@@ -1,0 +1,59 @@
+# ===== Java / Spring Boot =====
+**/target/
+*.class
+*.jar
+*.war
+*.log
+!.mvn/wrapper/maven-wrapper.jar
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ===== Node / Vue =====
+node_modules/
+dist/
+.npm
+*.log
+npm-debug.log*
+
+# ===== Archives & Logs =====
+*.zip
+*.tar.gz
+*.rar
+backend.log
+
+# ===== Environment =====
+.env
+.env.local
+.env.*.local
+application-local.yml
+application-local.yaml
+
+# ===== Test outputs =====
+test-results/
+coverage/
+
+# ===== Claude =====
+.claude/
