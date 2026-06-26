@@ -1,0 +1,29 @@
+package com.permission.common.entity;
+
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.permission.common.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.util.List;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("sys_menu")
+public class SysMenu extends BaseEntity {
+
+    private Long parentId;
+    private String menuName;
+    private String menuType;
+    private String path;
+    private String component;
+    private String icon;
+    private String permission;
+    private Integer sort;
+    private Integer status;
+    private Integer visible;
+
+    @TableField(exist = false)
+    private List<SysMenu> children;
+}
