@@ -40,11 +40,14 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(SecurityConstants.LOGIN_URL, SecurityConstants.REFRESH_TOKEN_URL).permitAll()
-                // NOTE: Swagger/Doc endpoints are publicly accessible here. In production, gate these
-                // behind a profile (e.g. @Profile("!prod") or Spring doc profile property) to avoid
-                // exposing API documentation publicly.
+                // Swagger/Doc 文档公开
                 .requestMatchers("/doc.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
+                // 认证接口公开
                 .requestMatchers("/api/auth/**").permitAll()
+                // 树洞公开接口（使用通配符）
+                .requestMatchers("/api/th/**").permitAll()
+                // 管理接口需要认证
+                .requestMatchers("/api/admin/**").authenticated()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
