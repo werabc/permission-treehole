@@ -16,22 +16,25 @@ public class ThPost {
 
     private Long userId;
 
+    @TableField(exist = false)
+    private String authorName;
+
     private Long categoryId;
 
     @TableField(exist = false)
     private String categoryName;
 
+    private String title;
+
+    private String content;
+
     @TableField(typeHandler = JacksonTypeHandler.class)
     private List<String> images;
-
-    @TableField("content")
-    private String content;
 
     private Integer isAnonymous;
 
     private Integer isTop;
 
-    /** 0-待审核 1-已通过 2-已拒绝 */
     private Integer status;
 
     private Integer viewCount;
@@ -40,7 +43,15 @@ public class ThPost {
 
     private Integer commentCount;
 
+    private Integer reportCount;
+
     private String ip;
+
+    private String auditRemark;
+
+    private Long auditorId;
+
+    private LocalDateTime auditTime;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

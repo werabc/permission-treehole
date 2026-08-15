@@ -20,7 +20,7 @@ public class ThCategoryController {
 
     private final ThCategoryService categoryService;
 
-    @Operation(summary = "获取所有启用分类")
+    @Operation(summary = "获取所有启用分类 (公开)")
     @GetMapping("/list")
     public R<List<ThCategory>> list() {
         return R.ok(categoryService.listEnabled());

@@ -12,11 +12,19 @@ public class ThComment {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long userId;
-
     private Long postId;
 
+    private Long userId;
+
+    @TableField(exist = false)
+    private String authorName;
+
     private Long parentId;
+
+    private Long replyUserId;
+
+    @TableField(exist = false)
+    private String replyUserName;
 
     private String content;
 
@@ -24,7 +32,6 @@ public class ThComment {
 
     private Integer likeCount;
 
-    /** 0-隐藏 1-显示 */
     private Integer status;
 
     private String ip;

@@ -4,9 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.permission.common.R;
 import com.permission.common.entity.ThPost;
-import com.permission.framework.security.JwtTokenProvider;
 import com.permission.system.service.ThPostService;
-import com.permission.system.service.ThCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,29 +18,21 @@ import org.springframework.web.bind.annotation.*;
 public class ThPostController {
 
     private final ThPostService postService;
-    private final ThCategoryService categoryService;
-    private final JwtTokenProvider jwtTokenProvider;
 
-    @Operation(summary = "分页查询帖子")
+    @Operation(summary = "分页查询帖子 (公开)")
     @GetMapping("/page")
     public R<IPage<ThPost>> page(@RequestParam(defaultValue = "1") long pageNum,
                                   @RequestParam(defaultValue = "10") long pageSize,
                                   @RequestParam(required = false) Long categoryId,
                                   @RequestParam(required = false) String keyword) {
-        // 防止 SQL 注入 - 限制 keyword 长度
-        if (StrUtil.isNotBlank(keyword) && keyword.length() > 100) {
-            keyword = keyword.substring(0, 100);
-        }
-        return R.ok(postService.pagePosts(pageNum, pageSize, categoryId, keyword));
+        return R.ok(postService.pagePosts(pageNum, pageSize, categoryId, keyword, 1));
     }
 
-    @Operation(summary = "获取帖子详情")
+    @Operation(summary = "获取帖子详情 (公开)")
     @GetMapping("/{id}")
     public R<ThPost> getById(@PathVariable Long id) {
         ThPost post = postService.getById(id);
-        if (post == null) {
-            return R.fail(404, "帖子不存在");
-        }
+        if (post == null) return R.fail(404, "帖子不存在");
         postService.incrementViewCount(id);
         return R.ok(post);
     }
@@ -50,20 +40,9 @@ public class ThPostController {
     @Operation(summary = "发布帖子 (需登录)")
     @PostMapping
     public R<Long> create(@RequestBody ThPost post, HttpServletRequest request) {
-        // 检查登录
         Long userId = getUserId(request);
-        if (userId == null) {
-            return R.fail(401, "请先登录");
-        }
-        // 内容校验
-        if (StrUtil.isBlank(post.getContent())) {
-            return R.fail(400, "内容不能为空");
-        }
-        if (post.getContent().length() > 5000) {
-            return R.fail(400, "内容不能超过5000字");
-        }
+        if (userId == null) return R.fail(401, "请先登录");
         post.setUserId(userId);
-        post.setIp(getClientIp(request));
         postService.createPost(post);
         return R.ok(post.getId());
     }
@@ -73,7 +52,7 @@ public class ThPostController {
     public R<Void> like(@PathVariable Long id, HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) return R.fail(401, "请先登录");
-        postService.likePost(id, String.valueOf(userId));
+        postService.likePost(id, userId);
         return R.ok();
     }
 
@@ -82,7 +61,7 @@ public class ThPostController {
     public R<Void> unlike(@PathVariable Long id, HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) return R.fail(401, "请先登录");
-        postService.unlikePost(id, String.valueOf(userId));
+        postService.unlikePost(id, userId);
         return R.ok();
     }
 
@@ -91,28 +70,19 @@ public class ThPostController {
     public R<Boolean> isLiked(@PathVariable Long id, HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) return R.ok(false);
-        return R.ok(postService.isLiked(id, String.valueOf(userId)));
+        return R.ok(postService.isLiked(id, userId));
     }
 
     private Long getUserId(HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        if (StrUtil.isBlank(token) || !token.startsWith("Bearer ")) return null;
-        token = token.substring(7);
+        String header = request.getHeader("Authorization");
+        if (StrUtil.isBlank(header) || !header.startsWith("Bearer ")) return null;
+        String token = header.substring(7);
         try {
-            return jwtTokenProvider.getUserId(token);
+            String payload = token.split("\\.")[1];
+            String json = new String(java.util.Base64.getUrlDecoder().decode(payload));
+            return cn.hutool.json.JSONUtil.parseObj(json).getLong("sub");
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (StrUtil.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (StrUtil.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
     }
 }

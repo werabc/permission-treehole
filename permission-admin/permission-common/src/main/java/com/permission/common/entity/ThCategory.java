@@ -18,6 +18,8 @@ public class ThCategory {
 
     private String icon;
 
+    private String description;
+
     private Integer sort;
 
     private Integer status;

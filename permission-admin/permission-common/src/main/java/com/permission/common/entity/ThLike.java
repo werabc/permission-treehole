@@ -12,12 +12,11 @@ public class ThLike {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** POST/COMMENT */
+    private Long userId;
+
     private String targetType;
 
     private Long targetId;
-
-    private String ip;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

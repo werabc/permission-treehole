@@ -12,11 +12,11 @@ public class ThUser {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long userId;
-
-    private String nickname;
+    private String username;
 
     private String password;
+
+    private String nickname;
 
     private String avatar;
 
@@ -24,7 +24,8 @@ public class ThUser {
 
     private Integer gender;
 
-    /** 0-封禁 1-正常 */
+    private String email;
+
     private Integer status;
 
     private LocalDateTime muteUntil;

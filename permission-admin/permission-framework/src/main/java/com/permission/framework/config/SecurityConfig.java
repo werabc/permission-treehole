@@ -45,7 +45,7 @@ public class SecurityConfig {
                 // 认证接口公开
                 .requestMatchers("/api/auth/**").permitAll()
                 // 树洞公开接口
-                .requestMatchers("/api/th/category/list", "/api/th/post/page", "/api/th/post/{id}").permitAll()
+                .requestMatchers("/api/th/category/list", "/api/th/post/page", "/api/th/post/{id}", "/api/th/comment/page", "/api/th/post/{id}/liked").permitAll()
                 // 树洞认证接口
                 .requestMatchers("/api/th/auth/**").permitAll()
                 // 树洞写操作需要认证
