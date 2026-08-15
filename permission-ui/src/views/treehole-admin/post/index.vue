@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="search-bar">
-      <el-select v-model="queryParams.status as any" placeholder="状态" clearable style="width: 120px" @change="fetchData">
+      <el-select v-model="queryParams.status" placeholder="状态" clearable style="width: 120px" @change="fetchData">
         <el-option label="全部" :value="undefined" />
         <el-option label="待审核" :value="0" />
         <el-option label="已通过" :value="1" />
@@ -13,9 +13,10 @@
     <el-table :data="tableData" v-loading="loading" stripe border>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="content" label="内容" min-width="300" show-overflow-tooltip />
-      <el-table-column label="状态" width="80">
+      <el-table-column prop="categoryName" label="分类" width="100" />
+      <el-table-column label="状态" width="80" align="center">
         <template #default="{ row }">
-          <el-tag :type="statusType(row.status) as any" size="small">{{ statusLabel(row.status) }}</el-tag>
+          <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="viewCount" label="浏览" width="60" align="center" />
