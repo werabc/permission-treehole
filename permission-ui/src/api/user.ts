@@ -48,3 +48,11 @@ export function assignRoles(id: number, roleIds: number[]): Promise<ApiResult<nu
 export function getUserRoleIds(id: number): Promise<ApiResult<number[]>> {
   return request.get(`/user/${id}/roles`)
 }
+
+export function exportUsers(): Promise<Blob> {
+  return request.get('/user/export', { responseType: 'blob' })
+}
+
+export function batchUpdateStatus(ids: number[], status: number): Promise<ApiResult<null>> {
+  return request.put('/user/batch-status', { ids, status })
+}

@@ -87,6 +87,8 @@ public class DataInitializer implements CommandLineRunner {
         Long menuLog = createMenu(menuSys, "日志管理", "CATALOG", "/log", null, "Document", null, 5);
         createMenu(menuLog, "操作日志", "MENU", "/log/operation", null, "Tickets", "system:log:list", 1);
         createMenu(menuLog, "登录日志", "MENU", "/log/login", null, "Key", "system:log:list", 2);
+
+        createMenu(menuSys, "在线用户", "MENU", "/system/online", null, "Monitor", "admin", 6);
         log.info("菜单数据初始化完成");
 
         // 5. 分配用户角色
@@ -126,9 +128,7 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         log.info("========== 数据初始化完成 ==========");
-        log.info("默认账号: admin / Admin@1234");
-        log.info("默认账号: tech / Admin@1234");
-        log.info("默认账号: backend / Admin@1234");
+        log.info("默认账号: admin, tech, backend (密码见 application.yml 或通过环境变量配置)");
     }
 
     private SysDept createDept(String name, Long parentId, String ancestors, int sort, String leader) {
@@ -204,3 +204,43 @@ public class DataInitializer implements CommandLineRunner {
         return CollUtil.isNotEmpty(menus) ? menus.get(0).getId() : null;
     }
 }
+
+// ============================================================
+// 文件注解与作用说明
+// ============================================================
+// 【文件路径】com.permission.system.config.DataInitializer
+// 【模块】permission-system
+//
+// 【使用的注解/技术】
+//   - @Slf4j — Lombok，注入日志对象
+//   - @Component — Spring，注册为容器组件
+//   - @RequiredArgsConstructor — Lombok，生成必需参数构造器（实现构造器注入）
+//   - CommandLineRunner — Spring Boot，应用启动后执行一次性初始化逻辑（run 方法）
+//   - @Transactional — Spring，声明式事务，保证初始化整体原子性
+//   - @Override — Java，标识重写接口方法
+//   - LambdaQueryWrapper / CollUtil — MyBatis-Plus / Hutool，构建查询条件与集合工具
+//
+// 【关键依赖】
+//   - 依赖 SysUserMapper / SysRoleMapper / SysMenuMapper / SysDeptMapper /
+//     SysUserRoleMapper / SysRoleMenuMapper → 插入初始化数据
+//   - 依赖 PasswordEncoder（Spring Security） → 对初始用户密码进行 BCrypt 加密
+//
+// 【关联文件】
+//   - 被 Spring 容器自动检测并执行（CommandLineRunner 约定）
+//   - 依赖 SysUser / SysRole / SysMenu / SysDept / SysUserRole / SysRoleMenu 实体
+//   - 初始化数据被 Spring Security 鉴权逻辑消费（角色-菜单-按钮权限体系）
+//
+// 【核心作用】
+//   应用启动时，若 sys_user 表为空，则自动初始化一套完整的 RBAC 基础数据：4 个角色
+//   （超级管理员/技术负责人/普通用户等）、10+ 部门、多个用户、40+ 菜单/按钮、用户-角色
+//   关联、角色-菜单关联，确保系统开箱即用。
+//
+// 【设计必要性】
+//   避免手工执行 SQL 脚本初始化数据，保证研发/测试/演示环境快速就绪；幂等设计（数据已存在
+//   则跳过）保证重复启动安全。
+//
+// 【注意事项/安全提示】
+//   - 密码经过 PasswordEncoder.encode() 加密存储，日志中不输出明文密码，避免凭证泄露
+//   - 默认账号建议在生产部署后及时修改密码或禁用
+//   - 本初始化逻辑仅适用于首次部署；生产环境应通过更可控的迁移脚本管理基础数据
+// ============================================================

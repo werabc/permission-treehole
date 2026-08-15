@@ -1,5 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { usePermissionStore } from '@/stores/permission'
 
 const staticRoutes: RouteRecordRaw[] = [
   {
@@ -8,26 +10,6 @@ const staticRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/login/index.vue'),
     meta: { title: '登录', noAuth: true },
   },
-  // Public novel pages — standalone, no layout/sidebar required
-  {
-    path: '/novel',
-    name: 'NovelList',
-    component: () => import('@/views/novel/List.vue'),
-    meta: { title: '小说广场', noAuth: true },
-  },
-  {
-    path: '/novel/:id',
-    name: 'NovelDetail',
-    component: () => import('@/views/novel/Detail.vue'),
-    meta: { title: '小说详情', noAuth: true },
-  },
-  {
-    path: '/novel/read/:novelId/:chapterId',
-    name: 'NovelRead',
-    component: () => import('@/views/novel/Read.vue'),
-    meta: { title: '阅读', noAuth: true },
-  },
-  // Auth-required pages under layout
   {
     path: '/',
     name: 'Layout',
@@ -41,16 +23,10 @@ const staticRoutes: RouteRecordRaw[] = [
         meta: { title: '首页', icon: 'HomeFilled' },
       },
       {
-        path: '/bookshelf',
-        name: 'Bookshelf',
-        component: () => import('@/views/novel/Bookshelf.vue'),
-        meta: { title: '我的书架', icon: 'Star' },
-      },
-      {
-        path: '/author',
-        name: 'AuthorDashboard',
-        component: () => import('@/views/author/Dashboard.vue'),
-        meta: { title: '作者中心', icon: 'Edit' },
+        path: '/profile',
+        name: 'Profile',
+        component: () => import('@/views/profile/index.vue'),
+        meta: { title: '个人信息', icon: 'User' },
       },
     ],
   },
@@ -81,5 +57,59 @@ export function addDynamicRoutes(routes: RouteRecordRaw[]) {
 export function resetDynamicRoutes() {
   routesAdded = false
 }
+
+// ========== 路由守卫 ==========
+router.beforeEach(async (to, from, next) => {
+  const userStore = useUserStore()
+  const permissionStore = usePermissionStore()
+  const token = localStorage.getItem('accessToken')
+
+  // 设置页面标题
+  document.title = (to.meta.title ? `${to.meta.title} - ` : '') + '权限管理系统'
+
+  // 公开路由直接放行
+  if (to.meta.noAuth) {
+    next()
+    return
+  }
+
+  // 无 token 跳转登录
+  if (!token) {
+    next('/login')
+    return
+  }
+
+  // 有 token 但无用户信息，尝试获取
+  if (!userStore.userInfo) {
+    try {
+      await userStore.fetchUserInfo()
+      if (!routesAdded) {
+        await permissionStore.generateRoutes()
+      }
+      next({ ...to, replace: true })
+      return
+    } catch {
+      // 获取失败，尝试刷新 token
+      try {
+        const success = await userStore.refreshAction()
+        if (success) {
+          await userStore.fetchUserInfo()
+          if (!routesAdded) {
+            await permissionStore.generateRoutes()
+          }
+          next({ ...to, replace: true })
+          return
+        }
+      } catch {
+        // 刷新也失败
+      }
+      localStorage.clear()
+      next('/login')
+      return
+    }
+  }
+
+  next()
+})
 
 export default router

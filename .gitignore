@@ -43,13 +43,27 @@ npm-debug.log*
 *.tar.gz
 *.rar
 backend.log
+backend_run.log
+frontend_run.log
 
-# ===== Environment =====
+# ===== Environment & Secrets =====
 .env
 .env.local
 .env.*.local
 application-local.yml
 application-local.yaml
+application-prod.yml
+application-prod.yaml
+
+# Database credentials
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+
+# Docker volumes
+mysql_data/
+redis_data/
 
 # ===== Test outputs =====
 test-results/
@@ -57,3 +71,7 @@ coverage/
 
 # ===== Claude =====
 .claude/
+
+# ===== Deploy secrets =====
+deploy/permission-admin/sql/
+deploy/*.pem

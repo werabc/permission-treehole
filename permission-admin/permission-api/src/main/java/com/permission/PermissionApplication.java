@@ -10,3 +10,4 @@ public class PermissionApplication {
         SpringApplication.run(PermissionApplication.class, args);
     }
 }
+

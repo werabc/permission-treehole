@@ -124,7 +124,7 @@ async function main() {
 
   const userText = await page.locator('table tbody').first().textContent().catch(() => '');
   result('超级管理员', userText.includes('超级管理员'));
-  result('技术负责人', userText.includes('技术负责人'));
+  result('技术主管', userText.includes('技术主管'));
   result('后端开发', userText.includes('后端开发'));
 
   const addUserBtns = await page.locator('button').allTextContents();

@@ -37,3 +37,30 @@ public enum ResultCode {
     private final int code;
     private final String message;
 }
+
+// ============================================================
+// 文件注解与作用说明
+// ============================================================
+// 【文件路径】com.permission.common.ResultCode
+// 【模块】permission-common（公共基础模块）
+//
+// 【使用的注解/技术】
+//   - @Getter — Lombok，仅生成 getter（code/message 已 final 无需 setter）
+//   - @AllArgsConstructor — Lombok，自动生成 (int code, String message) 构造器，
+//     供枚举常量 SUCCESS(200,"...") 这种声明语法使用
+//   - 枚举实现 — Java enum，天然单例，线程安全
+//
+// 【关联文件】
+//   - 被 R.ok() / R.fail() 指定失败编码时引用 → R.java
+//   - 被 GlobalExceptionHandler 捕获异常时映射为 R.fail(resultCode) → framework/.../GlobalExceptionHandler.java
+//   - 被 BusinessException 携带编码 → BusinessException.java
+//
+// 【核心作用】集中管理业务状态码与提示文案，避免魔法数字散落。
+//
+// 【设计必要性】用枚举而不是常量类，既提供类型约束（只能传合法 ResultCode），
+//   又能在 R/BusinessException/异常处理中统一使用，新增编码只需加一行。
+//
+// 【注意事项】
+//   - 错误码按模块分段：10xx 认证用户、20xx 角色、30xx 菜单、40xx 部门、50xx 通用
+//   - message 是面向用户的中文提示，不要写技术栈细节
+// ============================================================

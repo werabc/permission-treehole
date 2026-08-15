@@ -77,3 +77,34 @@ public class LoginUser implements UserDetails {
         return true;
     }
 }
+
+// ============================================================
+// 文件注解与作用说明
+// ============================================================
+// 【文件路径】com.permission.common.dto.LoginUser
+// 【模块】permission-common（公共基础模块）
+//
+// 【使用的注解/技术】
+//   - @Data — Lombok，生成 getter/setter
+//   - @NoArgsConstructor — 提供无参构造（Spring Security 反序列化需要）
+//   - @Builder — Lombok，为全字段构造器提供流式 builder 语法
+//   - implements UserDetails — Spring Security 用户模型接口
+//   - SimpleGrantedAuthority — 将权限字符串和角色统一封装为鉴权对象
+//
+// 【关联文件】
+//   - 被 JwtAuthenticationFilter 放入 SecurityContextHolder → framework/security/JwtAuthenticationFilter.java
+//   - 被 DetailServiceImpl.loadUserByUsername() 构造 → service/impl/DetailServiceImpl.java
+//   - @PreAuthorize 基于 getAuthorities() 中的角色/权限字符串鉴权 → controller/*Controller.java
+//   - 基础字段源自 SysUser → entity/SysUser.java
+//
+// 【核心作用】Spring Security 当前登录用户的上下文对象，持有用户身份、权限与角色。
+//
+// 【设计必要性】getAuthorities() 把角色编码（如 ROLE_ADMIN）与权限字符串都作为
+//   GrantedAuthority 放入，@PreAuthorize("hasRole('ADMIN')") 与
+//   @PreAuthorize("hasAuthority('system:user:list')") 才能同时匹配生效。
+//   DataScope 数值由 DataDataScopeAspect 解析返回 SQL 过滤条件。
+//
+// 【注意事项】
+//   - 四个布尔方法均返回 true，账号锁定/过期等业务状态由 UserStatus 枚举在服务层控制
+//   - Builder 参数非法时 permissions/roles 在构造中被防护为至少空集合，避免空指针
+// ============================================================

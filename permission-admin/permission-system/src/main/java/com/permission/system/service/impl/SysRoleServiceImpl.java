@@ -42,8 +42,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     public SysRole getRoleById(Long id) {
         SysRole role = baseMapper.selectById(id);
         if (role != null) {
-            Set<Long> menuIds = getRoleMenuIds(id);
-            role.setDeptIds(menuIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
+            // Do NOT set deptIds to menu IDs - frontend calls /{id}/menus separately
         }
         return role;
     }
@@ -144,3 +143,52 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         }
     }
 }
+
+// ============================================================
+// 文件注解与作用说明
+// ============================================================
+// 【文件路径】com.permission.system.service.impl.SysRoleServiceImpl
+// 【模块】permission-system
+//
+// 【使用的注解/技术】
+//   - @Service — Spring，声明业务层组件
+//   - @RequiredArgsConstructor — Lombok，生成必需参数构造器（构造器注入）
+//   - @Override — Java，标识重写接口/父类方法
+//   - @Transactional — Spring，声明式事务，保证角色写操作与关联清理的原子性
+//     （删除角色+清理关联、分配菜单、更新状态等）
+//   - ServiceImpl<SysRoleMapper, SysRole> — MyBatis-Plus，继承通用 Service 实现基类
+//   - Page / IPage / LambdaQueryWrapper — MyBatis-Plus，分页查询与条件构造器
+//   - StrUtil / CollUtil — Hutool，字符串/集合工具
+//   - BusinessException / ResultCode — 自定义业务异常与错误码（ROLE_HAS_USERS/
+//     ROLE_NAME_EXISTS/ROLE_CODE_EXISTS 等）
+//
+// 【关键依赖】
+//   - 依赖 SysRoleMapper → 角色数据访问
+//   - 依赖 SysRoleMenuMapper → 角色菜单关联表访问（分配/查询菜单 + 删除时级联清理）
+//   - 依赖 SysUserRoleMapper → 删除角色前校验是否仍有用户关联
+//   - 依赖 SysMenuMapper → 维护角色菜单关系时使用
+//   - 依赖 SysRole 实体 → 角色业务操作载体
+//   - 依赖 SysRoleService 接口 → 实现该接口契约
+//
+// 【关联文件】
+//   - 被 RoleController 调用，提供角色管理业务逻辑
+//   - 被 UserDetailsServiceImpl 调用（间接通过 Mapper），加载用户角色信息
+//   - 被 SysUserServiceImpl 调用（间接），分配用户角色时校验关联
+//   - 被 OperationLogAspect 切面拦截（写操作会记录 @OperationLog）
+//
+// 【核心作用】
+//   角色业务服务实现：提供角色分页查询、单角色详情、新增角色（名称/编码唯一性校验）、
+//   修改角色、批量级联删除角色（无用户关联才允许）并清理关联、状态修改、菜单权限分配、
+//   角色菜单 ID 查询、全量可用角色下拉。
+//
+// 【设计必要性】
+//   角色是企业 RBAC 权限体系的核心枢纽，涉及名称/编码唯一性、级联删除保护、权限变更审计
+//   等复杂业务规则，统一封装在 Service 层避免散落在 Controller 或 Mapper 中。
+//
+// 【注意事项/安全提示】
+//   - deleteRoles 严格校验：删除前遍历每个角色，若仍有用户关联则拒绝并提示角色名；通过校验
+//     后再批量删除角色 + 级联清理 role_menu 关联，保证数据一致性（@Transactional 保证原子性）
+//   - validateRoleNameUnique / validateRoleCodeUnique：新增和修改均校验唯一性，修改时可排除自身 ID
+//   - assignMenus 采用"先删除再插入"策略分配菜单，保证幂等（重复分配结果一致）
+//   - getRoleById 明确说明不把 deptIds 混为 menuIds，前端通过 /{id}/menus 接口单独获取菜单
+// ============================================================

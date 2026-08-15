@@ -1,0 +1,112 @@
+# =============================================
+# 权限管理系统 - Docker Compose 一键部署
+# 使用方式：docker compose up -d
+#
+# 已预配置：
+#   - JWT 密钥（自动生成）
+#   - MySQL / Redis 密码
+#   - 后端 prod profile（关 SQL 日志 + 关 Swagger）
+# =============================================
+version: "3.8"
+
+services:
+  # ---------- MySQL 8.0 ----------
+  mysql:
+    image: mysql:8.0
+    container_name: permission-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456abc"
+      MYSQL_DATABASE: "permission_admin"
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # 首次启动自动建表（仅当数据目录为空时执行）
+      - ./permission-admin/sql/create_tables.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456abc"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - permission-net
+
+  # ---------- Redis ----------
+  redis:
+    image: redis:7-alpine
+    container_name: permission-redis
+    restart: unless-stopped
+    command: redis-server --requirepass "redis123456" --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis123456", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - permission-net
+
+  # ---------- 后端 Spring Boot ----------
+  backend:
+    build:
+      context: ./permission-admin
+      dockerfile: Dockerfile
+    container_name: permission-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: permission_admin
+      DB_USERNAME: root
+      DB_PASSWORD: "123456abc"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: "redis123456"
+      REDIS_DATABASE: 1
+      JWT_SECRET_KEY: "koCocTsKipfXQbmv9D4nDL+dQVrKs6Jd5AXCXnq27b34gPfE7iu7FCpkri09fR3X"
+      TZ: Asia/Shanghai
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - permission-net
+
+  # ---------- 前端 Nginx ----------
+  frontend:
+    build:
+      context: ./permission-ui
+      dockerfile: Dockerfile
+    container_name: permission-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - permission-net
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  permission-net:
+    driver: bridge

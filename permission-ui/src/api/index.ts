@@ -18,14 +18,27 @@ service.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+let isRefreshing = false
+let refreshSubscribers: Array<(token: string) => void> = []
+
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.forEach(cb => cb(token))
+  refreshSubscribers = []
+}
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb)
+}
+
 service.interceptors.response.use(
   (response) => {
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
       if (res.code === 401) {
         localStorage.clear()
-        window.location.href = '/login'
+        window.location.hash = '/login'
+      } else {
+        ElMessage.error(res.message || '请求失败')
       }
       return Promise.reject(new Error(res.message || '请求失败'))
     }
@@ -34,9 +47,10 @@ service.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.clear()
-      window.location.href = '/login'
+      window.location.hash = '/login'
+    } else {
+      ElMessage.error(error.message || '网络异常')
     }
-    ElMessage.error(error.message || '网络异常')
     return Promise.reject(error)
   }
 )

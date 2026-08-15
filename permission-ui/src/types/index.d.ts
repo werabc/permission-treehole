@@ -17,6 +17,10 @@ export interface UserInfo {
   nickname: string
   deptId: number | null
   deptName: string
+  avatar?: string
+  email?: string
+  phone?: string
+  sex?: number
   permissions: string[]
   roles: string[]
 }
@@ -102,86 +106,6 @@ export interface LoginLog {
   status: number
   message: string
   loginTime: string
-}
-
-// Novel types
-export interface NovelCategory {
-  id: number
-  categoryName: string
-  categoryDesc: string
-  sort: number
-  status: number
-}
-
-export interface Novel {
-  id: number
-  title: string
-  authorId: number
-  authorName: string
-  categoryId: number
-  categoryName: string
-  coverUrl: string
-  intro: string
-  status: number
-  wordCount: number
-  clickCount: number
-  likeCount: number
-  lastChapterTitle: string
-  createTime: string
-  updateTime: string
-}
-
-export interface NovelChapter {
-  id: number
-  novelId: number
-  novelTitle: string
-  chapterTitle: string
-  chapterNum: number
-  content: string
-  wordCount: number
-  isFree: number
-  createTime: string
-}
-
-export interface UserBookshelf {
-  id: number
-  userId: number
-  novelId: number
-  novelTitle: string
-  coverUrl: string
-  authorName: string
-  lastChapterTitle: string
-  createTime: string
-}
-
-export interface ReadingHistory {
-  id: number
-  userId: number
-  novelId: number
-  chapterId: number
-  chapterTitle: string
-  novelTitle: string
-  coverUrl: string
-  authorName: string
-  updateTime: string
-}
-
-export interface NovelComment {
-  id: number
-  novelId: number
-  chapterId: number
-  userId: number
-  userName: string
-  content: string
-  parentId: number
-  likeCount: number
-  createTime: string
-  children: NovelComment[]
-}
-
-export interface ChapterNav {
-  prev: NovelChapter | null
-  next: NovelChapter | null
 }
 
 export interface PageResult<T> {

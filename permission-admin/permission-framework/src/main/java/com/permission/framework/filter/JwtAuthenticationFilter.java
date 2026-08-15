@@ -1,11 +1,11 @@
 package com.permission.framework.filter;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.permission.common.dto.LoginUser;
 import com.permission.common.constant.SecurityConstants;
 import com.permission.framework.security.JwtTokenProvider;
 import com.permission.framework.security.CustomUserDetailsService;
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,16 +36,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
 
         if (StrUtil.isNotBlank(token)) {
-            // Check blacklist
             String blacklistKey = SecurityConstants.TOKEN_BLACKLIST_PREFIX + token;
             if (Boolean.TRUE.equals(redisTemplate.hasKey(blacklistKey))) {
-                filterChain.doFilter(request, response);
+                // Token is blacklisted - return 401 immediately
+                response.setContentType("application/json;charset=UTF-8");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write(JSONUtil.toJsonStr(com.permission.common.R.fail(com.permission.common.ResultCode.UNAUTHORIZED)));
                 return;
             }
 
             try {
                 if (jwtTokenProvider.validateToken(token)) {
-                    Long userId = jwtTokenProvider.getUserId(token);
+                    // Parse once and reuse Claims
+                    io.jsonwebtoken.Claims claims = jwtTokenProvider.parseToken(token);
+                    Long userId = Long.valueOf(claims.getSubject());
                     LoginUser loginUser = userDetailsService.loadUserById(userId);
 
                     if (loginUser != null) {
@@ -55,10 +59,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
                 }
-            } catch (ExpiredJwtException e) {
-                log.debug("Token expired for request: {}", request.getRequestURI());
             } catch (Exception e) {
-                log.error("Authentication error: {}", e.getMessage());
+                log.error("Authentication error for request {}: {}", request.getRequestURI(), e.getMessage());
+                // Fail-closed: return 401 on unexpected errors
+                response.setContentType("application/json;charset=UTF-8");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write(JSONUtil.toJsonStr(com.permission.common.R.fail(com.permission.common.ResultCode.UNAUTHORIZED)));
+                return;
             }
         }
 
@@ -73,3 +80,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 }
+

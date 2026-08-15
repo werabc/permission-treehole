@@ -18,11 +18,25 @@
       <el-button type="primary" :icon="Search" @click="fetchData">搜索</el-button>
       <el-button :icon="Refresh" @click="resetQuery">重置</el-button>
       <div style="flex: 1" />
+      <el-button type="success" :icon="Download" @click="handleExport" v-permission="'system:user:list'">导出</el-button>
+      <el-dropdown @command="handleBatchCommand" v-permission="'system:user:edit'">
+        <el-button type="warning">
+          批量操作<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="enable">批量启用</el-dropdown-item>
+            <el-dropdown-item command="disable">批量禁用</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <el-button type="primary" :icon="Plus" v-permission="'system:user:add'" @click="handleAdd">新增用户</el-button>
     </div>
 
     <div class="table-card">
-      <el-table :data="tableData" v-loading="loading" stripe border style="width: 100%">
+      <el-table :data="tableData" v-loading="loading" stripe border style="width: 100%"
+                @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="50" />
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="username" label="用户名" min-width="120" />
         <el-table-column prop="nickname" label="昵称" min-width="120" />
@@ -152,11 +166,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Search, Refresh, Plus } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Download, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getUserPage, getUserById, createUser, updateUser, deleteUsers,
-  assignRoles, getUserRoleIds, resetPassword,
+  assignRoles, getUserRoleIds, resetPassword, exportUsers, batchUpdateStatus,
 } from '@/api/user'
 import { getDeptTreeSelect } from '@/api/dept'
 import { getAllRoles } from '@/api/role'
@@ -166,6 +180,7 @@ const loading = ref(false)
 const tableData = ref<SysUser[]>([])
 const total = ref(0)
 const deptTree = ref<SysDept[]>([])
+const selectedRows = ref<SysUser[]>([])
 const allRoles = ref<SysRole[]>([])
 
 const queryParams = reactive({
@@ -193,6 +208,33 @@ function resetQuery() {
   queryParams.deptId = undefined
   queryParams.status = undefined
   queryParams.pageNum = 1
+  fetchData()
+}
+
+function handleSelectionChange(rows: SysUser[]) {
+  selectedRows.value = rows
+}
+
+async function handleExport() {
+  try {
+    await exportUsers()
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
+  }
+}
+
+async function handleBatchCommand(command: string) {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择用户')
+    return
+  }
+  const status = command === 'enable' ? 1 : 0
+  const action = status === 1 ? '启用' : '禁用'
+  await ElMessageBox.confirm(`确定要批量${action}选中的 ${selectedRows.value.length} 个用户吗？`, '批量操作')
+  const ids = selectedRows.value.map(r => r.id)
+  await batchUpdateStatus(ids, status)
+  ElMessage.success(`批量${action}成功`)
   fetchData()
 }
 

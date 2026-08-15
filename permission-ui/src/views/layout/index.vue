@@ -18,18 +18,6 @@
           <el-icon><HomeFilled /></el-icon>
           <template #title>首页</template>
         </el-menu-item>
-        <el-menu-item index="/novel">
-          <el-icon><Notebook /></el-icon>
-          <template #title>小说广场</template>
-        </el-menu-item>
-        <el-menu-item index="/bookshelf">
-          <el-icon><Star /></el-icon>
-          <template #title>我的书架</template>
-        </el-menu-item>
-        <el-menu-item index="/author">
-          <el-icon><Edit /></el-icon>
-          <template #title>作者中心</template>
-        </el-menu-item>
 
         <template v-for="menu in menuList" :key="menu.id">
           <el-sub-menu v-if="menu.children && menu.children.length > 0" :index="menu.path || String(menu.id)">
@@ -119,7 +107,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Lock, Fold, Expand, UserFilled, ArrowDown, User, Key, SwitchButton, HomeFilled, Notebook, Star, Edit } from '@element-plus/icons-vue'
+import { Lock, Fold, Expand, UserFilled, ArrowDown, User, Key, SwitchButton, HomeFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { usePermissionStore } from '@/stores/permission'
@@ -137,16 +125,7 @@ const menuList = computed(() => {
 })
 
 onMounted(async () => {
-  if (!userStore.userInfo) {
-    try {
-      await userStore.fetchUserInfo()
-      await permissionStore.generateRoutes()
-    } catch {
-      router.push('/login')
-    }
-  } else {
-    await permissionStore.generateRoutes()
-  }
+  await permissionStore.generateRoutes()
 })
 
 function handleCommand(command: string) {
@@ -155,7 +134,7 @@ function handleCommand(command: string) {
   } else if (command === 'password') {
     passwordDialogVisible.value = true
   } else if (command === 'profile') {
-    ElMessage.info('个人信息')
+    router.push('/profile')
   }
 }
 
