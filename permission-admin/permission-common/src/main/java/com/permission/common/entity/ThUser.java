@@ -6,28 +6,40 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("th_comment")
-public class ThComment {
+@TableName("th_user")
+public class ThUser {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long userId;
 
-    private Long postId;
+    private String nickname;
 
-    private Long parentId;
+    private String password;
 
-    private String content;
+    private String avatar;
 
-    private Integer isAnonymous;
+    private String bio;
 
-    private Integer likeCount;
+    private Integer gender;
 
-    /** 0-隐藏 1-显示 */
+    /** 0-封禁 1-正常 */
     private Integer status;
 
-    private String ip;
+    private LocalDateTime muteUntil;
+
+    private LocalDateTime banUntil;
+
+    private Integer postCount;
+
+    private Integer commentCount;
+
+    private Integer violationCount;
+
+    private LocalDateTime lastPostTime;
+
+    private String lastLoginIp;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

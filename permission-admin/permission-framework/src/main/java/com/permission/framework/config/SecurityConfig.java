@@ -44,8 +44,14 @@ public class SecurityConfig {
                 .requestMatchers("/doc.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                 // 认证接口公开
                 .requestMatchers("/api/auth/**").permitAll()
-                // 树洞公开接口（使用通配符）
-                .requestMatchers("/api/th/**").permitAll()
+                // 树洞公开接口
+                .requestMatchers("/api/th/category/list", "/api/th/post/page", "/api/th/post/{id}").permitAll()
+                // 树洞认证接口
+                .requestMatchers("/api/th/auth/**").permitAll()
+                // 树洞写操作需要认证
+                .requestMatchers("/api/th/post", "/api/th/comment").authenticated()
+                .requestMatchers("/api/th/post/{id}/like", "/api/th/comment/{id}/like").authenticated()
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/th/post/{id}/like").authenticated()
                 // 管理接口需要认证
                 .requestMatchers("/api/admin/**").authenticated()
                 .anyRequest().authenticated())

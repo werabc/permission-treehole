@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.permission.common.R;
 import com.permission.common.entity.ThPost;
+import com.permission.framework.security.JwtTokenProvider;
 import com.permission.system.service.ThPostService;
 import com.permission.system.service.ThCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +21,7 @@ public class ThPostController {
 
     private final ThPostService postService;
     private final ThCategoryService categoryService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Operation(summary = "分页查询帖子")
     @GetMapping("/page")
@@ -45,9 +47,14 @@ public class ThPostController {
         return R.ok(post);
     }
 
-    @Operation(summary = "发布帖子")
+    @Operation(summary = "发布帖子 (需登录)")
     @PostMapping
     public R<Long> create(@RequestBody ThPost post, HttpServletRequest request) {
+        // 检查登录
+        Long userId = getUserId(request);
+        if (userId == null) {
+            return R.fail(401, "请先登录");
+        }
         // 内容校验
         if (StrUtil.isBlank(post.getContent())) {
             return R.fail(400, "内容不能为空");
@@ -55,29 +62,47 @@ public class ThPostController {
         if (post.getContent().length() > 5000) {
             return R.fail(400, "内容不能超过5000字");
         }
+        post.setUserId(userId);
         post.setIp(getClientIp(request));
         postService.createPost(post);
         return R.ok(post.getId());
     }
 
-    @Operation(summary = "点赞帖子")
+    @Operation(summary = "点赞帖子 (需登录)")
     @PostMapping("/{id}/like")
     public R<Void> like(@PathVariable Long id, HttpServletRequest request) {
-        postService.likePost(id, getClientIp(request));
+        Long userId = getUserId(request);
+        if (userId == null) return R.fail(401, "请先登录");
+        postService.likePost(id, String.valueOf(userId));
         return R.ok();
     }
 
-    @Operation(summary = "取消点赞")
+    @Operation(summary = "取消点赞 (需登录)")
     @DeleteMapping("/{id}/like")
     public R<Void> unlike(@PathVariable Long id, HttpServletRequest request) {
-        postService.unlikePost(id, getClientIp(request));
+        Long userId = getUserId(request);
+        if (userId == null) return R.fail(401, "请先登录");
+        postService.unlikePost(id, String.valueOf(userId));
         return R.ok();
     }
 
-    @Operation(summary = "检查是否已点赞")
+    @Operation(summary = "检查是否已点赞 (需登录)")
     @GetMapping("/{id}/liked")
     public R<Boolean> isLiked(@PathVariable Long id, HttpServletRequest request) {
-        return R.ok(postService.isLiked(id, getClientIp(request)));
+        Long userId = getUserId(request);
+        if (userId == null) return R.ok(false);
+        return R.ok(postService.isLiked(id, String.valueOf(userId)));
+    }
+
+    private Long getUserId(HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        if (StrUtil.isBlank(token) || !token.startsWith("Bearer ")) return null;
+        token = token.substring(7);
+        try {
+            return jwtTokenProvider.getUserId(token);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String getClientIp(HttpServletRequest request) {

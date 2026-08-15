@@ -10,5 +10,5 @@ public interface ThCommentService extends IService<ThComment> {
 
     void createComment(ThComment comment);
 
-    void likeComment(Long id, String ip);
+    void likeComment(Long id, String userId);
 }

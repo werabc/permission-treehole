@@ -14,6 +14,8 @@ public class ThPost {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private Long userId;
+
     private Long categoryId;
 
     @TableField(exist = false)

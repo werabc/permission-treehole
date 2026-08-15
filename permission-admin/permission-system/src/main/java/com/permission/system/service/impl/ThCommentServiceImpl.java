@@ -37,7 +37,7 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
     public void createComment(ThComment comment) {
         comment.setStatus(1);
         comment.setLikeCount(0);
-        comment.setIsAnonymous(1);
+        comment.setIsAnonymous(comment.getIsAnonymous() != null ? comment.getIsAnonymous() : 1);
         save(comment);
 
         // 更新帖子评论数
@@ -49,14 +49,14 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
     }
 
     @Override
-    public void likeComment(Long id, String ip) {
+    public void likeComment(Long id, String userId) {
         ThComment comment = getById(id);
         if (comment == null) return;
 
         Long count = likeMapper.selectCount(new LambdaQueryWrapper<ThLike>()
                 .eq(ThLike::getTargetType, "COMMENT")
                 .eq(ThLike::getTargetId, id)
-                .eq(ThLike::getIp, ip)
+                .eq(ThLike::getIp, userId)
                 .eq(ThLike::getDeleted, 0));
 
         if (count > 0) return;
@@ -64,7 +64,7 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
         ThLike like = new ThLike();
         like.setTargetType("COMMENT");
         like.setTargetId(id);
-        like.setIp(ip);
+        like.setIp(userId);
         likeMapper.insert(like);
 
         comment.setLikeCount(comment.getLikeCount() + 1);

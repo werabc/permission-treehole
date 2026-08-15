@@ -12,11 +12,11 @@ public interface ThPostService extends IService<ThPost> {
 
     void createPost(ThPost post);
 
-    void likePost(Long id, String ip);
+    void likePost(Long id, String userId);
 
-    void unlikePost(Long id, String ip);
+    void unlikePost(Long id, String userId);
 
-    boolean isLiked(Long id, String ip);
+    boolean isLiked(Long id, String userId);
 
     void incrementViewCount(Long id);
 }

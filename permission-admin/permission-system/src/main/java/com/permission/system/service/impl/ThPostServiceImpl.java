@@ -60,29 +60,28 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
         post.setViewCount(0);
         post.setLikeCount(0);
         post.setCommentCount(0);
-        post.setIsAnonymous(1); // 默认匿名
+        post.setIsAnonymous(post.getIsAnonymous() != null ? post.getIsAnonymous() : 1);
         post.setIsTop(0);
         save(post);
     }
 
     @Override
-    public void likePost(Long id, String ip) {
+    public void likePost(Long id, String userId) {
         ThPost post = getById(id);
         if (post == null) return;
 
-        // 检查是否已点赞
         Long count = likeMapper.selectCount(new LambdaQueryWrapper<ThLike>()
                 .eq(ThLike::getTargetType, "POST")
                 .eq(ThLike::getTargetId, id)
-                .eq(ThLike::getIp, ip)
+                .eq(ThLike::getIp, userId)
                 .eq(ThLike::getDeleted, 0));
 
-        if (count > 0) return; // 已点赞
+        if (count > 0) return;
 
         ThLike like = new ThLike();
         like.setTargetType("POST");
         like.setTargetId(id);
-        like.setIp(ip);
+        like.setIp(userId);
         likeMapper.insert(like);
 
         post.setLikeCount(post.getLikeCount() + 1);
@@ -90,15 +89,14 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
     }
 
     @Override
-    public void unlikePost(Long id, String ip) {
+    public void unlikePost(Long id, String userId) {
         ThPost post = getById(id);
         if (post == null) return;
 
-        // 删除点赞记录
         LambdaQueryWrapper<ThLike> wrapper = new LambdaQueryWrapper<ThLike>()
                 .eq(ThLike::getTargetType, "POST")
                 .eq(ThLike::getTargetId, id)
-                .eq(ThLike::getIp, ip);
+                .eq(ThLike::getIp, userId);
         ThLike like = likeMapper.selectOne(wrapper);
         if (like != null) {
             like.setDeleted(1);
@@ -109,11 +107,11 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
     }
 
     @Override
-    public boolean isLiked(Long id, String ip) {
+    public boolean isLiked(Long id, String userId) {
         return likeMapper.selectCount(new LambdaQueryWrapper<ThLike>()
                 .eq(ThLike::getTargetType, "POST")
                 .eq(ThLike::getTargetId, id)
-                .eq(ThLike::getIp, ip)
+                .eq(ThLike::getIp, userId)
                 .eq(ThLike::getDeleted, 0)) > 0;
     }
 
