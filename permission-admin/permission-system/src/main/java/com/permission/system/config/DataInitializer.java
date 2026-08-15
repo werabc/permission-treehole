@@ -89,6 +89,15 @@ public class DataInitializer implements CommandLineRunner {
         createMenu(menuLog, "登录日志", "MENU", "/log/login", null, "Key", "system:log:list", 2);
 
         createMenu(menuSys, "在线用户", "MENU", "/system/online", null, "Monitor", "admin", 6);
+
+        // 7. 树洞管理菜单
+        Long menuTreehole = createMenu(menuSys, "树洞管理", "CATALOG", "/admin/treehole", null, "ChatLineRound", null, 7);
+        createMenu(menuTreehole, "帖子管理", "MENU", "/admin/treehole/post", null, "Document", "admin", 1);
+        createMenu(menuTreehole, "评论管理", "MENU", "/admin/treehole/comment", null, "ChatDotRound", "admin", 2);
+        createMenu(menuTreehole, "举报管理", "MENU", "/admin/treehole/report", null, "Warning", "admin", 3);
+        createMenu(menuTreehole, "分类管理", "MENU", "/admin/treehole/category", null, "Files", "admin", 4);
+        createMenu(menuTreehole, "数据统计", "MENU", "/admin/treehole/statistics", null, "DataAnalysis", "admin", 5);
+
         log.info("菜单数据初始化完成");
 
         // 5. 分配用户角色

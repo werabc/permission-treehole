@@ -21,6 +21,8 @@ public class ThReport {
 
     private String description;
 
+    private String handleResult;
+
     /** 0-待处理 1-已处理 2-驳回 */
     private Integer status;
 
