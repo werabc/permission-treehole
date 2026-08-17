@@ -5,14 +5,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.permission.common.entity.ThCategory;
-import com.permission.common.entity.ThLike;
-import com.permission.common.entity.ThPost;
-import com.permission.common.entity.ThUser;
+import com.permission.common.entity.*;
 import com.permission.common.exception.BusinessException;
 import com.permission.common.ResultCode;
 import com.permission.system.mapper.ThCategoryMapper;
 import com.permission.system.mapper.ThLikeMapper;
+import com.permission.system.mapper.ThNotificationMapper;
 import com.permission.system.mapper.ThPostMapper;
 import com.permission.system.mapper.ThUserMapper;
 import com.permission.system.service.ThPostService;
@@ -29,6 +27,7 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
     private final ThCategoryMapper categoryMapper;
     private final ThUserMapper userMapper;
     private final ThLikeMapper likeMapper;
+    private final ThNotificationMapper notificationMapper;
 
     @Override
     public IPage<ThPost> pagePosts(long pageNum, long pageSize, Long categoryId, String keyword, Integer status) {
@@ -98,6 +97,22 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
         likeMapper.insert(like);
 
         postMapper.incrementLikeCount(id);
+
+        // 创建通知（如果不是点赞自己的帖子）
+        if (post.getUserId() != null && !post.getUserId().equals(userId)) {
+            ThNotification notification = new ThNotification();
+            notification.setUserId(post.getUserId());
+            notification.setSenderId(userId);
+            notification.setType("LIKE");
+            notification.setTargetType("POST");
+            notification.setTargetId(id);
+
+            ThUser liker = userMapper.selectById(userId);
+            String likerName = liker != null ? liker.getNickname() : "有人";
+            notification.setContent(likerName + " 点赞了你的帖子");
+            notification.setIsRead(0);
+            notificationMapper.insert(notification);
+        }
     }
 
     @Override

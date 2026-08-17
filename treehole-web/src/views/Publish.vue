@@ -8,7 +8,9 @@
         <label>分类</label>
         <select v-model="form.categoryId" class="select">
           <option :value="undefined">选择分类</option>
-          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+          <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+            {{ cat.icon }} {{ cat.name }}
+          </option>
         </select>
       </div>
 
@@ -19,9 +21,31 @@
           class="textarea"
           placeholder="写下你想说的话..."
           maxlength="5000"
-          rows="6"
+          rows="8"
         ></textarea>
         <span class="char-count">{{ form.content.length }}/5000</span>
+      </div>
+
+      <div class="form-group">
+        <label>发布方式</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" v-model="form.isAnonymous" :value="0" />
+            <span>实名发布（显示昵称）</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" v-model="form.isAnonymous" :value="1" />
+            <span>匿名发布（不显示身份）</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="notice">
+        <el-alert type="info" :closable="false" show-icon>
+          <template #title>
+            发布的内容需要审核通过后才会显示在列表中
+          </template>
+        </el-alert>
       </div>
 
       <div class="actions">
@@ -37,6 +61,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage, ElAlert } from 'element-plus'
 import { createPost, getCategoryList } from '../api/treehole'
 import type { Category } from '../api/treehole'
 
@@ -47,25 +72,34 @@ const submitting = ref(false)
 const form = reactive({
   content: '',
   categoryId: undefined as number | undefined,
+  isAnonymous: 1, // 默认匿名
 })
 
 async function loadCategories() {
-  const res = await getCategoryList()
-  categories.value = res.data
+  try {
+    const res = await getCategoryList()
+    categories.value = res.data
+  } catch (e) {
+    console.error('加载分类失败:', e)
+  }
 }
 
 async function handleSubmit() {
   if (!form.content.trim()) {
-    alert('请输入内容')
+    ElMessage.warning('请输入内容')
     return
   }
   submitting.value = true
   try {
-    const res = await createPost({ content: form.content, categoryId: form.categoryId })
-    alert('发布成功！')
+    const res = await createPost({
+      content: form.content,
+      categoryId: form.categoryId,
+      isAnonymous: form.isAnonymous,
+    })
+    ElMessage.success('发布成功！等待审核')
     router.push(`/post/${res.data}`)
   } catch (e: any) {
-    alert(e.message || '发布失败')
+    ElMessage.error(e.message || '发布失败')
   } finally {
     submitting.value = false
   }
@@ -130,10 +164,12 @@ onMounted(loadCategories)
   line-height: 1.6;
   resize: vertical;
   transition: border-color 0.2s;
+  font-family: inherit;
 }
 
 .textarea:focus {
   border-color: #3b82f6;
+  outline: none;
 }
 
 .char-count {
@@ -142,6 +178,28 @@ onMounted(loadCategories)
   font-size: 12px;
   color: #94a3b8;
   margin-top: 4px;
+}
+
+.radio-group {
+  display: flex;
+  gap: 24px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"] {
+  accent-color: #3b82f6;
+}
+
+.notice {
+  margin: 16px 0;
 }
 
 .actions {

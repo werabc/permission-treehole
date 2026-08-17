@@ -86,7 +86,7 @@ async function handleLogin() {
   try {
     await userStore.loginAction(loginForm)
     ElMessage.success('登录成功')
-    router.push('/')
+    window.location.hash = '/dashboard'
   } catch {
     refreshCaptcha()
   } finally {

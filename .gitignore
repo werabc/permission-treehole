@@ -69,6 +69,22 @@ redis_data/
 test-results/
 coverage/
 
+# ===== Test scripts =====
+test-*.js
+debug-*.js
+stress-*.js
+browser-*.js
+admin-*.js
+check-*.sh
+create-*.sh
+force-*.sh
+final-*.sh
+server-*.sh
+fast-*.sh
+full-*.sh
+frontend-*.sh
+debug-*.png
+
 # ===== Claude =====
 .claude/
 

@@ -6,6 +6,7 @@ import com.permission.common.entity.*;
 import com.permission.common.enums.UserStatus;
 import com.permission.framework.security.CustomUserDetailsService;
 import com.permission.system.mapper.*;
+import com.permission.common.entity.ThUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,6 +27,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, CustomUserDet
     private final SysMenuMapper menuMapper;
     private final SysDeptMapper deptMapper;
     private final SysUserRoleMapper userRoleMapper;
+    private final ThUserMapper thUserMapper;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -46,11 +48,28 @@ public class UserDetailsServiceImpl implements UserDetailsService, CustomUserDet
 
     @Override
     public LoginUser loadUserById(Long userId) {
-        SysUser user = userMapper.selectById(userId);
-        if (user == null) {
-            return null;
+        // 先查管理员表
+        SysUser sysUser = userMapper.selectById(userId);
+        if (sysUser != null) {
+            return buildLoginUser(sysUser);
         }
-        return buildLoginUser(user);
+        // 再查树洞用户表
+        ThUser thUser = thUserMapper.selectById(userId);
+        if (thUser != null) {
+            return buildTreeholeLoginUser(thUser);
+        }
+        return null;
+    }
+
+    private LoginUser buildTreeholeLoginUser(ThUser user) {
+        return LoginUser.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .nickname(user.getNickname() != null ? user.getNickname() : user.getUsername())
+                .permissions(new HashSet<>())
+                .roles(new HashSet<>())
+                .build();
     }
 
     private LoginUser buildLoginUser(SysUser user) {

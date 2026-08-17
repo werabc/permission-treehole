@@ -118,3 +118,126 @@ CREATE TABLE IF NOT EXISTS sys_login_log (
     INDEX idx_username (username),
     INDEX idx_login_time (login_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='登录日志表';
+
+-- =============================================
+-- 树洞模块
+-- =============================================
+
+CREATE TABLE IF NOT EXISTS th_user (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用户ID',
+    username        VARCHAR(50)  NOT NULL UNIQUE COMMENT '用户名',
+    password        VARCHAR(200) NOT NULL COMMENT '密码(BCrypt加密)',
+    nickname        VARCHAR(50)  DEFAULT NULL COMMENT '昵称',
+    avatar          VARCHAR(500) DEFAULT NULL COMMENT '头像URL',
+    bio             VARCHAR(500) DEFAULT NULL COMMENT '个人简介',
+    gender          TINYINT      DEFAULT 0 COMMENT '性别: 0-未知 1-男 2-女',
+    email           VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
+    status          TINYINT      NOT NULL DEFAULT 1 COMMENT '状态: 0-封禁 1-正常',
+    mute_until      DATETIME     DEFAULT NULL COMMENT '禁言截止时间',
+    ban_until       DATETIME     DEFAULT NULL COMMENT '封号截止时间',
+    post_count      INT          NOT NULL DEFAULT 0 COMMENT '发帖数',
+    comment_count   INT          NOT NULL DEFAULT 0 COMMENT '评论数',
+    violation_count INT          NOT NULL DEFAULT 0 COMMENT '违规次数',
+    last_post_time  DATETIME     DEFAULT NULL COMMENT '最后发帖时间',
+    last_login_ip   VARCHAR(50)  DEFAULT NULL COMMENT '最后登录IP',
+    create_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_username (username),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞用户表';
+
+CREATE TABLE IF NOT EXISTS th_category (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '分类ID',
+    name        VARCHAR(50)  NOT NULL COMMENT '分类名称',
+    code        VARCHAR(50)  NOT NULL UNIQUE COMMENT '分类编码',
+    icon        VARCHAR(100) DEFAULT NULL COMMENT '图标',
+    description VARCHAR(200) DEFAULT NULL COMMENT '描述',
+    sort        INT          NOT NULL DEFAULT 0 COMMENT '排序',
+    status      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态: 0-禁用 1-启用',
+    post_count  INT          NOT NULL DEFAULT 0 COMMENT '帖子数',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_code (code),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞分类表';
+
+CREATE TABLE IF NOT EXISTS th_post (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '帖子ID',
+    user_id       BIGINT       NOT NULL COMMENT '用户ID',
+    category_id   BIGINT       DEFAULT NULL COMMENT '分类ID',
+    title         VARCHAR(200) DEFAULT NULL COMMENT '标题',
+    content       TEXT         NOT NULL COMMENT '内容',
+    images        JSON         DEFAULT NULL COMMENT '图片列表',
+    is_anonymous  TINYINT      NOT NULL DEFAULT 0 COMMENT '是否匿名: 0-否 1-是',
+    is_top        TINYINT      NOT NULL DEFAULT 0 COMMENT '是否置顶: 0-否 1-是',
+    status        TINYINT      NOT NULL DEFAULT 0 COMMENT '状态: 0-待审核 1-已通过 2-已拒绝',
+    view_count    INT          NOT NULL DEFAULT 0 COMMENT '浏览数',
+    like_count    INT          NOT NULL DEFAULT 0 COMMENT '点赞数',
+    comment_count INT          NOT NULL DEFAULT 0 COMMENT '评论数',
+    report_count  INT          NOT NULL DEFAULT 0 COMMENT '举报数',
+    ip            VARCHAR(50)  DEFAULT NULL COMMENT '发布IP',
+    audit_remark  VARCHAR(500) DEFAULT NULL COMMENT '审核备注',
+    auditor_id    BIGINT       DEFAULT NULL COMMENT '审核人ID',
+    audit_time    DATETIME     DEFAULT NULL COMMENT '审核时间',
+    create_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted       TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_user_id (user_id),
+    INDEX idx_category_id (category_id),
+    INDEX idx_status (status),
+    INDEX idx_create_time (create_time),
+    INDEX idx_is_top (is_top)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞帖子表';
+
+CREATE TABLE IF NOT EXISTS th_comment (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '评论ID',
+    post_id      BIGINT       NOT NULL COMMENT '帖子ID',
+    user_id      BIGINT       NOT NULL COMMENT '用户ID',
+    parent_id    BIGINT       DEFAULT NULL COMMENT '父评论ID(回复)',
+    reply_user_id BIGINT      DEFAULT NULL COMMENT '被回复人ID',
+    content      TEXT         NOT NULL COMMENT '内容',
+    is_anonymous TINYINT      NOT NULL DEFAULT 0 COMMENT '是否匿名',
+    like_count   INT          NOT NULL DEFAULT 0 COMMENT '点赞数',
+    status       TINYINT      NOT NULL DEFAULT 1 COMMENT '状态: 0-待审核 1-已通过 2-已拒绝',
+    ip           VARCHAR(50)  DEFAULT NULL COMMENT '发布IP',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted      TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_post_id (post_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_parent_id (parent_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞评论表';
+
+CREATE TABLE IF NOT EXISTS th_like (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '点赞ID',
+    user_id     BIGINT       NOT NULL COMMENT '用户ID',
+    target_type VARCHAR(20)  NOT NULL COMMENT '目标类型: POST-帖子 COMMENT-评论',
+    target_id   BIGINT       NOT NULL COMMENT '目标ID',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    UNIQUE KEY uk_user_target (user_id, target_type, target_id, deleted),
+    INDEX idx_target (target_type, target_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞点赞表';
+
+CREATE TABLE IF NOT EXISTS th_report (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '举报ID',
+    reporter_id     BIGINT       NOT NULL COMMENT '举报人ID',
+    target_type     VARCHAR(20)  NOT NULL COMMENT '目标类型: POST-帖子 COMMENT-评论',
+    target_id       BIGINT       NOT NULL COMMENT '目标ID',
+    reason          VARCHAR(100) NOT NULL COMMENT '举报原因',
+    description     TEXT         DEFAULT NULL COMMENT '举报描述',
+    evidence_images JSON         DEFAULT NULL COMMENT '证据图片',
+    status          TINYINT      NOT NULL DEFAULT 0 COMMENT '状态: 0-待处理 1-已处理-成立 2-已处理-不成立',
+    handle_result   VARCHAR(500) DEFAULT NULL COMMENT '处理结果',
+    handler_id      BIGINT       DEFAULT NULL COMMENT '处理人ID',
+    handle_time     DATETIME     DEFAULT NULL COMMENT '处理时间',
+    create_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_target (target_type, target_id),
+    INDEX idx_status (status),
+    INDEX idx_reporter (reporter_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞举报表';

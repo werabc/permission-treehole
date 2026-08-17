@@ -74,6 +74,9 @@ public class AuthController {
     @Operation(summary = "获取当前用户信息")
     @GetMapping("/user-info")
     public R<Map<String, Object>> userInfo(@AuthenticationPrincipal LoginUser loginUser) {
+        if (loginUser == null) {
+            return R.fail(401, "未登录");
+        }
         Map<String, Object> info = new HashMap<>();
         info.put("userId", loginUser.getUserId());
         info.put("username", loginUser.getUsername());

@@ -15,7 +15,7 @@ public interface SysMenuMapper extends BaseMapper<SysMenu> {
     @Select("SELECT * FROM sys_role_menu WHERE role_id = #{roleId}")
     List<SysRoleMenu> selectRoleMenusByRoleId(@Param("roleId") Long roleId);
 
-    @Select("SELECT m.* FROM sys_menu m " +
+    @Select("SELECT DISTINCT m.* FROM sys_menu m " +
             "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id " +
             "INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id " +
             "WHERE ur.user_id = #{userId} AND m.status = 1 AND m.deleted = 0 " +

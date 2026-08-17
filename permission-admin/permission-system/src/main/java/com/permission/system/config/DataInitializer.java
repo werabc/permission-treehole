@@ -13,6 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+// 树洞分类初始化
+import com.permission.common.entity.ThCategory;
+import com.permission.system.mapper.ThCategoryMapper;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -24,6 +28,7 @@ public class DataInitializer implements CommandLineRunner {
     private final SysDeptMapper deptMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMenuMapper roleMenuMapper;
+    private final ThCategoryMapper thCategoryMapper;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -92,11 +97,15 @@ public class DataInitializer implements CommandLineRunner {
 
         // 7. 树洞管理菜单
         Long menuTreehole = createMenu(menuSys, "树洞管理", "CATALOG", "/admin/treehole", null, "ChatLineRound", null, 7);
-        createMenu(menuTreehole, "帖子管理", "MENU", "/admin/treehole/post", null, "Document", "admin", 1);
-        createMenu(menuTreehole, "评论管理", "MENU", "/admin/treehole/comment", null, "ChatDotRound", "admin", 2);
-        createMenu(menuTreehole, "举报管理", "MENU", "/admin/treehole/report", null, "Warning", "admin", 3);
-        createMenu(menuTreehole, "分类管理", "MENU", "/admin/treehole/category", null, "Files", "admin", 4);
-        createMenu(menuTreehole, "数据统计", "MENU", "/admin/treehole/statistics", null, "DataAnalysis", "admin", 5);
+        createMenu(menuTreehole, "用户管理", "MENU", "/admin/th/user", null, "User", "admin", 1);
+        createMenu(menuTreehole, "内容审核", "MENU", "/admin/th/moderation", null, "View", "admin", 2);
+        createMenu(menuTreehole, "帖子管理", "MENU", "/admin/th/post", null, "Document", "admin", 3);
+        createMenu(menuTreehole, "评论管理", "MENU", "/admin/th/comment", null, "ChatDotRound", "admin", 4);
+        createMenu(menuTreehole, "举报管理", "MENU", "/admin/th/report", null, "Warning", "admin", 5);
+        createMenu(menuTreehole, "分类管理", "MENU", "/admin/th/category", null, "Files", "admin", 6);
+        createMenu(menuTreehole, "公告管理", "MENU", "/admin/th/announcement", null, "Bell", "admin", 7);
+        createMenu(menuTreehole, "数据分析", "MENU", "/admin/th/analytics", null, "DataAnalysis", "admin", 8);
+        createMenu(menuTreehole, "站点配置", "MENU", "/admin/th/settings", null, "Setting", "admin", 9);
 
         log.info("菜单数据初始化完成");
 
@@ -136,8 +145,41 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
 
+        // 8. 初始化树洞分类
+        initTreeholeCategories();
+
         log.info("========== 数据初始化完成 ==========");
         log.info("默认账号: admin, tech, backend (密码见 application.yml 或通过环境变量配置)");
+    }
+
+    /**
+     * 初始化树洞默认分类
+     */
+    private void initTreeholeCategories() {
+        if (thCategoryMapper.selectCount(new LambdaQueryWrapper<>()) > 0) {
+            log.info("树洞分类已初始化，跳过");
+            return;
+        }
+
+        createTreeholeCategory("情感树洞", "emotion", "💕", "分享内心情感故事", 1);
+        createTreeholeCategory("生活随笔", "life", "📝", "记录生活点滴", 2);
+        createTreeholeCategory("匿名吐槽", "rant", "💨", "安全匿名吐槽空间", 3);
+        createTreeholeCategory("求助问答", "help", "🙋", "提问与互助", 4);
+        createTreeholeCategory("趣味分享", "fun", "🎉", "有趣的内容分享", 5);
+
+        log.info("树洞分类数据初始化完成");
+    }
+
+    private void createTreeholeCategory(String name, String code, String icon, String description, int sort) {
+        ThCategory category = new ThCategory();
+        category.setName(name);
+        category.setCode(code);
+        category.setIcon(icon);
+        category.setDescription(description);
+        category.setSort(sort);
+        category.setStatus(1);
+        category.setPostCount(0);
+        thCategoryMapper.insert(category);
     }
 
     private SysDept createDept(String name, Long parentId, String ancestors, int sort, String leader) {

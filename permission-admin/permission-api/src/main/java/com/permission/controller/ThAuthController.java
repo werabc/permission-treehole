@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.permission.common.R;
 import com.permission.common.dto.LoginDTO;
 import com.permission.common.entity.ThUser;
+import com.permission.framework.security.JwtAuthenticationUtil;
 import com.permission.system.service.ThUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class ThAuthController {
 
     private final ThUserService userService;
+    private final JwtAuthenticationUtil jwtUtil;
 
     @Operation(summary = "注册")
     @PostMapping("/register")
@@ -40,7 +42,7 @@ public class ThAuthController {
     @Operation(summary = "获取当前用户信息")
     @GetMapping("/user-info")
     public R<Map<String, Object>> userInfo(HttpServletRequest request) {
-        Long userId = getUserId(request);
+        Long userId = jwtUtil.extractUserId(request);
         if (userId == null) return R.fail(401, "未登录");
 
         ThUser user = userService.getUserById(userId);
@@ -55,18 +57,5 @@ public class ThAuthController {
         info.put("postCount", user.getPostCount());
         info.put("commentCount", user.getCommentCount());
         return R.ok(info);
-    }
-
-    private Long getUserId(HttpServletRequest request) {
-        String header = request.getHeader("Authorization");
-        if (StrUtil.isBlank(header) || !header.startsWith("Bearer ")) return null;
-        String token = header.substring(7);
-        try {
-            return cn.hutool.json.JSONUtil.parseObj(
-                new String(java.util.Base64.getUrlDecoder().decode(token.split("\\.")[1]))
-            ).getLong("sub");
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

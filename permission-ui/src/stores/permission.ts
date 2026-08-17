@@ -5,15 +5,26 @@ import { addDynamicRoutes } from '@/router'
 import type { SysMenu } from '@/types'
 
 const componentMap: Record<string, () => Promise<any>> = {
+  // 系统管理
   '/system/user':              () => import('@/views/system/user/index.vue'),
   '/system/role':              () => import('@/views/system/role/index.vue'),
   '/system/menu':              () => import('@/views/system/menu/index.vue'),
   '/system/dept':              () => import('@/views/system/dept/index.vue'),
   '/system/online':            () => import('@/views/system/online/index.vue'),
-  '/log/operation':            () => import('@/views/log/operation/index.vue'),
-  '/log/login':                () => import('@/views/log/login/index.vue'),
-  '/admin/treehole/post':      () => import('@/views/treehole-admin/post/index.vue'),
-  '/admin/treehole/statistics': () => import('@/views/treehole-admin/statistics/index.vue'),
+  // 日志管理
+  '/system/logs/operation':    () => import('@/views/system/logs/operation.vue'),
+  '/system/logs/login':        () => import('@/views/system/logs/login.vue'),
+  // 树洞管理
+  '/admin/th/user':            () => import('@/views/th-admin/user/index.vue'),
+  '/admin/th/moderation':      () => import('@/views/th-admin/moderation/index.vue'),
+  '/admin/th/post':            () => import('@/views/th-admin/post/index.vue'),
+  '/admin/th/comment':         () => import('@/views/th-admin/comment/index.vue'),
+  '/admin/th/report':          () => import('@/views/th-admin/report/index.vue'),
+  '/admin/th/category':        () => import('@/views/th-admin/category/index.vue'),
+  '/admin/th/announcement':    () => import('@/views/th-admin/announcement/index.vue'),
+  '/admin/th/analytics':       () => import('@/views/th-admin/analytics/index.vue'),
+  '/admin/th/settings':        () => import('@/views/th-admin/settings/index.vue'),
+  // 仪表盘和个人中心
   '/dashboard':                () => import('@/views/dashboard/index.vue'),
   '/profile':                  () => import('@/views/profile/index.vue'),
 }
@@ -38,6 +49,9 @@ export const usePermissionStore = defineStore('permission', () => {
     return addRoutes.value
   }
 
+  /**
+   * 构建路由 - 使用绝对路径，子路由也使用绝对路径
+   */
   function buildRoutes(menus: SysMenu[]): any[] {
     const routes: any[] = []
     for (const menu of menus) {

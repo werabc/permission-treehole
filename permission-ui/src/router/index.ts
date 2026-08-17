@@ -46,11 +46,33 @@ const router = createRouter({
 
 let routesAdded = false
 
+/**
+ * 递归添加路由 - 将嵌套路由扁平化后全部添加到 Layout 下
+ */
+function addRoutesRecursively(route: RouteRecordRaw) {
+  // 添加当前路由（如果有组件）
+  if (route.component) {
+    router.addRoute('Layout', {
+      path: route.path,
+      name: route.name,
+      component: route.component,
+      meta: route.meta,
+      redirect: route.redirect,
+    })
+  }
+  // 递归添加子路由
+  if (route.children && route.children.length > 0) {
+    for (const child of route.children) {
+      addRoutesRecursively(child)
+    }
+  }
+}
+
 export function addDynamicRoutes(routes: RouteRecordRaw[]) {
   if (routesAdded) return
   routesAdded = true
   for (const route of routes) {
-    router.addRoute('Layout', route)
+    addRoutesRecursively(route)
   }
 }
 
@@ -63,6 +85,7 @@ router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   const permissionStore = usePermissionStore()
   const token = localStorage.getItem('accessToken')
+  const refreshTokenVal = localStorage.getItem('refreshToken')
 
   // 设置页面标题
   document.title = (to.meta.title ? `${to.meta.title} - ` : '') + '权限管理系统'
@@ -88,25 +111,58 @@ router.beforeEach(async (to, from, next) => {
       }
       next({ ...to, replace: true })
       return
-    } catch {
+    } catch (e: any) {
       // 获取失败，尝试刷新 token
-      try {
-        const success = await userStore.refreshAction()
-        if (success) {
-          await userStore.fetchUserInfo()
-          if (!routesAdded) {
-            await permissionStore.generateRoutes()
+      if (refreshTokenVal) {
+        try {
+          const success = await userStore.refreshAction()
+          if (success) {
+            await userStore.fetchUserInfo()
+            if (!routesAdded) {
+              await permissionStore.generateRoutes()
+            }
+            next({ ...to, replace: true })
+            return
           }
-          next({ ...to, replace: true })
-          return
+        } catch {
+          // 刷新也失败
         }
-      } catch {
-        // 刷新也失败
       }
-      localStorage.clear()
+      // 清除所有登录信息并跳转登录
+      userStore.logoutAction()
       next('/login')
       return
     }
+  }
+
+  // 验证 token 是否过期（通过检查 token 的 payload）
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const exp = payload.exp * 1000 // 转换为毫秒
+    if (Date.now() >= exp) {
+      // Token 过期，尝试刷新
+      if (refreshTokenVal) {
+        try {
+          const success = await userStore.refreshAction()
+          if (success) {
+            await userStore.fetchUserInfo()
+            next({ ...to, replace: true })
+            return
+          }
+        } catch {
+          // 刷新失败
+        }
+      }
+      // 清除所有登录信息并跳转登录
+      userStore.logoutAction()
+      next('/login')
+      return
+    }
+  } catch {
+    // Token 格式无效，清除并跳转
+    userStore.logoutAction()
+    next('/login')
+    return
   }
 
   next()

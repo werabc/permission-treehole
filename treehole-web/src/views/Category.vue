@@ -13,36 +13,82 @@
     </div>
     <div v-if="loading" class="loading">加载中...</div>
     <div v-if="!loading && posts.length === 0" class="empty">该分类暂无内容</div>
+
+    <div v-if="hasMore" class="load-more">
+      <button class="th-btn th-btn-ghost" @click="loadMore">加载更多</button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getPostPage } from '../api/treehole'
-import type { Post } from '../api/treehole'
+import { getPostPage, getCategoryList } from '../api/treehole'
+import type { Post, Category } from '../api/treehole'
 
 const route = useRoute()
 const posts = ref<Post[]>([])
+const categories = ref<Category[]>([])
 const loading = ref(false)
+const pageNum = ref(1)
+const pageSize = 20
+const total = ref(0)
 const categoryName = ref('')
+const categoryId = ref<number | undefined>(undefined)
+const hasMore = ref(false)
 
-const categoryMap: Record<string, string> = {
-  emotion: '情感树洞',
-  life: '生活随笔',
-  rant: '匿名吐槽',
-  help: '求助问答',
-  fun: '趣味分享',
+async function loadCategories() {
+  try {
+    const res = await getCategoryList()
+    categories.value = res.data
+    resolveCategoryFromRoute()
+  } catch (e) {
+    console.error('加载分类失败:', e)
+  }
+}
+
+function resolveCategoryFromRoute() {
+  const code = route.params.code as string
+  const cat = categories.value.find(c => c.code === code)
+  if (cat) {
+    categoryId.value = cat.id
+    categoryName.value = cat.name
+  } else {
+    categoryName.value = code
+    categoryId.value = undefined
+  }
 }
 
 async function fetchPosts() {
   loading.value = true
+  pageNum.value = 1
   try {
-    const code = route.params.code as string
-    categoryName.value = categoryMap[code] || code
-    // 这里简化处理，实际应该通过分类ID查询
-    const res = await getPostPage({ pageNum: 1, pageSize: 50 })
+    const res = await getPostPage({
+      pageNum: 1,
+      pageSize: pageSize,
+      categoryId: categoryId.value,
+    })
     posts.value = res.data.records
+    total.value = res.data.total
+    hasMore.value = posts.value.length < total.value
+  } catch (e) {
+    console.error('加载帖子失败:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadMore() {
+  loading.value = true
+  pageNum.value++
+  try {
+    const res = await getPostPage({
+      pageNum: pageNum.value,
+      pageSize: pageSize,
+      categoryId: categoryId.value,
+    })
+    posts.value = [...posts.value, ...res.data.records]
+    hasMore.value = posts.value.length < total.value
   } finally {
     loading.value = false
   }
@@ -58,7 +104,15 @@ function formatTime(time: string) {
   return date.toLocaleDateString()
 }
 
-onMounted(fetchPosts)
+watch(() => route.params.code, () => {
+  resolveCategoryFromRoute()
+  fetchPosts()
+})
+
+onMounted(async () => {
+  await loadCategories()
+  await fetchPosts()
+})
 </script>
 
 <style scoped>
@@ -99,6 +153,8 @@ onMounted(fetchPosts)
   color: #334155;
   line-height: 1.6;
   margin-bottom: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .post-meta {
@@ -112,5 +168,10 @@ onMounted(fetchPosts)
   text-align: center;
   padding: 40px;
   color: #94a3b8;
+}
+
+.load-more {
+  text-align: center;
+  margin-top: 20px;
 }
 </style>

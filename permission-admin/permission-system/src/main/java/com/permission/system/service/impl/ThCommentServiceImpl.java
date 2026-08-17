@@ -5,14 +5,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.permission.common.entity.ThComment;
-import com.permission.common.entity.ThLike;
-import com.permission.common.entity.ThPost;
-import com.permission.common.entity.ThUser;
+import com.permission.common.entity.*;
 import com.permission.common.exception.BusinessException;
 import com.permission.common.ResultCode;
 import com.permission.system.mapper.ThCommentMapper;
 import com.permission.system.mapper.ThLikeMapper;
+import com.permission.system.mapper.ThNotificationMapper;
 import com.permission.system.mapper.ThPostMapper;
 import com.permission.system.mapper.ThUserMapper;
 import com.permission.system.service.ThCommentService;
@@ -27,6 +25,7 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
     private final ThPostMapper postMapper;
     private final ThUserMapper userMapper;
     private final ThLikeMapper likeMapper;
+    private final ThNotificationMapper notificationMapper;
 
     @Override
     public IPage<ThComment> pageComments(long pageNum, long pageSize, Long postId) {
@@ -45,6 +44,11 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
             } else {
                 ThUser user = userMapper.selectById(comment.getUserId());
                 comment.setAuthorName(user != null ? user.getNickname() : "未知用户");
+            }
+            // 填充被回复人名称
+            if (comment.getReplyUserId() != null) {
+                ThUser replyUser = userMapper.selectById(comment.getReplyUserId());
+                comment.setReplyUserName(replyUser != null ? replyUser.getNickname() : "未知用户");
             }
         }
 
@@ -70,6 +74,28 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
 
         // 更新帖子评论数
         postMapper.incrementCommentCount(comment.getPostId());
+
+        // 创建通知（如果评论的不是自己的帖子）
+        ThPost post = postMapper.selectById(comment.getPostId());
+        if (post != null && post.getUserId() != null && !post.getUserId().equals(comment.getUserId())) {
+            ThNotification notification = new ThNotification();
+            notification.setUserId(post.getUserId());
+            notification.setSenderId(comment.getUserId());
+            notification.setType("COMMENT");
+            notification.setTargetType("POST");
+            notification.setTargetId(comment.getPostId());
+
+            String commenterName = "匿名用户";
+            if (comment.getIsAnonymous() == 0) {
+                ThUser commenter = userMapper.selectById(comment.getUserId());
+                commenterName = commenter != null ? commenter.getNickname() : "有人";
+            }
+            String content = comment.getContent();
+            if (content.length() > 50) content = content.substring(0, 50) + "...";
+            notification.setContent(commenterName + " 评论了你的帖子: " + content);
+            notification.setIsRead(0);
+            notificationMapper.insert(notification);
+        }
     }
 
     @Override

@@ -1,16 +1,7 @@
 # =============================================
-# 权限管理系统 - Docker Compose 一键部署
-# 使用方式：docker compose up -d
-#
-# 已预配置：
-#   - JWT 密钥（自动生成）
-#   - MySQL / Redis 密码
-#   - 后端 prod profile（关 SQL 日志 + 关 Swagger）
+# 权限管理系统 - Docker Compose 部署
 # =============================================
-version: "3.8"
-
 services:
-  # ---------- MySQL 8.0 ----------
   mysql:
     image: mysql:8.0
     container_name: permission-mysql
@@ -25,7 +16,6 @@ services:
       - --default-authentication-plugin=mysql_native_password
     volumes:
       - mysql_data:/var/lib/mysql
-      # 首次启动自动建表（仅当数据目录为空时执行）
       - ./permission-admin/sql/create_tables.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "3306:3306"
@@ -38,7 +28,6 @@ services:
     networks:
       - permission-net
 
-  # ---------- Redis ----------
   redis:
     image: redis:7-alpine
     container_name: permission-redis
@@ -56,7 +45,6 @@ services:
     networks:
       - permission-net
 
-  # ---------- 后端 Spring Boot ----------
   backend:
     build:
       context: ./permission-admin
@@ -83,16 +71,28 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8081:8080"
     networks:
       - permission-net
 
-  # ---------- 前端 Nginx ----------
   frontend:
     build:
       context: ./permission-ui
       dockerfile: Dockerfile
     container_name: permission-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8082:80"
+    networks:
+      - permission-net
+
+  treehole-web:
+    build:
+      context: ./treehole-web
+      dockerfile: Dockerfile
+    container_name: treehole-web
     restart: unless-stopped
     depends_on:
       - backend

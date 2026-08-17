@@ -40,20 +40,26 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(SecurityConstants.LOGIN_URL, SecurityConstants.REFRESH_TOKEN_URL).permitAll()
+                // Dashboard 统计接口需要认证
+                .requestMatchers("/api/dashboard/**").authenticated()
                 // Swagger/Doc 文档公开
                 .requestMatchers("/doc.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                 // 认证接口公开
                 .requestMatchers("/api/auth/**").permitAll()
                 // 树洞公开接口
                 .requestMatchers("/api/th/category/list", "/api/th/post/page", "/api/th/post/{id}", "/api/th/comment/page", "/api/th/post/{id}/liked").permitAll()
-                // 树洞认证接口
+                // 树洞认证接口（登录/注册/用户信息）
                 .requestMatchers("/api/th/auth/**").permitAll()
-                // 树洞写操作需要认证
+                // 树洞写操作需要 JWT 认证（通过 JwtAuthenticationFilter 解析 token 中的 userId）
                 .requestMatchers("/api/th/post", "/api/th/comment").authenticated()
                 .requestMatchers("/api/th/post/{id}/like", "/api/th/comment/{id}/like").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/th/post/{id}/like").authenticated()
-                // 管理接口需要认证
-                .requestMatchers("/api/admin/**").authenticated()
+                // 个人中心需要认证
+                .requestMatchers("/api/th/user/**").authenticated()
+                // 举报需要认证
+                .requestMatchers("/api/th/report/**").authenticated()
+                // 管理接口需要 admin 权限
+                .requestMatchers("/api/admin/**").hasAuthority("admin")
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

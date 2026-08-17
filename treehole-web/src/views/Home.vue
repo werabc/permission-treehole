@@ -21,6 +21,7 @@
       <div v-for="post in posts" :key="post.id" class="post-card" @click="goDetail(post.id)">
         <div class="post-header">
           <span class="post-category th-tag th-tag-blue">{{ post.categoryName || '树洞' }}</span>
+          <span class="post-author-name">{{ post.authorName || '匿名' }}</span>
           <span class="post-time">{{ formatTime(post.createTime) }}</span>
         </div>
         <p class="post-content">{{ post.content }}</p>
@@ -169,6 +170,12 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+}
+
+.post-author-name {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .post-time {
