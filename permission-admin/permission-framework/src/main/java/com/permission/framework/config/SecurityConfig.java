@@ -47,7 +47,7 @@ public class SecurityConfig {
                 // 认证接口公开
                 .requestMatchers("/api/auth/**").permitAll()
                 // 树洞公开接口
-                .requestMatchers("/api/th/category/list", "/api/th/post/page", "/api/th/post/{id}", "/api/th/comment/page", "/api/th/post/{id}/liked").permitAll()
+                .requestMatchers("/api/th/category/list", "/api/th/post/page", "/api/th/post/{id}", "/api/th/comment/page", "/api/th/post/{id}/liked", "/api/th/announcements").permitAll()
                 // 树洞认证接口（登录/注册/用户信息）
                 .requestMatchers("/api/th/auth/**").permitAll()
                 // 树洞写操作需要 JWT 认证（通过 JwtAuthenticationFilter 解析 token 中的 userId）
