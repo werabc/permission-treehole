@@ -310,13 +310,16 @@ INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, icon, pe
 (7, 6, '操作日志', 'MENU', '/log/operation', 'Tickets', 'system:log:list', 1),
 (8, 6, '登录日志', 'MENU', '/log/login', 'Key', 'system:log:list', 2),
 (9, 1, '在线用户', 'MENU', '/system/online', 'Monitor', 'admin', 6),
-(10, 0, '树洞管理', 'CATALOG', '/admin/treehole', 'ChatLineRound', NULL, 2),
-(11, 10, '帖子管理', 'MENU', '/admin/treehole/post', 'Document', 'admin', 1),
-(12, 10, '评论管理', 'MENU', '/admin/treehole/comment', 'ChatDotRound', 'admin', 2),
-(13, 10, '举报管理', 'MENU', '/admin/treehole/report', 'Warning', 'admin', 3),
-(14, 10, '分类管理', 'MENU', '/admin/treehole/category', 'Files', 'admin', 4),
-(15, 10, '用户管理', 'MENU', '/admin/treehole/user', 'User', 'admin', 5),
-(16, 10, '数据统计', 'MENU', '/admin/treehole/statistics', 'DataAnalysis', 'admin', 6);
+(10, 0, '树洞管理', 'CATALOG', '/admin/th', 'ChatLineRound', NULL, 2),
+(11, 10, '用户管理', 'MENU', '/admin/th/user', 'User', 'admin', 1),
+(12, 10, '内容审核', 'MENU', '/admin/th/moderation', 'View', 'admin', 2),
+(13, 10, '帖子管理', 'MENU', '/admin/th/post', 'Document', 'admin', 3),
+(14, 10, '评论管理', 'MENU', '/admin/th/comment', 'ChatDotRound', 'admin', 4),
+(15, 10, '举报管理', 'MENU', '/admin/th/report', 'Warning', 'admin', 5),
+(16, 10, '分类管理', 'MENU', '/admin/th/category', 'Files', 'admin', 6),
+(17, 10, '公告管理', 'MENU', '/admin/th/announcement', 'Bell', 'admin', 7),
+(18, 10, '数据分析', 'MENU', '/admin/th/analytics', 'DataAnalysis', 'admin', 8),
+(19, 10, '站点配置', 'MENU', '/admin/th/settings', 'Setting', 'admin', 9);
 
 -- 授权管理员所有菜单
 INSERT IGNORE INTO sys_role_menu (role_id, menu_id) SELECT 1, id FROM sys_menu WHERE deleted = 0;

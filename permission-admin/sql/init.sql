@@ -437,8 +437,8 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon
 (25, 23, '登录日志',  'MENU',    '/log/login',   'log/login/index',  'Key',      'system:log:list',         2, 1, 1),
 -- 在线用户
 (26, 1,  '在线用户',  'MENU',    '/system/online', null,            'Monitor',  'admin',                 6, 1, 1),
--- 树洞管理
-(27, 1,  '树洞管理',  'CATALOG', '/admin/treehole', null,           'ChatLineRound', '',                7, 1, 1),
+-- 树洞管理 (顶级目录)
+(27, 0,  '树洞管理',  'CATALOG', '/admin/th', null,           'ChatLineRound', '',                7, 1, 1),
 (28, 27, '用户管理',  'MENU',    '/admin/th/user', null,            'User',     'admin',                 1, 1, 1),
 (29, 27, '内容审核',  'MENU',    '/admin/th/moderation', null,       'View',     'admin',                 2, 1, 1),
 (30, 27, '帖子管理',  'MENU',    '/admin/th/post', null,            'Document', 'admin',                 3, 1, 1),

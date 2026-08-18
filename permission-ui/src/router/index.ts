@@ -30,13 +30,24 @@ const staticRoutes: RouteRecordRaw[] = [
       },
     ],
   },
-  {
+]
+
+/**
+ * 在动态路由全部加载完成后再添加 404 通配路由，
+ * 避免刷新时动态路由尚未注册就被通配路由匹配到 NotFound 页面。
+ */
+let notFoundRouteAdded = false
+
+export function addNotFoundRoute() {
+  if (notFoundRouteAdded) return
+  notFoundRouteAdded = true
+  router.addRoute({
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/layout/404.vue'),
     meta: { title: '404', noAuth: true },
-  },
-]
+  })
+}
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -77,6 +88,8 @@ export function addDynamicRoutes(routes: RouteRecordRaw[]) {
   for (const route of routes) {
     addRoutesRecursively(route)
   }
+  // 动态路由全部注册后再添加 404 通配路由，防止刷新时闪烁 404
+  addNotFoundRoute()
 }
 
 export function resetDynamicRoutes() {
