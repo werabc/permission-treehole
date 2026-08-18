@@ -137,9 +137,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
             loginLogService.recordLoginLog(loginUser.getUsername(), clientIp, 1, "登录成功");
 
-            // 记录在线状态
-            onlineUserService.userOnline(loginUser.getUserId(), loginUser.getUsername(),
-                    loginUser.getNickname(), clientIp);
+            // 注：管理员登录不记录在线状态，在线用户仅统计树洞端（ThUserServiceImpl 中记录）
 
             return TokenVO.builder()
                     .accessToken(accessToken)

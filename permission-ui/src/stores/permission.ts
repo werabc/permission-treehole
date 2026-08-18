@@ -10,7 +10,6 @@ const componentMap: Record<string, () => Promise<any>> = {
   '/system/role':              () => import('@/views/system/role/index.vue'),
   '/system/menu':              () => import('@/views/system/menu/index.vue'),
   '/system/dept':              () => import('@/views/system/dept/index.vue'),
-  '/system/online':            () => import('@/views/system/online/index.vue'),
   // 日志管理 (路径与数据库 sys_menu 表一致)
   '/log/operation':            () => import('@/views/system/logs/operation.vue'),
   '/log/login':                () => import('@/views/system/logs/login.vue'),
@@ -20,10 +19,12 @@ const componentMap: Record<string, () => Promise<any>> = {
   '/admin/th/post':            () => import('@/views/th-admin/post/index.vue'),
   '/admin/th/comment':         () => import('@/views/th-admin/comment/index.vue'),
   '/admin/th/report':          () => import('@/views/th-admin/report/index.vue'),
+  '/admin/th/online':          () => import('@/views/th-admin/online/index.vue'),
   '/admin/th/category':        () => import('@/views/th-admin/category/index.vue'),
   '/admin/th/announcement':    () => import('@/views/th-admin/announcement/index.vue'),
   '/admin/th/analytics':       () => import('@/views/th-admin/analytics/index.vue'),
   '/admin/th/settings':        () => import('@/views/th-admin/settings/index.vue'),
+  '/admin/th/logs':            () => import('@/views/th-admin/logs/index.vue'),
   // 仪表盘和个人中心
   '/dashboard':                () => import('@/views/dashboard/index.vue'),
   '/profile':                  () => import('@/views/profile/index.vue'),

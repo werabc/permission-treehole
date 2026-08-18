@@ -435,8 +435,6 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon
 (23, 1,  '日志管理',  'CATALOG', '/log',         '',                 'Document', '',                     5, 1, 1),
 (24, 23, '操作日志',  'MENU',    '/log/operation','log/operation/index','Tickets','system:log:list',       1, 1, 1),
 (25, 23, '登录日志',  'MENU',    '/log/login',   'log/login/index',  'Key',      'system:log:list',         2, 1, 1),
--- 在线用户
-(26, 1,  '在线用户',  'MENU',    '/system/online', null,            'Monitor',  'admin',                 6, 1, 1),
 -- 树洞管理 (顶级目录)
 (27, 0,  '树洞管理',  'CATALOG', '/admin/th', null,           'ChatLineRound', '',                7, 1, 1),
 (28, 27, '用户管理',  'MENU',    '/admin/th/user', null,            'User',     'admin',                 1, 1, 1),
@@ -444,10 +442,12 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon
 (30, 27, '帖子管理',  'MENU',    '/admin/th/post', null,            'Document', 'admin',                 3, 1, 1),
 (31, 27, '评论管理',  'MENU',    '/admin/th/comment', null,          'ChatDotRound', 'admin',             4, 1, 1),
 (32, 27, '举报管理',  'MENU',    '/admin/th/report', null,           'Warning',  'admin',                 5, 1, 1),
-(33, 27, '分类管理',  'MENU',    '/admin/th/category', null,         'Files',    'admin',                 6, 1, 1),
-(34, 27, '公告管理',  'MENU',    '/admin/th/announcement', null,     'Bell',     'admin',                 7, 1, 1),
-(35, 27, '数据分析',  'MENU',    '/admin/th/analytics', null,        'DataAnalysis', 'admin',             8, 1, 1),
-(36, 27, '站点配置',  'MENU',    '/admin/th/settings', null,         'Setting',  'admin',                 9, 1, 1),
+(26, 27, '在线用户',  'MENU',    '/admin/th/online', null,            'Monitor',  'admin',                 6, 1, 1),
+(33, 27, '分类管理',  'MENU',    '/admin/th/category', null,         'Files',    'admin',                 7, 1, 1),
+(34, 27, '公告管理',  'MENU',    '/admin/th/announcement', null,     'Bell',     'admin',                 8, 1, 1),
+(35, 27, '数据分析',  'MENU',    '/admin/th/analytics', null,        'DataAnalysis', 'admin',             9, 1, 1),
+(36, 27, '站点配置',  'MENU',    '/admin/th/settings', null,         'Setting',  'admin',                 10, 1, 1),
+(39, 27, '操作日志',  'MENU',    '/admin/th/logs', null,            'Document',  'admin',                11, 1, 1),
 -- 仪表盘
 (37, 0,  '首页',      'MENU',    '/dashboard',   null,               'HomeFilled','',                    0, 1, 1),
 -- 个人信息
