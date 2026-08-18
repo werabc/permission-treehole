@@ -4,12 +4,14 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.permission.common.constant.SecurityConstants;
 import com.permission.common.dto.LoginDTO;
 import com.permission.common.entity.*;
 import com.permission.common.exception.BusinessException;
 import com.permission.common.ResultCode;
 import com.permission.framework.security.JwtTokenProvider;
 import com.permission.system.mapper.*;
+import com.permission.system.service.OnlineUserService;
 import com.permission.system.service.ThUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final OnlineUserService onlineUserService;
 
     // 最大分页大小限制
     private static final long MAX_PAGE_SIZE = 100;
@@ -94,13 +97,16 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         String token = jwtTokenProvider.createAccessToken(user.getId(), user.getUsername(), claims);
 
         // 缓存到 Redis
-        redisTemplate.opsForValue().set("token:" + token, user.getId(), 7200, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(SecurityConstants.TOKEN_CACHE_PREFIX + token, user.getId(), 7200, TimeUnit.SECONDS);
+
+        // 记录在线状态
+        onlineUserService.userOnline(user.getId(), user.getUsername(), user.getNickname(), "treehole-client");
 
         Map<String, String> result = new HashMap<>();
         result.put("token", token);
         result.put("nickname", user.getNickname());
 
-        log.info("User logged in: {}", user.getUsername());
+        log.info("Treehole user logged in: {}", user.getUsername());
         return result;
     }
 

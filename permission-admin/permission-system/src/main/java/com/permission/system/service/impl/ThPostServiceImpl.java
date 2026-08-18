@@ -79,7 +79,7 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
                 throw new BusinessException(ResultCode.BAD_REQUEST, "分类不存在");
             }
         }
-        post.setStatus(0); // 待审核
+        post.setStatus(1); // 默认审核通过（可手动打回）
         post.setViewCount(0);
         post.setLikeCount(0);
         post.setCommentCount(0);

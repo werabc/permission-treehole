@@ -11,9 +11,9 @@ const componentMap: Record<string, () => Promise<any>> = {
   '/system/menu':              () => import('@/views/system/menu/index.vue'),
   '/system/dept':              () => import('@/views/system/dept/index.vue'),
   '/system/online':            () => import('@/views/system/online/index.vue'),
-  // 日志管理
-  '/system/logs/operation':    () => import('@/views/system/logs/operation.vue'),
-  '/system/logs/login':        () => import('@/views/system/logs/login.vue'),
+  // 日志管理 (路径与数据库 sys_menu 表一致)
+  '/log/operation':            () => import('@/views/system/logs/operation.vue'),
+  '/log/login':                () => import('@/views/system/logs/login.vue'),
   // 树洞管理
   '/admin/th/user':            () => import('@/views/th-admin/user/index.vue'),
   '/admin/th/moderation':      () => import('@/views/th-admin/moderation/index.vue'),
