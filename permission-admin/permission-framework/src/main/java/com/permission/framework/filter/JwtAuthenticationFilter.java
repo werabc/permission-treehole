@@ -50,7 +50,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // Parse once and reuse Claims
                     io.jsonwebtoken.Claims claims = jwtTokenProvider.parseToken(token);
                     Long userId = Long.valueOf(claims.getSubject());
-                    LoginUser loginUser = userDetailsService.loadUserById(userId);
+
+                    // 根据请求路径判断用户类型：树洞端(/api/th/*) 和管理端
+                    String uri = request.getRequestURI();
+                    boolean isTreehole = uri.startsWith("/api/th/");
+                    LoginUser loginUser = userDetailsService.loadUserById(userId, isTreehole);
 
                     if (loginUser != null) {
                         UsernamePasswordAuthenticationToken authentication =

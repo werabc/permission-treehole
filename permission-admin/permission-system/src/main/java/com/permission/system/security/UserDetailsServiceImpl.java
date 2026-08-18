@@ -48,17 +48,27 @@ public class UserDetailsServiceImpl implements UserDetailsService, CustomUserDet
 
     @Override
     public LoginUser loadUserById(Long userId) {
-        // 先查管理员表
-        SysUser sysUser = userMapper.selectById(userId);
-        if (sysUser != null) {
-            return buildLoginUser(sysUser);
+        // 默认按管理员加载（兼容旧调用）
+        return loadUserById(userId, false);
+    }
+
+    @Override
+    public LoginUser loadUserById(Long userId, boolean isTreehole) {
+        if (isTreehole) {
+            // 树洞端：只查树洞用户表
+            ThUser thUser = thUserMapper.selectById(userId);
+            if (thUser != null) {
+                return buildTreeholeLoginUser(thUser);
+            }
+            return null;
+        } else {
+            // 管理端：只查管理员表
+            SysUser sysUser = userMapper.selectById(userId);
+            if (sysUser != null) {
+                return buildLoginUser(sysUser);
+            }
+            return null;
         }
-        // 再查树洞用户表
-        ThUser thUser = thUserMapper.selectById(userId);
-        if (thUser != null) {
-            return buildTreeholeLoginUser(thUser);
-        }
-        return null;
     }
 
     private LoginUser buildTreeholeLoginUser(ThUser user) {
