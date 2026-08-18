@@ -216,7 +216,8 @@ function renderPostStatusChart() {
 function renderCategoryChart(data: any) {
   if (!categoryRef.value) return
   categoryChart = echarts.init(categoryRef.value)
-  const categories = data?.categories || []
+  // 后端返回的是数组 [{name, postCount}]
+  const categories = Array.isArray(data) ? data : (data?.categories || [])
   categoryChart.setOption({
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
     legend: { bottom: '0%', left: 'center' },
@@ -225,7 +226,7 @@ function renderCategoryChart(data: any) {
       avoidLabelOverlap: false,
       itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
       label: { show: true, formatter: '{b}: {c}' },
-      data: categories.map((c: any) => ({ value: c.count, name: c.name })),
+      data: categories.map((c: any) => ({ value: c.postCount || c.count || 0, name: c.name })),
     }],
   })
 }

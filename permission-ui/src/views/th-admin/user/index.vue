@@ -199,9 +199,7 @@ const commentsPage = reactive({ pageNum: 1, pageSize: 10, total: 0 })
 const queryParams = reactive({ pageNum: 1, pageSize: 10, keyword: '', status: undefined as number | undefined, sortField: '', sortOrder: '' })
 
 function handleDateChange(val: [string, string] | null) {
-  if (val) {
-    queryParams.keyword = queryParams.keyword
-  }
+  // 后端暂不支持日期范围过滤，仅刷新列表
   fetchData()
 }
 
@@ -238,10 +236,7 @@ async function viewDetail(row: any) {
   detailVisible.value = true
   fetchUserPosts()
   fetchUserComments()
-  userViolations.value = [
-    { id: 1, type: 'mute', reason: '发布不当内容，禁言24小时', createTime: '2024-01-15 10:30:00' },
-    { id: 2, type: 'ban', reason: '多次违规，封号7天', createTime: '2024-01-10 14:20:00' },
-  ]
+  userViolations.value = [] // 违规记录暂无独立API，待后续实现
 }
 
 async function fetchUserPosts() {

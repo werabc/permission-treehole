@@ -120,18 +120,28 @@
       </el-col>
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header><span class="card-header">系统健康</span></template>
+          <template #header><span class="card-header">树洞在线</span></template>
           <div class="health-list">
-            <div v-for="item in healthItems" :key="item.name" class="health-item">
+            <div class="health-item">
               <div class="health-info">
-                <el-icon :size="16" :color="item.status === 'good' ? '#67c23a' : item.status === 'warning' ? '#e6a23c' : '#f56c6c'">
-                  <CircleCheck v-if="item.status === 'good'" />
-                  <Warning v-else-if="item.status === 'warning'" />
-                  <CircleClose v-else />
-                </el-icon>
-                <span class="health-name">{{ item.name }}</span>
+                <el-icon :size="16" color="#67c23a"><UserFilled /></el-icon>
+                <span class="health-name">在线用户</span>
               </div>
-              <span class="health-value">{{ item.value }}</span>
+              <span class="health-value">{{ onlineCount }} 人</span>
+            </div>
+            <div class="health-item">
+              <div class="health-info">
+                <el-icon :size="16" color="#409eff"><ChatDotRound /></el-icon>
+                <span class="health-name">待审核帖子</span>
+              </div>
+              <span class="health-value">{{ pendingPosts }} 篇</span>
+            </div>
+            <div class="health-item">
+              <div class="health-info">
+                <el-icon :size="16" color="#e6a23c"><Flag /></el-icon>
+                <span class="health-name">待处理举报</span>
+              </div>
+              <span class="health-value">{{ pendingReports }} 条</span>
             </div>
           </div>
         </el-card>
@@ -173,6 +183,7 @@ import { useUserStore } from '@/stores/user'
 import { getDashboardStatistics } from '@/api/dashboard'
 import { getThAnalyticsOverview, getThAnalyticsTrends } from '@/api/treehole-admin'
 import { getLoginLogPage } from '@/api/log'
+import { getOnlineCount } from '@/api/online'
 
 const userStore = useUserStore()
 const trendChartRef = ref<HTMLElement>()
@@ -187,6 +198,7 @@ const pendingReports = ref(0)
 const userTrend = ref(0)
 const postTrend = ref(0)
 const commentTrend = ref(0)
+const onlineCount = ref(0)
 
 const stats = reactive({
   overview: { userCount: 0, roleCount: 0, menuCount: 0, deptCount: 0 },
@@ -261,9 +273,22 @@ async function fetchLoginStats() {
   try {
     const res = await getLoginLogPage({ pageNum: 1, pageSize: 1 })
     totalLogins.value = res.data?.total ?? 0
-    todayLogins.value = Math.floor(totalLogins.value * 0.3) // 模拟今日数据
+    // 从趋势数据中获取今日登录数（不再模拟）
+    const trendRes = await getThAnalyticsTrends(1)
+    if (trendRes.data?.loginTrend && trendRes.data.loginTrend.length > 0) {
+      todayLogins.value = trendRes.data.loginTrend[trendRes.data.loginTrend.length - 1] || 0
+    }
   } catch (e) {
     console.error('Failed to fetch login stats:', e)
+  }
+}
+
+async function fetchOnlineCount() {
+  try {
+    const res = await getOnlineCount()
+    onlineCount.value = res.data || 0
+  } catch (e) {
+    console.error('Failed to fetch online count:', e)
   }
 }
 
@@ -344,9 +369,9 @@ function renderPostStatusChart() {
       itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
       label: { show: true, formatter: '{b}: {c}' },
       data: [
-        { value: 0, name: '已通过', itemStyle: { color: '#67c23a' } },
-        { value: 0, name: '待审核', itemStyle: { color: '#e6a23c' } },
-        { value: 0, name: '已拒绝', itemStyle: { color: '#f56c6c' } },
+        { value: overview.postStatus?.approved || 0, name: '已通过', itemStyle: { color: '#67c23a' } },
+        { value: overview.postStatus?.pending || 0, name: '待审核', itemStyle: { color: '#e6a23c' } },
+        { value: overview.postStatus?.rejected || 0, name: '已拒绝', itemStyle: { color: '#f56c6c' } },
       ],
     }],
   })
@@ -364,6 +389,7 @@ onMounted(() => {
   fetchAnalytics()
   fetchTrends()
   fetchLoginStats()
+  fetchOnlineCount()
   window.addEventListener('resize', handleResize)
 })
 

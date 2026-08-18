@@ -33,6 +33,7 @@ public class ThPublicController {
     private final ThReportService reportService;
     private final ThUserService userService;
     private final ThCategoryService categoryService;
+    private final com.permission.system.mapper.ThAnnouncementMapper announcementMapper;
 
     /**
      * 从认证主体中提取用户ID，若未登录则抛出401异常
@@ -52,6 +53,14 @@ public class ThPublicController {
     @GetMapping("/category/list")
     public R<List<ThCategory>> getCategoryList() {
         return R.ok(categoryService.listEnabled());
+    }
+
+    // ==================== 公告 ====================
+
+    @Operation(summary = "树洞公告列表（公开）")
+    @GetMapping("/announcements")
+    public R<List<ThAnnouncement>> getActiveAnnouncements() {
+        return R.ok(announcementMapper.selectActiveAnnouncements());
     }
 
     // ==================== 帖子 ====================

@@ -94,11 +94,11 @@ const selectedRows = ref<any[]>([])
 const keyword = ref('')
 const visibilityFilter = ref<number | undefined>(undefined)
 
-const queryParams = reactive({ pageNum: 1, pageSize: 10, postId: undefined as number | undefined })
+const queryParams = reactive({ pageNum: 1, pageSize: 10, postId: undefined as number | undefined, keyword: '' })
 
 function resetQuery() {
   queryParams.postId = undefined
-  keyword.value = ''
+  queryParams.keyword = ''
   visibilityFilter.value = undefined
   queryParams.pageNum = 1
   fetchData()
@@ -107,8 +107,14 @@ function resetQuery() {
 async function fetchData() {
   loading.value = true
   try {
-    const res = await getThCommentPage(queryParams)
-    tableData.value = res.data.records
+    const params = { ...queryParams }
+    // 可见性过滤：后端暂不支持，前端过滤
+    const res = await getThCommentPage(params)
+    let records = res.data.records
+    if (visibilityFilter.value !== undefined) {
+      records = records.filter((r: any) => r.hidden === visibilityFilter.value)
+    }
+    tableData.value = records
     total.value = res.data.total
   } finally { loading.value = false }
 }

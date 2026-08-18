@@ -99,10 +99,10 @@ const detailVisible = ref(false)
 const detail = ref<any>(null)
 const dateRange = ref<[string, string] | null>(null)
 const statusFilter = ref<number | undefined>(undefined)
-const todayLogins = ref(234)
-const successLogins = ref(228)
-const failLogins = ref(6)
-const uniqueUsers = ref(156)
+const todayLogins = ref(0)
+const successLogins = ref(0)
+const failLogins = ref(0)
+const uniqueUsers = ref(0)
 
 const queryParams = reactive({ pageNum: 1, pageSize: 10, keyword: '', startDate: '', endDate: '' })
 
@@ -131,13 +131,22 @@ async function fetchData() {
   loading.value = true
   try {
     const params = { ...queryParams }
-    if (statusFilter.value !== undefined) {
-      params.keyword = params.keyword
-    }
     const res = await getLoginLogPage(params)
     tableData.value = res.data.records
     total.value = res.data.total
+    // 从列表数据计算统计（不再硬编码）
+    successLogins.value = tableData.value.filter((r: any) => r.status === 1).length
+    failLogins.value = tableData.value.filter((r: any) => r.status === 0).length
+    uniqueUsers.value = new Set(tableData.value.map((r: any) => r.username)).size
   } finally { loading.value = false }
+}
+
+async function fetchTodayLogins() {
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    const res = await getLoginLogPage({ pageNum: 1, pageSize: 1, startDate: today, endDate: today })
+    todayLogins.value = res.data?.total ?? 0
+  } catch (e) { /* ignore */ }
 }
 
 function viewDetail(row: any) {
@@ -145,7 +154,7 @@ function viewDetail(row: any) {
   detailVisible.value = true
 }
 
-onMounted(fetchData)
+onMounted(() => { fetchData(); fetchTodayLogins() })
 </script>
 
 <style scoped>

@@ -31,9 +31,6 @@
           <el-button type="danger" :disabled="selectedPosts.length === 0" @click="batchAudit('posts', 2)">
             <el-icon><Close /></el-icon>批量拒绝
           </el-button>
-          <el-button type="warning" :disabled="selectedPosts.length === 0" @click="batchAudit('posts', 3)">
-            <el-icon><Delete /></el-icon>批量删除
-          </el-button>
           <span class="selected-count" v-if="selectedPosts.length > 0">已选择 {{ selectedPosts.length }} 项</span>
         </div>
         <el-table :data="postList" v-loading="loading" stripe border @selection-change="selectedPosts = $event.map((e: any) => e.id)">

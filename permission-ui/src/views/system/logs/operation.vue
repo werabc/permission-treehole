@@ -3,13 +3,10 @@
     <div class="search-bar">
       <el-input v-model="queryParams.keyword" placeholder="搜索操作/模块" clearable style="width: 200px" @keyup.enter="fetchData" @clear="fetchData" />
       <el-select v-model="queryParams.module" placeholder="操作模块" clearable style="width: 140px" @change="fetchData">
-        <el-option label="用户管理" value="USER" />
-        <el-option label="帖子管理" value="POST" />
-        <el-option label="评论管理" value="COMMENT" />
-        <el-option label="举报管理" value="REPORT" />
-        <el-option label="分类管理" value="CATEGORY" />
-        <el-option label="系统设置" value="SYSTEM" />
-        <el-option label="登录认证" value="AUTH" />
+        <el-option label="用户管理" value="用户管理" />
+        <el-option label="角色管理" value="角色管理" />
+        <el-option label="菜单管理" value="菜单管理" />
+        <el-option label="部门管理" value="部门管理" />
       </el-select>
       <el-select v-model="statusFilter" placeholder="状态" clearable style="width: 100px" @change="fetchData">
         <el-option label="全部" :value="undefined" />
@@ -145,18 +142,17 @@ const detailVisible = ref(false)
 const detail = ref<any>(null)
 const dateRange = ref<[string, string] | null>(null)
 const statusFilter = ref<number | undefined>(undefined)
-const todayCount = ref(156)
-const successRate = ref(98.5)
-const avgTime = ref(45)
-const activeOperators = ref(8)
+const todayCount = ref(0)
+const successRate = ref(0)
+const avgTime = ref(0)
+const activeOperators = ref(0)
 
 const queryParams = reactive({ pageNum: 1, pageSize: 10, keyword: '', module: '', startDate: '', endDate: '' })
 
-function moduleLabel(m: string) {
-  return { USER: '用户管理', POST: '帖子管理', COMMENT: '评论管理', REPORT: '举报管理', CATEGORY: '分类管理', SYSTEM: '系统设置', AUTH: '登录认证' }[m] || m
-}
+// 模块名称已经是中文，直接显示
+function moduleLabel(m: string) { return m || '-' }
 function moduleType(m: string) {
-  return { USER: 'primary', POST: 'success', COMMENT: 'info', REPORT: 'danger', CATEGORY: 'warning', SYSTEM: '', AUTH: 'warning' }[m] || 'info'
+  return { '用户管理': 'primary', '角色管理': 'warning', '菜单管理': 'success', '部门管理': 'info' }[m] || 'info'
 }
 
 function handleDateChange(val: [string, string] | null) {
@@ -185,13 +181,23 @@ async function fetchData() {
   loading.value = true
   try {
     const params = { ...queryParams }
-    if (statusFilter.value !== undefined) {
-      params.keyword = params.keyword
-    }
     const res = await getOperationLogPage(params)
     tableData.value = res.data.records
     total.value = res.data.total
+    // 从列表数据计算统计
+    const successList = tableData.value.filter((r: any) => r.status === 1)
+    successRate.value = tableData.value.length > 0 ? Math.round((successList.length / tableData.value.length) * 1000) / 10 : 0
+    avgTime.value = tableData.value.length > 0 ? Math.round(tableData.value.reduce((sum: number, r: any) => sum + (r.executeTime || 0), 0) / tableData.value.length) : 0
+    activeOperators.value = new Set(tableData.value.map((r: any) => r.operator)).size
   } finally { loading.value = false }
+}
+
+async function fetchTodayCount() {
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    const res = await getOperationLogPage({ pageNum: 1, pageSize: 1, startDate: today, endDate: today })
+    todayCount.value = res.data?.total ?? 0
+  } catch (e) { /* ignore */ }
 }
 
 function viewDetail(row: any) {
@@ -199,7 +205,7 @@ function viewDetail(row: any) {
   detailVisible.value = true
 }
 
-onMounted(fetchData)
+onMounted(() => { fetchData(); fetchTodayCount() })
 </script>
 
 <style scoped>
