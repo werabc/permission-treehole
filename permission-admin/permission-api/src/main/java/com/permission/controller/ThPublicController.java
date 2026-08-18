@@ -69,7 +69,8 @@ public class ThPublicController {
     public R<ThPost> getPostDetail(@PathVariable Long id,
                                     @AuthenticationPrincipal LoginUser loginUser) {
         ThPost post = postService.getById(id);
-        if (post == null) return R.fail(404, "帖子不存在");
+        if (post == null || post.getDeleted() == 1) return R.fail(404, "帖子不存在");
+        if (post.getStatus() != 1) return R.fail(404, "帖子不存在");
         postService.incrementViewCount(id);
         return R.ok(post);
     }
