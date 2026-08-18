@@ -5,10 +5,10 @@ export interface LoginForm {
   password: string
 }
 
-export interface TokenVO {
-  accessToken: string
-  refreshToken: string
-  expiresIn: number
+// 树洞登录返回格式（与管理端 TokenVO 不同）
+export interface TreeholeLoginResult {
+  token: string
+  nickname: string
 }
 
 export function register(data: LoginForm) {
@@ -16,7 +16,7 @@ export function register(data: LoginForm) {
 }
 
 export function login(data: LoginForm) {
-  return request.post('/th/auth/login', data) as Promise<{ data: { token: string; nickname: string } }>
+  return request.post('/th/auth/login', data) as Promise<{ data: TreeholeLoginResult }>
 }
 
 export function getUserInfo() {
