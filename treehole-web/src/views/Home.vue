@@ -1,5 +1,17 @@
 <template>
   <div class="home">
+    <!-- 公告栏 -->
+    <div v-if="announcements.length > 0" class="announcement-bar">
+      <el-carousel height="40px" direction="vertical" :autoplay="true" indicator-position="none">
+        <el-carousel-item v-for="ann in announcements" :key="ann.id">
+          <div class="announcement-item">
+            <span class="ann-title">📢 {{ ann.title }}</span>
+            <span class="ann-content">{{ ann.content }}</span>
+          </div>
+        </el-carousel-item>
+      </el-carousel>
+    </div>
+
     <div class="category-bar">
       <button
         :class="['cat-btn', { active: !selectedCategory }]"
@@ -45,12 +57,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getPostPage, getCategoryList } from '../api/treehole'
-import type { Post, Category } from '../api/treehole'
+import { getPostPage, getCategoryList, getActiveAnnouncements } from '../api/treehole'
+import type { Post, Category, Announcement } from '../api/treehole'
 
 const router = useRouter()
 const posts = ref<Post[]>([])
 const categories = ref<Category[]>([])
+const announcements = ref<Announcement[]>([])
 const loading = ref(false)
 const pageNum = ref(1)
 const pageSize = 10
@@ -105,9 +118,17 @@ function formatTime(time: string) {
   return date.toLocaleDateString()
 }
 
+async function loadAnnouncements() {
+  try {
+    const res = await getActiveAnnouncements()
+    announcements.value = res.data
+  } catch (e) { /* ignore */ }
+}
+
 onMounted(() => {
   loadCategories()
   fetchPosts()
+  loadAnnouncements()
 })
 </script>
 
@@ -115,6 +136,33 @@ onMounted(() => {
 .home {
   max-width: 800px;
   margin: 0 auto;
+}
+
+.announcement-bar {
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #667eea22, #764ba222);
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+.announcement-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  height: 40px;
+}
+.ann-title {
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+}
+.ann-content {
+  color: #64748b;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .category-bar {

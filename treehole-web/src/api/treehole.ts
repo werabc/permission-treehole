@@ -54,6 +54,21 @@ export function getCategoryList() {
   return request.get('/th/category/list') as Promise<{ data: Category[] }>
 }
 
+export function getActiveAnnouncements() {
+  return request.get('/th/announcements') as Promise<{ data: Announcement[] }>
+}
+
+export interface Announcement {
+  id: number
+  title: string
+  content: string
+  type: string
+  status: number
+  publishTime: string
+  expireTime: string
+  createTime: string
+}
+
 export function getPostPage(params: { pageNum: number; pageSize: number; categoryId?: number; keyword?: string }) {
   return request.get('/th/post/page', { params }) as Promise<{ data: { records: Post[]; total: number } }>
 }
