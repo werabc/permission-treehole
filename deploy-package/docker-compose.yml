@@ -14,7 +14,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --character-set-client-handshake=OFF --init-connect='SET NAMES utf8mb4'
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -41,12 +41,11 @@ services:
       dockerfile: Dockerfile
     container_name: permission_backend
     environment:
-      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/permission_admin?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root123456
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123456
+      REDIS_HOST: redis
+      REDIS_PASSWORD: redis123456
       JWT_SECRET: ${JWT_SECRET:-cGVybWlzc2lvbi1hZG1pbi1zZWNyZXQta2V5LTIwMjQtbXVzdC1iZS1sb25nLWVub3VnaC1mb3ItaHMyNTY=}
     ports:
       - "8081:8080"

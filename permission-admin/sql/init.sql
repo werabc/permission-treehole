@@ -392,9 +392,9 @@ INSERT INTO sys_dept (id, dept_name, parent_id, ancestors, sort, leader, status)
 
 -- 初始化用户 (密码: Admin@1234, BCrypt加密)
 INSERT INTO sys_user (id, username, password, nickname, email, phone, status, dept_id) VALUES
-(1, 'admin',   '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5Eh', '超级管理员', 'admin@example.com', '13800000001', 1, 1),
-(2, 'tech',    '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5Eh', '技术负责人', 'tech@example.com',  '13800000002', 1, 2),
-(3, 'backend', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5Eh', '后端开发',   'backend@example.com','13800000003', 1, 6);
+(1, 'admin',   '$2a$10$YoZweBVj9TYL1Coop.9sTeQBvtEJMyGlYme2StFh2.mE60FkAMocW', '超级管理员', 'admin@example.com', '13800000001', 1, 1),
+(2, 'tech',    '$2a$10$YoZweBVj9TYL1Coop.9sTeQBvtEJMyGlYme2StFh2.mE60FkAMocW', '技术负责人', 'tech@example.com',  '13800000002', 1, 2),
+(3, 'backend', '$2a$10$YoZweBVj9TYL1Coop.9sTeQBvtEJMyGlYme2StFh2.mE60FkAMocW', '后端开发',   'backend@example.com','13800000003', 1, 6);
 
 -- 初始化角色
 INSERT INTO sys_role (id, role_name, role_code, role_desc, data_scope, status) VALUES
