@@ -116,6 +116,11 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
 
     @Override
     public void likeComment(Long id, Long userId) {
+        ThComment comment = commentMapper.selectById(id);
+        if (comment == null || comment.getDeleted() == 1) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "评论不存在");
+        }
+
         Long count = likeMapper.selectCount(new LambdaQueryWrapper<ThLike>()
                 .eq(ThLike::getUserId, userId)
                 .eq(ThLike::getTargetType, "COMMENT")
