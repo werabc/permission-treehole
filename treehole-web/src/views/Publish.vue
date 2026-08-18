@@ -96,7 +96,7 @@ async function handleSubmit() {
       categoryId: form.categoryId,
       isAnonymous: form.isAnonymous,
     })
-    ElMessage.success('发布成功！等待审核')
+    ElMessage.success('发布成功！')
     router.push(`/post/${res.data}`)
   } catch (e: any) {
     ElMessage.error(e.message || '发布失败')

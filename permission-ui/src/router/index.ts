@@ -91,6 +91,9 @@ export function resetDynamicRoutes() {
 }
 
 // ========== 路由守卫 ==========
+// 标记是否已完成初始路由加载
+let initialRoutesLoaded = false
+
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   const permissionStore = usePermissionStore()
@@ -112,13 +115,17 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
-  // 有 token 但无用户信息，尝试获取
-  if (!userStore.userInfo) {
+  // 如果动态路由还未加载，先加载路由（解决刷新404问题）
+  if (!initialRoutesLoaded) {
     try {
-      await userStore.fetchUserInfo()
+      if (!userStore.userInfo) {
+        await userStore.fetchUserInfo()
+      }
       if (!routesAdded) {
         await permissionStore.generateRoutes()
       }
+      initialRoutesLoaded = true
+      // 路由加载完成后重新导航到目标页面
       next({ ...to, replace: true })
       return
     } catch (e: any) {
@@ -131,6 +138,7 @@ router.beforeEach(async (to, from, next) => {
             if (!routesAdded) {
               await permissionStore.generateRoutes()
             }
+            initialRoutesLoaded = true
             next({ ...to, replace: true })
             return
           }

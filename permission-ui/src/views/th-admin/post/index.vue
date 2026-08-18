@@ -57,7 +57,7 @@
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
           <el-button v-if="row.status === 0" link type="success" size="small" @click="handleAudit(row, 1)">通过</el-button>
-          <el-button v-if="row.status === 0" link type="danger" size="small" @click="handleAudit(row, 2)">拒绝</el-button>
+          <el-button v-if="row.status !== 2" link type="danger" size="small" @click="handleAudit(row, 2)">拒绝</el-button>
           <el-button v-if="row.isTop === 1" link type="warning" size="small" @click="handlePin(row, 0)">取消置顶</el-button>
           <el-button v-else link type="warning" size="small" @click="handlePin(row, 1)">置顶</el-button>
           <el-button v-if="row.status === 1" link type="info" size="small" @click="handleHide(row, 0)">隐藏</el-button>
