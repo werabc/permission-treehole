@@ -51,9 +51,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     io.jsonwebtoken.Claims claims = jwtTokenProvider.parseToken(token);
                     Long userId = Long.valueOf(claims.getSubject());
 
-                    // 根据请求路径判断用户类型：树洞端(/api/th/*) 和管理端
-                    String uri = request.getRequestURI();
-                    boolean isTreehole = uri.startsWith("/api/th/");
+                    // 从 token 中读取用户类型，不再依赖请求路径
+                    String userType = claims.get("userType", String.class);
+                    boolean isTreehole = "treehole".equals(userType);
                     LoginUser loginUser = userDetailsService.loadUserById(userId, isTreehole);
 
                     if (loginUser != null) {

@@ -94,7 +94,7 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
         claims.put("username", user.getUsername());
-        String token = jwtTokenProvider.createAccessToken(user.getId(), user.getUsername(), claims);
+        String token = jwtTokenProvider.createAccessToken(user.getId(), user.getUsername(), claims, "treehole");
 
         // 缓存到 Redis
         redisTemplate.opsForValue().set(SecurityConstants.TOKEN_CACHE_PREFIX + token, user.getId(), 7200, TimeUnit.SECONDS);

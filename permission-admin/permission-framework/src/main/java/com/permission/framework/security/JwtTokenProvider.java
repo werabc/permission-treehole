@@ -38,6 +38,17 @@ public class JwtTokenProvider {
     }
 
     public String createAccessToken(Long userId, String username, Map<String, Object> claims) {
+        return createAccessToken(userId, username, claims, "admin");
+    }
+
+    /**
+     * 创建 accessToken，带用户类型标识
+     * @param userId 用户ID
+     * @param username 用户名
+     * @param claims 额外声明
+     * @param userType 用户类型: "admin" 或 "treehole"
+     */
+    public String createAccessToken(Long userId, String username, Map<String, Object> claims, String userType) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + SecurityConstants.TOKEN_EXPIRE * 1000);
 
@@ -45,7 +56,8 @@ public class JwtTokenProvider {
                 .subject(String.valueOf(userId))
                 .issuedAt(now)
                 .expiration(expiration)
-                .claim("username", username);
+                .claim("username", username)
+                .claim("userType", userType);
 
         if (claims != null) {
             claims.forEach(builder::claim);
