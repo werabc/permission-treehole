@@ -1,0 +1,1 @@
+import{s as t}from"./index-CBcgQpKT.js";function e(e){return t.get("/dept/tree",{params:e})}function n(){return t.get("/dept/tree-select")}function r(e){return t.get(`/dept/${e}`)}function u(e){return t.post("/dept",e)}function s(e,n){return t.put(`/dept/${e}`,n)}function p(e){return t.delete(`/dept/${e}`)}export{e as a,n as b,u as c,p as d,r as g,s as u};
