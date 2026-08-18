@@ -100,7 +100,7 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
                     commenterName = commenter != null ? commenter.getNickname() : "有人";
                 }
                 String content = comment.getContent();
-                if (content.length() > 50) content = content.substring(0, 50) + "...";
+                if (content != null && content.length() > 50) content = content.substring(0, 50) + "...";
                 notification.setContent(commenterName + " 评论了你的帖子: " + content);
                 notification.setIsRead(0);
                 notificationMapper.insert(notification);
