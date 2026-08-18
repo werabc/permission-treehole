@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.permission.common.R;
+import com.permission.common.annotation.OperationLog;
 import com.permission.common.dto.LoginUser;
 import com.permission.common.entity.ThPost;
 import com.permission.system.mapper.ThPostMapper;
@@ -115,6 +116,7 @@ public class ThPostAdminController {
     @Operation(summary = "审核帖子")
     @PutMapping("/{id}/audit")
     @PreAuthorize("hasAnyAuthority('admin')")
+    @OperationLog(module = "帖子管理", value = "审核帖子")
     public R<Void> audit(@PathVariable Long id,
                           @RequestParam Integer status,
                           @RequestParam(required = false) String auditRemark,
@@ -154,6 +156,7 @@ public class ThPostAdminController {
     @Operation(summary = "删除帖子")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('admin')")
+    @OperationLog(module = "帖子管理", value = "删除帖子")
     public R<Void> delete(@PathVariable Long id) {
         ThPost post = postMapper.selectById(id);
         if (post == null) return R.fail(404, "帖子不存在");

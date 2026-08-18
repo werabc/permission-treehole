@@ -24,7 +24,7 @@
           <span class="post-author-name">{{ post.authorName || '匿名' }}</span>
           <span class="post-time">{{ formatTime(post.createTime) }}</span>
         </div>
-        <p class="post-content">{{ post.content }}</p>
+        <p class="post-content">{{ post.content.length > 150 ? post.content.substring(0, 150) + '...' : post.content }}</p>
         <div class="post-actions">
           <span class="action">👁 {{ post.viewCount }}</span>
           <span class="action">👍 {{ post.likeCount }}</span>

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.permission.common.R;
+import com.permission.common.annotation.OperationLog;
 import com.permission.common.entity.ThComment;
 import com.permission.common.entity.ThPost;
 import com.permission.common.entity.ThUser;
@@ -88,6 +89,7 @@ public class ThCommentAdminController {
     @Operation(summary = "隐藏/恢复评论")
     @PutMapping("/{id}/hide")
     @PreAuthorize("hasAnyAuthority('admin')")
+    @OperationLog(module = "评论管理", value = "隐藏/恢复评论")
     public R<Void> hide(@PathVariable Long id, @RequestParam Integer status) {
         ThComment comment = commentMapper.selectById(id);
         if (comment == null) return R.fail(404, "评论不存在");
@@ -99,6 +101,7 @@ public class ThCommentAdminController {
     @Operation(summary = "删除评论")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('admin')")
+    @OperationLog(module = "评论管理", value = "删除评论")
     public R<Void> delete(@PathVariable Long id) {
         ThComment comment = commentMapper.selectById(id);
         if (comment == null) return R.fail(404, "评论不存在");

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.permission.common.R;
+import com.permission.common.annotation.OperationLog;
 import com.permission.common.entity.ThComment;
 import com.permission.common.entity.ThPost;
 import com.permission.system.mapper.ThCommentMapper;
@@ -65,6 +66,7 @@ public class ThModerationController {
     @Operation(summary = "批量审核")
     @PostMapping("/batch-audit")
     @PreAuthorize("hasAnyAuthority('admin')")
+    @OperationLog(module = "内容审核", value = "批量审核")
     public R<Void> batchAudit(@RequestBody Map<String, Object> body) {
         String type = (String) body.get("type");
         @SuppressWarnings("unchecked")
