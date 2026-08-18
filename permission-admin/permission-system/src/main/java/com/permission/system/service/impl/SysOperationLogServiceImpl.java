@@ -21,8 +21,10 @@ public class SysOperationLogServiceImpl extends ServiceImpl<SysOperationLogMappe
         LambdaQueryWrapper<SysOperationLog> wrapper = new LambdaQueryWrapper<>();
 
         if (StrUtil.isNotBlank(keyword)) {
-            wrapper.and(w -> w.like(SysOperationLog::getOperator, keyword)
-                    .or().like(SysOperationLog::getAction, keyword));
+            // 转义LIKE通配符，防止通配符注入
+            String safeKeyword = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            wrapper.and(w -> w.like(SysOperationLog::getOperator, safeKeyword)
+                    .or().like(SysOperationLog::getAction, safeKeyword));
         }
         if (StrUtil.isNotBlank(module)) {
             wrapper.eq(SysOperationLog::getModule, module);
