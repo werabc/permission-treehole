@@ -2,6 +2,7 @@ package com.permission.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.permission.common.R;
+import com.permission.common.annotation.OperationLog;
 import com.permission.common.dto.LoginUser;
 import com.permission.common.entity.*;
 import com.permission.system.service.*;
@@ -85,6 +86,7 @@ public class ThPublicController {
 
     @Operation(summary = "创建帖子")
     @PostMapping("/post")
+    @OperationLog(module = "树洞帖子", value = "创建帖子")
     public R<Long> createPost(@RequestBody ThPost post,
                                @AuthenticationPrincipal LoginUser loginUser) {
         post.setUserId(requireUserId(loginUser));
