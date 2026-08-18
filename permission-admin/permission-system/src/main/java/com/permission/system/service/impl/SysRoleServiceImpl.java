@@ -31,8 +31,10 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         Page<SysRole> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<>();
         if (StrUtil.isNotBlank(keyword)) {
-            wrapper.and(w -> w.like(SysRole::getRoleName, keyword)
-                    .or().like(SysRole::getRoleCode, keyword));
+            // 转义LIKE通配符，防止通配符注入
+            String safeKeyword = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            wrapper.and(w -> w.like(SysRole::getRoleName, safeKeyword)
+                    .or().like(SysRole::getRoleCode, safeKeyword));
         }
         wrapper.orderByAsc(SysRole::getCreateTime);
         return baseMapper.selectPage(page, wrapper);
