@@ -39,17 +39,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { isLoggedIn, logout as doLogout } from './api/auth'
+import { logout as doLogout } from './api/auth'
 import { getUnreadCount } from './api/treehole'
 import Welcome from './views/Welcome.vue'
 
 const router = useRouter()
 const unreadCount = ref(0)
 const nickname = ref(localStorage.getItem('th_nickname') || '')
+const tokenRef = ref(localStorage.getItem('th_token') || '')
 
-// Alibaba-Java: 响应式计算属性 — 确保登录状态变化时 UI 自动更新
+// 使用 ref 追踪登录状态，确保响应式更新
 const isLoggedIn = computed(() => {
-  const token = localStorage.getItem('th_token')
+  const token = tokenRef.value
   if (!token) return false
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
@@ -64,6 +65,7 @@ const displayName = computed(() => nickname.value || '用户')
 
 function handleLogout() {
   doLogout()
+  tokenRef.value = ''
   nickname.value = ''
   unreadCount.value = 0
   router.push('/login')
@@ -79,6 +81,7 @@ async function loadUnreadCount() {
 
 // 响应登录状态变化
 function onStorageChange() {
+  tokenRef.value = localStorage.getItem('th_token') || ''
   nickname.value = localStorage.getItem('th_nickname') || ''
   loadUnreadCount()
 }
