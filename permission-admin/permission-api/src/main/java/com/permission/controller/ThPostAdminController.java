@@ -152,8 +152,7 @@ public class ThPostAdminController {
     public R<Void> delete(@PathVariable Long id) {
         ThPost post = postMapper.selectById(id);
         if (post == null) return R.fail(404, "帖子不存在");
-        post.setDeleted(1);
-        postMapper.updateById(post);
+        postMapper.deleteById(id);
         return R.ok();
     }
 }

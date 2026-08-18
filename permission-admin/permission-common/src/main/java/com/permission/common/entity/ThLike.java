@@ -1,26 +1,18 @@
 package com.permission.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.permission.common.BaseEntity;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("th_like")
-public class ThLike {
-
-    @TableId(type = IdType.AUTO)
-    private Long id;
+public class ThLike extends BaseEntity {
 
     private Long userId;
 
     private String targetType;
 
     private Long targetId;
-
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    @TableLogic
-    private Integer deleted;
 }

@@ -11,6 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import com.permission.common.ResultCode;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +32,18 @@ public class ThPublicController {
     private final ThReportService reportService;
     private final ThUserService userService;
     private final ThCategoryService categoryService;
+
+    /**
+     * 从认证主体中提取用户ID，若未登录则抛出401异常
+     * Alibaba-Java: NPE防护【推荐→强制】防止 NPE 是程序员的基本修养
+     */
+    private Long requireUserId(LoginUser loginUser) {
+        if (loginUser == null) {
+            throw new AuthenticationCredentialsNotFoundException(
+                    ResultCode.UNAUTHORIZED.getMessage());
+        }
+        return loginUser.getUserId();
+    }
 
     // ==================== 分类 ====================
 
@@ -71,7 +86,7 @@ public class ThPublicController {
     @PostMapping("/post")
     public R<Long> createPost(@RequestBody ThPost post,
                                @AuthenticationPrincipal LoginUser loginUser) {
-        post.setUserId(loginUser.getUserId());
+        post.setUserId(requireUserId(loginUser));
         postService.createPost(post);
         return R.ok(post.getId());
     }
@@ -80,7 +95,7 @@ public class ThPublicController {
     @PostMapping("/post/{id}/like")
     public R<Void> likePost(@PathVariable Long id,
                              @AuthenticationPrincipal LoginUser loginUser) {
-        postService.likePost(id, loginUser.getUserId());
+        postService.likePost(id, requireUserId(loginUser));
         return R.ok();
     }
 
@@ -88,7 +103,7 @@ public class ThPublicController {
     @DeleteMapping("/post/{id}/like")
     public R<Void> unlikePost(@PathVariable Long id,
                                @AuthenticationPrincipal LoginUser loginUser) {
-        postService.unlikePost(id, loginUser.getUserId());
+        postService.unlikePost(id, requireUserId(loginUser));
         return R.ok();
     }
 
@@ -106,7 +121,7 @@ public class ThPublicController {
     @PostMapping("/comment")
     public R<Long> createComment(@RequestBody ThComment comment,
                                   @AuthenticationPrincipal LoginUser loginUser) {
-        comment.setUserId(loginUser.getUserId());
+        comment.setUserId(requireUserId(loginUser));
         commentService.createComment(comment);
         return R.ok(comment.getId());
     }
@@ -115,7 +130,7 @@ public class ThPublicController {
     @PostMapping("/comment/{id}/like")
     public R<Void> likeComment(@PathVariable Long id,
                                 @AuthenticationPrincipal LoginUser loginUser) {
-        commentService.likeComment(id, loginUser.getUserId());
+        commentService.likeComment(id, requireUserId(loginUser));
         return R.ok();
     }
 
@@ -125,7 +140,7 @@ public class ThPublicController {
     @PostMapping("/report")
     public R<Void> submitReport(@RequestBody ThReport report,
                                  @AuthenticationPrincipal LoginUser loginUser) {
-        report.setReporterId(loginUser.getUserId());
+        report.setReporterId(requireUserId(loginUser));
         reportService.createReport(report);
         return R.ok();
     }
@@ -137,7 +152,7 @@ public class ThPublicController {
     public R<IPage<ThPost>> getMyPosts(@RequestParam(defaultValue = "1") long pageNum,
                                         @RequestParam(defaultValue = "10") long pageSize,
                                         @AuthenticationPrincipal LoginUser loginUser) {
-        return R.ok(userService.getPosts(loginUser.getUserId(), pageNum, pageSize));
+        return R.ok(userService.getPosts(requireUserId(loginUser), pageNum, pageSize));
     }
 
     @Operation(summary = "我的评论")
@@ -145,7 +160,7 @@ public class ThPublicController {
     public R<IPage<ThComment>> getMyComments(@RequestParam(defaultValue = "1") long pageNum,
                                               @RequestParam(defaultValue = "10") long pageSize,
                                               @AuthenticationPrincipal LoginUser loginUser) {
-        return R.ok(userService.getMyComments(loginUser.getUserId(), pageNum, pageSize));
+        return R.ok(userService.getMyComments(requireUserId(loginUser), pageNum, pageSize));
     }
 
     @Operation(summary = "收到的评论")
@@ -153,7 +168,7 @@ public class ThPublicController {
     public R<IPage<ThComment>> getReceivedComments(@RequestParam(defaultValue = "1") long pageNum,
                                                     @RequestParam(defaultValue = "10") long pageSize,
                                                     @AuthenticationPrincipal LoginUser loginUser) {
-        return R.ok(userService.getReceivedComments(loginUser.getUserId(), pageNum, pageSize));
+        return R.ok(userService.getReceivedComments(requireUserId(loginUser), pageNum, pageSize));
     }
 
     @Operation(summary = "通知列表")
@@ -162,13 +177,13 @@ public class ThPublicController {
                                                       @RequestParam(defaultValue = "10") long pageSize,
                                                       @RequestParam(required = false) Boolean unreadOnly,
                                                       @AuthenticationPrincipal LoginUser loginUser) {
-        return R.ok(userService.getNotifications(loginUser.getUserId(), pageNum, pageSize, unreadOnly));
+        return R.ok(userService.getNotifications(requireUserId(loginUser), pageNum, pageSize, unreadOnly));
     }
 
     @Operation(summary = "未读通知数量")
     @GetMapping("/user/unread-count")
     public R<Long> getUnreadCount(@AuthenticationPrincipal LoginUser loginUser) {
-        return R.ok(userService.getUnreadCount(loginUser.getUserId()));
+        return R.ok(userService.getUnreadCount(requireUserId(loginUser)));
     }
 
     @Operation(summary = "标记通知已读")
@@ -176,7 +191,7 @@ public class ThPublicController {
     public R<Void> markNotificationsRead(@RequestBody Map<String, List<Long>> body,
                                           @AuthenticationPrincipal LoginUser loginUser) {
         List<Long> ids = body.get("ids");
-        userService.markNotificationsRead(loginUser.getUserId(), ids);
+        userService.markNotificationsRead(requireUserId(loginUser), ids);
         return R.ok();
     }
 
@@ -184,7 +199,7 @@ public class ThPublicController {
     @PutMapping("/user/profile")
     public R<Void> updateProfile(@RequestBody ThUser user,
                                   @AuthenticationPrincipal LoginUser loginUser) {
-        user.setId(loginUser.getUserId());
+        user.setId(requireUserId(loginUser));
         userService.updateProfile(user);
         return R.ok();
     }

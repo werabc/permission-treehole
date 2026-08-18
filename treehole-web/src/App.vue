@@ -9,10 +9,11 @@
         </router-link>
         <nav class="nav">
           <router-link to="/">首页</router-link>
+          <!-- Alibaba-Java: 使用 computed 属性确保响应式 -->
           <template v-if="isLoggedIn">
             <router-link to="/publish">发布</router-link>
             <router-link to="/profile" class="profile-link">
-              👤 {{ nickname }}
+              👤 {{ displayName }}
               <span v-if="unreadCount > 0" class="nav-badge">{{ unreadCount }}</span>
             </router-link>
             <a @click="handleLogout" class="logout-btn">退出</a>
@@ -36,28 +37,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { isLoggedIn, logout as doLogout } from './api/auth'
 import { getUnreadCount } from './api/treehole'
 import Welcome from './views/Welcome.vue'
 
 const router = useRouter()
-const nickname = ref(localStorage.getItem('th_nickname') || '')
 const unreadCount = ref(0)
+const nickname = ref(localStorage.getItem('th_nickname') || '')
 
-const loginStatus = ref(isLoggedIn())
+// Alibaba-Java: 响应式计算属性 — 确保登录状态变化时 UI 自动更新
+const isLoggedIn = computed(() => {
+  const token = localStorage.getItem('th_token')
+  if (!token) return false
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const exp = payload.exp * 1000
+    return Date.now() < exp
+  } catch {
+    return false
+  }
+})
+
+const displayName = computed(() => nickname.value || '用户')
 
 function handleLogout() {
   doLogout()
-  loginStatus.value = false
   nickname.value = ''
   unreadCount.value = 0
   router.push('/login')
 }
 
 async function loadUnreadCount() {
-  if (!isLoggedIn()) return
+  if (!isLoggedIn.value) return
   try {
     const res = await getUnreadCount()
     unreadCount.value = res.data
@@ -65,14 +78,20 @@ async function loadUnreadCount() {
 }
 
 // 响应登录状态变化
-window.addEventListener('storage', () => {
-  loginStatus.value = isLoggedIn()
+function onStorageChange() {
   nickname.value = localStorage.getItem('th_nickname') || ''
   loadUnreadCount()
-})
+}
+
+window.addEventListener('storage', onStorageChange)
 
 onMounted(() => {
   loadUnreadCount()
+})
+
+// Alibaba-Java: 清理事件监听器，防止内存泄漏
+onUnmounted(() => {
+  window.removeEventListener('storage', onStorageChange)
 })
 </script>
 

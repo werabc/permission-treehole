@@ -76,8 +76,7 @@ public class ThAnnouncementController {
     public R<Void> delete(@PathVariable Long id) {
         ThAnnouncement announcement = announcementMapper.selectById(id);
         if (announcement == null) return R.fail(404, "公告不存在");
-        announcement.setDeleted(1);
-        announcementMapper.updateById(announcement);
+        announcementMapper.deleteById(id);
         return R.ok();
     }
 }

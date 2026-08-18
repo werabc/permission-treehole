@@ -1,6 +1,7 @@
 package com.permission.controller;
 
 import com.permission.common.R;
+import com.permission.common.ResultCode;
 import com.permission.common.annotation.OperationLog;
 import com.permission.common.dto.LoginUser;
 import com.permission.common.entity.SysUser;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Tag(name = "用户管理")
 @RestController
@@ -135,10 +137,21 @@ public class UserController {
     @PreAuthorize("hasAnyAuthority('system:user:edit', 'admin')")
     @OperationLog(module = "用户管理", value = "批量修改状态")
     public R<Void> batchUpdateStatus(@RequestBody Map<String, Object> body) {
-        @SuppressWarnings("unchecked")
-        List<Integer> idList = (List<Integer>) body.get("ids");
-        Integer status = (Integer) body.get("status");
-        List<Long> ids = idList.stream().map(Integer::longValue).collect(java.util.stream.Collectors.toList());
+        // Alibaba-Java: 安全规约【强制】无泛型集合赋值需类型安全检查
+        Object idsObj = body.get("ids");
+        if (!(idsObj instanceof List)) {
+            return R.fail(ResultCode.BAD_REQUEST.getCode(), "ID列表格式错误");
+        }
+        List<Long> ids;
+        try {
+            ids = ((List<?>) idsObj).stream()
+                    .map(o -> o instanceof Number ? ((Number) o).longValue() : Long.parseLong(o.toString()))
+                    .collect(Collectors.toList());
+        } catch (NumberFormatException e) {
+            return R.fail(ResultCode.BAD_REQUEST.getCode(), "ID列表包含非法值");
+        }
+        Object statusObj = body.get("status");
+        Integer status = statusObj instanceof Number ? ((Number) statusObj).intValue() : null;
         userService.batchUpdateStatus(ids, status);
         return R.ok();
     }

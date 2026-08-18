@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS sys_menu (
 CREATE TABLE IF NOT EXISTS sys_user_role (
     user_id BIGINT NOT NULL COMMENT '用户ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (user_id, role_id),
     INDEX idx_user_id (user_id),
     INDEX idx_role_id (role_id)
@@ -80,6 +81,7 @@ CREATE TABLE IF NOT EXISTS sys_user_role (
 CREATE TABLE IF NOT EXISTS sys_role_menu (
     role_id BIGINT NOT NULL COMMENT '角色ID',
     menu_id BIGINT NOT NULL COMMENT '菜单ID',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (role_id, menu_id),
     INDEX idx_role_id (role_id),
     INDEX idx_menu_id (menu_id)
@@ -113,7 +115,7 @@ CREATE TABLE IF NOT EXISTS sys_login_log (
     browser    VARCHAR(100) DEFAULT NULL COMMENT '浏览器',
     os         VARCHAR(50)  DEFAULT NULL COMMENT '操作系统',
     status     TINYINT      DEFAULT 1 COMMENT '状态: 0-失败 1-成功',
-    message    VARCHAR(200) DEFAULT NULL COMMENT '提示信息',
+    message    TEXT DEFAULT NULL COMMENT '提示信息',
     login_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
     INDEX idx_username (username),
     INDEX idx_login_time (login_time)
@@ -218,7 +220,7 @@ CREATE TABLE IF NOT EXISTS th_like (
     target_id   BIGINT       NOT NULL COMMENT '目标ID',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
-    UNIQUE KEY uk_user_target (user_id, target_type, target_id, deleted),
+    UNIQUE KEY uk_user_target (user_id, target_type, target_id),
     INDEX idx_target (target_type, target_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞点赞表';
 
@@ -241,3 +243,70 @@ CREATE TABLE IF NOT EXISTS th_report (
     INDEX idx_status (status),
     INDEX idx_reporter (reporter_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞举报表';
+
+-- =============================================
+-- 树洞通知表 (th_notification)
+-- =============================================
+CREATE TABLE IF NOT EXISTS th_notification (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '通知ID',
+    user_id     BIGINT NOT NULL COMMENT '接收用户ID',
+    sender_id   BIGINT DEFAULT NULL COMMENT '发送者ID',
+    type        VARCHAR(20) NOT NULL COMMENT '类型: LIKE-点赞 COMMENT-评论 REPORT-举报 SYSTEM-系统',
+    target_type VARCHAR(20) DEFAULT NULL COMMENT '目标类型: POST-帖子 COMMENT-评论',
+    target_id   BIGINT DEFAULT NULL COMMENT '目标ID',
+    content     VARCHAR(500) NOT NULL COMMENT '通知内容',
+    is_read     TINYINT NOT NULL DEFAULT 0 COMMENT '是否已读: 0-未读 1-已读',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_user_id (user_id),
+    INDEX idx_is_read (is_read),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞通知表';
+
+-- =============================================
+-- 树洞公告表 (th_announcement)
+-- =============================================
+CREATE TABLE IF NOT EXISTS th_announcement (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '公告ID',
+    title        VARCHAR(200) NOT NULL COMMENT '标题',
+    content      TEXT NOT NULL COMMENT '内容',
+    type         VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT '类型: NORMAL-普通 URGENT-紧急 MAINTENANCE-维护',
+    status       TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 0-下架 1-上架',
+    publish_time DATETIME DEFAULT NULL COMMENT '发布时间',
+    expire_time  DATETIME DEFAULT NULL COMMENT '过期时间',
+    creator_id   BIGINT NOT NULL COMMENT '创建者ID',
+    create_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted      TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_status (status),
+    INDEX idx_type (type),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞公告表';
+
+-- =============================================
+-- 树洞用户行为日志表 (th_user_log)
+-- =============================================
+CREATE TABLE IF NOT EXISTS th_user_log (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
+    user_id      BIGINT NOT NULL COMMENT '用户ID',
+    action       VARCHAR(50) NOT NULL COMMENT '操作类型: LOGIN-登录 POST-发帖 COMMENT-评论 LIKE-点赞 REPORT-举报',
+    target_type  VARCHAR(20) DEFAULT NULL COMMENT '目标类型: POST-帖子 COMMENT-评论',
+    target_id    BIGINT DEFAULT NULL COMMENT '目标ID',
+    detail       VARCHAR(500) DEFAULT NULL COMMENT '操作详情',
+    ip           VARCHAR(50) DEFAULT NULL COMMENT '操作IP',
+    create_time  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_user_id (user_id),
+    INDEX idx_action (action),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞用户行为日志表';
+
+-- =============================================
+-- 树洞站点配置表 (th_setting)
+-- =============================================
+CREATE TABLE IF NOT EXISTS th_setting (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '配置ID',
+    config_key  VARCHAR(100) NOT NULL UNIQUE COMMENT '配置键',
+    config_value TEXT COMMENT '配置值',
+    config_desc VARCHAR(200) DEFAULT NULL COMMENT '配置描述',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='树洞站点配置表';

@@ -65,8 +65,7 @@ public class ThCategoryAdminController {
     public R<Void> delete(@PathVariable Long id) {
         ThCategory category = categoryMapper.selectById(id);
         if (category == null) return R.fail(404, "分类不存在");
-        category.setDeleted(1);
-        categoryMapper.updateById(category);
+        categoryMapper.deleteById(id);
         return R.ok();
     }
 }

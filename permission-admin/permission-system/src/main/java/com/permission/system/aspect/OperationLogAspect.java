@@ -72,7 +72,8 @@ public class OperationLogAspect {
             try {
                 operationLogMapper.insert(logEntry);
             } catch (Exception logEx) {
-                log.warn("Failed to persist operation log: {}", logEx.getMessage());
+                // Alibaba-Java: 异常日志【强制】异常信息应包括案发现场信息和异常堆栈信息
+                log.warn("Failed to persist operation log", logEx);
             }
 
             return result;
@@ -84,7 +85,8 @@ public class OperationLogAspect {
             try {
                 operationLogMapper.insert(logEntry);
             } catch (Exception logEx) {
-                log.warn("Failed to persist operation log: {}", logEx.getMessage());
+                // Alibaba-Java: 异常日志【强制】异常信息应包括案发现场信息和异常堆栈信息
+                log.warn("Failed to persist operation log", logEx);
             }
             throw e;
         }

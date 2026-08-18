@@ -13,7 +13,9 @@ public interface SecurityConstants {
     String REFRESH_TOKEN_URL = "/api/auth/refresh";
     String LOGOUT_URL = "/api/auth/logout";
     String CAPTCHA_URL = "/api/auth/captcha";
-    String JWT_SECRET = "permission-admin-secret-key-2024-must-be-long-enough-for-hs256";
+    // JWT_SECRET removed: key is now loaded exclusively by JwtTokenProvider from
+    // ${jwt.secret} property or JWT_SECRET_KEY env var. No fallback is provided
+    // to prevent accidental use of a known key in production.
     long TOKEN_EXPIRE = 7200;
     long REFRESH_TOKEN_EXPIRE = 604800;
     int MAX_LOGIN_FAIL_COUNT = 5;

@@ -1,16 +1,14 @@
 package com.permission.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.permission.common.BaseEntity;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("th_category")
-public class ThCategory {
-
-    @TableId(type = IdType.AUTO)
-    private Long id;
+public class ThCategory extends BaseEntity {
 
     private String name;
 
@@ -25,13 +23,4 @@ public class ThCategory {
     private Integer status;
 
     private Integer postCount;
-
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    @TableLogic
-    private Integer deleted;
 }

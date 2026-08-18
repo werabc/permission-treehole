@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -99,12 +100,24 @@ public class ThReportAdminController {
     @PreAuthorize("hasAnyAuthority('admin')")
     public R<Void> batchHandle(@RequestBody Map<String, Object> body,
                                 @AuthenticationPrincipal com.permission.common.dto.LoginUser loginUser) {
-        @SuppressWarnings("unchecked")
-        List<Long> ids = (List<Long>) body.get("ids");
-        Integer status = (Integer) body.get("status");
-        String result = (String) body.get("result");
+        // Alibaba-Java: 安全规约【强制】无泛型集合赋值需类型安全检查
+        Object idsObj = body.get("ids");
+        if (!(idsObj instanceof List)) {
+            return R.fail(400, "ID列表格式错误");
+        }
+        List<Long> ids;
+        try {
+            ids = ((List<?>) idsObj).stream()
+                    .map(o -> o instanceof Number ? ((Number) o).longValue() : Long.parseLong(o.toString()))
+                    .collect(Collectors.toList());
+        } catch (NumberFormatException e) {
+            return R.fail(400, "ID列表包含非法值");
+        }
+        Object statusObj = body.get("status");
+        Integer status = statusObj instanceof Number ? ((Number) statusObj).intValue() : null;
+        String result = body.get("result") != null ? body.get("result").toString() : null;
 
-        if (ids == null || ids.isEmpty()) return R.fail(400, "ID列表不能为空");
+        if (ids.isEmpty()) return R.fail(400, "ID列表不能为空");
 
         for (Long id : ids) {
             ThReport report = reportMapper.selectById(id);

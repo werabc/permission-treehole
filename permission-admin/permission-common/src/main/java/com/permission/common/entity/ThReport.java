@@ -1,18 +1,19 @@
 package com.permission.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.permission.common.BaseEntity;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName(value = "th_report", autoResultMap = true)
-public class ThReport {
-
-    @TableId(type = IdType.AUTO)
-    private Long id;
+public class ThReport extends BaseEntity {
 
     private Long reporterId;
 
@@ -37,13 +38,4 @@ public class ThReport {
     private Long handlerId;
 
     private LocalDateTime handleTime;
-
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    @TableLogic
-    private Integer deleted;
 }

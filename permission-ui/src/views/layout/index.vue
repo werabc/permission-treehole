@@ -185,13 +185,16 @@ function onPasswordInput(val: string) {
   }
 }
 
+// Alibaba-Java: 密码策略 — 与后端 SysUserServiceImpl.PATTERN 保持一致
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%^&*()_+\-=\[\]{}|;:',.<>?/]).{8,}$/
+
 const passwordRules = {
   oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
     {
       validator: (_rule: any, value: string, callback: any) => {
-        if (value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%^&*()_+\-=\[\]{}|;:',.<>?/]).{8,}$/.test(value)) {
+        if (value && !PASSWORD_REGEX.test(value)) {
           callback(new Error('密码至少8位，含大小写字母、数字和特殊字符'))
         } else {
           callback()

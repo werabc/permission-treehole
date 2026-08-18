@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { login as loginApi, getUserInfo, logout as logoutApi, refreshToken as refreshApi } from '@/api/auth'
 import type { UserInfo, LoginForm } from '@/types'
-import router from '@/router'
+import router, { resetDynamicRoutes } from '@/router'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref<string>(localStorage.getItem('accessToken') || '')
@@ -66,6 +66,8 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null
     permissions.value = []
     roles.value = []
+    // Alibaba-Java: 修复登出后动态路由未重置的问题
+    resetDynamicRoutes()
     router.push('/login')
   }
 

@@ -25,15 +25,16 @@ public class JwtTokenProvider {
             secret = System.getenv("JWT_SECRET_KEY");
         }
         if (secret == null || secret.isBlank()) {
-            // Dev fallback only - log a warning
-            log.warn("WARNING: Using default JWT secret key. Set JWT_SECRET_KEY env var or jwt.secret property in production!");
-            secret = "cGVybWlzc2lvbi1hZG1pbi1zZWNyZXQta2V5LTIwMjQtbXVzdC1iZS1sb25nLWVub3VnaC1mb3ItaHMyNTY=";
+            throw new IllegalStateException(
+                "JWT secret key is not configured. Please set 'jwt.secret' property or 'JWT_SECRET_KEY' environment variable. "
+                + "The key must be a Base64-encoded string of at least 32 bytes (256 bits).");
         }
         byte[] keyBytes = Decoders.BASE64.decode(secret);
         if (keyBytes.length < 32) {
             throw new IllegalArgumentException("JWT secret key must be at least 256 bits (32 bytes)");
         }
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
+        log.info("JWT secret key initialized successfully ({} bytes)", keyBytes.length);
     }
 
     public String createAccessToken(Long userId, String username, Map<String, Object> claims) {

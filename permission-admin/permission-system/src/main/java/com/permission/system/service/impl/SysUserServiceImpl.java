@@ -109,9 +109,21 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             String accessToken = jwtTokenProvider.createAccessToken(loginUser.getUserId(), loginUser.getUsername(), claims);
             String refreshToken = jwtTokenProvider.createRefreshToken(loginUser.getUserId());
 
+            // Alibaba-Java: 安全规约 — 缓存前清除密码hash，防止Redis泄露导致凭证暴露
+            LoginUser cacheUser = LoginUser.builder()
+                    .userId(loginUser.getUserId())
+                    .username(loginUser.getUsername())
+                    .nickname(loginUser.getNickname())
+                    .deptId(loginUser.getDeptId())
+                    .deptName(loginUser.getDeptName())
+                    .dataScope(loginUser.getDataScope())
+                    .deptIds(loginUser.getDeptIds())
+                    .permissions(loginUser.getPermissions())
+                    .roles(loginUser.getRoles())
+                    .build();
             redisTemplate.opsForValue().set(
                     SecurityConstants.TOKEN_CACHE_PREFIX + accessToken,
-                    loginUser,
+                    cacheUser,
                     SecurityConstants.TOKEN_EXPIRE,
                     TimeUnit.SECONDS);
 
@@ -270,7 +282,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Transactional
     public void createUser(SysUser user) {
         if (existsByUsername(user.getUsername())) {
-            throw new BusinessException(1007, "用户名已存在");
+            throw new BusinessException(ResultCode.DATA_EXISTS, "用户名已存在");
         }
         validatePassword(user.getPassword());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -286,7 +298,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
         if (!existing.getUsername().equals(user.getUsername()) && existsByUsername(user.getUsername())) {
-            throw new BusinessException(1007, "用户名已存在");
+            throw new BusinessException(ResultCode.DATA_EXISTS, "用户名已存在");
         }
         user.setPassword(null);
         baseMapper.updateById(user);

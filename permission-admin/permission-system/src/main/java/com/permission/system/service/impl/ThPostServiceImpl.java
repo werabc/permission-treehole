@@ -15,10 +15,13 @@ import com.permission.system.mapper.ThPostMapper;
 import com.permission.system.mapper.ThUserMapper;
 import com.permission.system.service.ThPostService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> implements ThPostService {
@@ -29,32 +32,34 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
     private final ThLikeMapper likeMapper;
     private final ThNotificationMapper notificationMapper;
 
+    // 最大分页大小限制
+    private static final long MAX_PAGE_SIZE = 100;
+
     @Override
     public IPage<ThPost> pagePosts(long pageNum, long pageSize, Long categoryId, String keyword, Integer status) {
-        Page<ThPost> page = new Page(pageNum, pageSize);
+        // 限制分页大小，防止恶意请求
+        if (pageSize > MAX_PAGE_SIZE) {
+            pageSize = MAX_PAGE_SIZE;
+            log.warn("Page size exceeds maximum, capped to {}", MAX_PAGE_SIZE);
+        }
+
+        Page<ThPost> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ThPost> wrapper = new LambdaQueryWrapper<ThPost>()
                 .eq(ThPost::getDeleted, 0)
                 .eq(status != null, ThPost::getStatus, status)
                 .eq(categoryId != null, ThPost::getCategoryId, categoryId)
-                .like(StrUtil.isNotBlank(keyword), ThPost::getContent, keyword)
                 .orderByDesc(ThPost::getIsTop)
                 .orderByDesc(ThPost::getCreateTime);
+        // Alibaba-Java: 安全规约 — 转义LIKE通配符，防止通配符注入
+        if (StrUtil.isNotBlank(keyword)) {
+            String safeKeyword = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            wrapper.like(ThPost::getContent, safeKeyword);
+        }
 
         IPage<ThPost> result = postMapper.selectPage(page, wrapper);
 
-        // 填充作者名和分类名
-        for (ThPost post : result.getRecords()) {
-            if (post.getIsAnonymous() != null && post.getIsAnonymous() == 1) {
-                post.setAuthorName("匿名用户");
-            } else {
-                ThUser user = userMapper.selectById(post.getUserId());
-                post.setAuthorName(user != null ? user.getNickname() : "未知用户");
-            }
-            if (post.getCategoryId() != null) {
-                ThCategory cat = categoryMapper.selectById(post.getCategoryId());
-                post.setCategoryName(cat != null ? cat.getName() : "未分类");
-            }
-        }
+        // 批量填充作者名和分类名，避免 N+1 查询
+        fillPostExtras(result.getRecords());
 
         return result;
     }
@@ -67,6 +72,13 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
         if (post.getContent().length() > 5000) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "内容不能超过5000字");
         }
+        // 验证分类是否存在
+        if (post.getCategoryId() != null) {
+            ThCategory category = categoryMapper.selectById(post.getCategoryId());
+            if (category == null || category.getDeleted() == 1) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "分类不存在");
+            }
+        }
         post.setStatus(0); // 待审核
         post.setViewCount(0);
         post.setLikeCount(0);
@@ -75,6 +87,7 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
         post.setIsTop(0);
         post.setIsAnonymous(post.getIsAnonymous() != null ? post.getIsAnonymous() : 0);
         postMapper.insert(post);
+        log.info("Created post id={} userId={}", post.getId(), post.getUserId());
     }
 
     @Override
@@ -100,18 +113,24 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
 
         // 创建通知（如果不是点赞自己的帖子）
         if (post.getUserId() != null && !post.getUserId().equals(userId)) {
-            ThNotification notification = new ThNotification();
-            notification.setUserId(post.getUserId());
-            notification.setSenderId(userId);
-            notification.setType("LIKE");
-            notification.setTargetType("POST");
-            notification.setTargetId(id);
+            try {
+                ThNotification notification = new ThNotification();
+                notification.setUserId(post.getUserId());
+                notification.setSenderId(userId);
+                notification.setType("LIKE");
+                notification.setTargetType("POST");
+                notification.setTargetId(id);
 
-            ThUser liker = userMapper.selectById(userId);
-            String likerName = liker != null ? liker.getNickname() : "有人";
-            notification.setContent(likerName + " 点赞了你的帖子");
-            notification.setIsRead(0);
-            notificationMapper.insert(notification);
+                ThUser liker = userMapper.selectById(userId);
+                String likerName = liker != null ? liker.getNickname() : "有人";
+                notification.setContent(likerName + " 点赞了你的帖子");
+                notification.setIsRead(0);
+                notificationMapper.insert(notification);
+                log.debug("Created LIKE notification for user={} from={}", post.getUserId(), userId);
+            } catch (Exception e) {
+                // Alibaba-Java: 异常日志【强制】异常信息应包括案发现场信息和异常堆栈信息
+                log.error("Failed to create LIKE notification for postId={}", id, e);
+            }
         }
     }
 
@@ -124,8 +143,7 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
                 .eq(ThLike::getDeleted, 0);
         ThLike like = likeMapper.selectOne(wrapper);
         if (like != null) {
-            like.setDeleted(1);
-            likeMapper.updateById(like);
+            likeMapper.deleteById(like.getId());
             postMapper.decrementLikeCount(id);
         }
     }
@@ -142,5 +160,54 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
     @Override
     public void incrementViewCount(Long id) {
         postMapper.incrementViewCount(id);
+    }
+
+    /**
+     * 批量填充帖子作者名和分类名，避免 N+1 查询
+     */
+    private void fillPostExtras(List<ThPost> posts) {
+        if (posts == null || posts.isEmpty()) return;
+
+        // 收集所有用户ID和分类ID
+        Set<Long> userIds = new HashSet<>();
+        Set<Long> categoryIds = new HashSet<>();
+        for (ThPost post : posts) {
+            if (post.getIsAnonymous() == null || post.getIsAnonymous() != 1) {
+                if (post.getUserId() != null) userIds.add(post.getUserId());
+            }
+            if (post.getCategoryId() != null) categoryIds.add(post.getCategoryId());
+        }
+
+        // 批量查询用户
+        Map<Long, ThUser> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<ThUser> users = userMapper.selectBatchIds(userIds);
+            for (ThUser user : users) {
+                userMap.put(user.getId(), user);
+            }
+        }
+
+        // 批量查询分类
+        Map<Long, ThCategory> categoryMap = new HashMap<>();
+        if (!categoryIds.isEmpty()) {
+            List<ThCategory> categories = categoryMapper.selectBatchIds(categoryIds);
+            for (ThCategory cat : categories) {
+                categoryMap.put(cat.getId(), cat);
+            }
+        }
+
+        // 填充
+        for (ThPost post : posts) {
+            if (post.getIsAnonymous() != null && post.getIsAnonymous() == 1) {
+                post.setAuthorName("匿名用户");
+            } else {
+                ThUser user = userMap.get(post.getUserId());
+                post.setAuthorName(user != null ? user.getNickname() : "未知用户");
+            }
+            if (post.getCategoryId() != null) {
+                ThCategory cat = categoryMap.get(post.getCategoryId());
+                post.setCategoryName(cat != null ? cat.getName() : "未分类");
+            }
+        }
     }
 }

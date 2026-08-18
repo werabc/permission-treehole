@@ -1,16 +1,15 @@
 package com.permission.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.permission.common.BaseEntity;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("th_comment")
-public class ThComment {
-
-    @TableId(type = IdType.AUTO)
-    private Long id;
+public class ThComment extends BaseEntity {
 
     private Long postId;
 
@@ -35,13 +34,4 @@ public class ThComment {
     private Integer status;
 
     private String ip;
-
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    @TableLogic
-    private Integer deleted;
 }

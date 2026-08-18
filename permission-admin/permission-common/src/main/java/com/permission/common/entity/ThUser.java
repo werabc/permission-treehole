@@ -1,19 +1,21 @@
 package com.permission.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.permission.common.BaseEntity;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("th_user")
-public class ThUser {
-
-    @TableId(type = IdType.AUTO)
-    private Long id;
+public class ThUser extends BaseEntity {
 
     private String username;
 
+    @JsonIgnore
     private String password;
 
     private String nickname;
@@ -41,13 +43,4 @@ public class ThUser {
     private LocalDateTime lastPostTime;
 
     private String lastLoginIp;
-
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    @TableLogic
-    private Integer deleted;
 }

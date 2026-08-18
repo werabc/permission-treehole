@@ -12,6 +12,7 @@ import com.permission.framework.security.JwtTokenProvider;
 import com.permission.system.mapper.*;
 import com.permission.system.service.ThUserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> implements ThUserService {
@@ -32,6 +34,9 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
+
+    // 最大分页大小限制
+    private static final long MAX_PAGE_SIZE = 100;
 
     @Override
     public ThUser register(LoginDTO loginDTO) {
@@ -64,6 +69,7 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         user.setViolationCount(0);
         userMapper.insert(user);
 
+        log.info("Registered new user: {}", user.getUsername());
         return user;
     }
 
@@ -73,6 +79,7 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
                 .eq(ThUser::getUsername, loginDTO.getUsername()));
 
         if (user == null || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+            log.warn("Failed login attempt for user: {}", loginDTO.getUsername());
             throw new BusinessException(ResultCode.USERNAME_OR_PASSWORD_ERROR);
         }
 
@@ -92,6 +99,8 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         Map<String, String> result = new HashMap<>();
         result.put("token", token);
         result.put("nickname", user.getNickname());
+
+        log.info("User logged in: {}", user.getUsername());
         return result;
     }
 
@@ -102,6 +111,10 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
 
     @Override
     public IPage<ThPost> getPosts(Long userId, long pageNum, long pageSize) {
+        if (pageSize > MAX_PAGE_SIZE) {
+            pageSize = MAX_PAGE_SIZE;
+            log.warn("Page size exceeds maximum, capped to {}", MAX_PAGE_SIZE);
+        }
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.permission.common.entity.ThPost> page =
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageNum, pageSize);
         LambdaQueryWrapper<com.permission.common.entity.ThPost> wrapper = new LambdaQueryWrapper<com.permission.common.entity.ThPost>()
@@ -113,6 +126,10 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
 
     @Override
     public IPage<ThComment> getMyComments(Long userId, long pageNum, long pageSize) {
+        if (pageSize > MAX_PAGE_SIZE) {
+            pageSize = MAX_PAGE_SIZE;
+            log.warn("Page size exceeds maximum, capped to {}", MAX_PAGE_SIZE);
+        }
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.permission.common.entity.ThComment> page =
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageNum, pageSize);
         LambdaQueryWrapper<com.permission.common.entity.ThComment> wrapper = new LambdaQueryWrapper<com.permission.common.entity.ThComment>()
@@ -124,6 +141,10 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
 
     @Override
     public IPage<ThComment> getReceivedComments(Long userId, long pageNum, long pageSize) {
+        if (pageSize > MAX_PAGE_SIZE) {
+            pageSize = MAX_PAGE_SIZE;
+            log.warn("Page size exceeds maximum, capped to {}", MAX_PAGE_SIZE);
+        }
         // 获取用户的所有帖子ID
         List<Long> postIds = thPostMapper.selectList(
                 new LambdaQueryWrapper<com.permission.common.entity.ThPost>()
@@ -147,22 +168,28 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
 
     @Override
     public IPage<ThNotification> getNotifications(Long userId, long pageNum, long pageSize, Boolean unreadOnly) {
+        if (pageSize > MAX_PAGE_SIZE) {
+            pageSize = MAX_PAGE_SIZE;
+            log.warn("Page size exceeds maximum, capped to {}", MAX_PAGE_SIZE);
+        }
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.permission.common.entity.ThNotification> page =
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageNum, pageSize);
         LambdaQueryWrapper<com.permission.common.entity.ThNotification> wrapper = new LambdaQueryWrapper<com.permission.common.entity.ThNotification>()
                 .eq(com.permission.common.entity.ThNotification::getUserId, userId)
-
                 .eq(unreadOnly != null && unreadOnly, com.permission.common.entity.ThNotification::getIsRead, 0)
                 .orderByDesc(com.permission.common.entity.ThNotification::getCreateTime);
-        return (IPage<ThNotification>) thNotificationMapper.selectPage(page, wrapper);
+        IPage<ThNotification> result = (IPage<ThNotification>) thNotificationMapper.selectPage(page, wrapper);
+        log.debug("Fetched {} notifications for user={}", result.getTotal(), userId);
+        return result;
     }
 
     @Override
     public long getUnreadCount(Long userId) {
-        return thNotificationMapper.selectCount(new LambdaQueryWrapper<com.permission.common.entity.ThNotification>()
+        long count = thNotificationMapper.selectCount(new LambdaQueryWrapper<com.permission.common.entity.ThNotification>()
                 .eq(com.permission.common.entity.ThNotification::getUserId, userId)
-
                 .eq(com.permission.common.entity.ThNotification::getIsRead, 0));
+        log.debug("Unread count for user={}: {}", userId, count);
+        return count;
     }
 
     @Override
@@ -175,6 +202,7 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
                 thNotificationMapper.updateById(notification);
             }
         }
+        log.debug("Marked {} notifications as read for user={}", ids.size(), userId);
     }
 
     @Override
@@ -188,5 +216,6 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         if (user.getGender() != null) existing.setGender(user.getGender());
         if (user.getAvatar() != null) existing.setAvatar(user.getAvatar());
         userMapper.updateById(existing);
+        log.info("Updated profile for user={}", existing.getUsername());
     }
 }

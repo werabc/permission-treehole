@@ -102,13 +102,12 @@ public class ThCommentAdminController {
     public R<Void> delete(@PathVariable Long id) {
         ThComment comment = commentMapper.selectById(id);
         if (comment == null) return R.fail(404, "评论不存在");
-        comment.setDeleted(1);
-        commentMapper.updateById(comment);
 
-        // 减少帖子评论数（仅当帖子存在时）
+        // 减少帖子评论数（仅当帖子存在时）- 在逻辑删除前执行
         if (comment.getPostId() != null) {
             postMapper.decrementCommentCount(comment.getPostId());
         }
+        commentMapper.deleteById(id);
         return R.ok();
     }
 }

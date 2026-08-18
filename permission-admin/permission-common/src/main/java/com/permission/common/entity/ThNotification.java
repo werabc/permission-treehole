@@ -1,15 +1,21 @@
 package com.permission.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
+/**
+ * 树洞通知实体 — 注意：th_notification 表无 deleted 字段，不继承 BaseEntity
+ */
 @Data
+@EqualsAndHashCode
 @TableName("th_notification")
 public class ThNotification {
 
-    @TableId(type = IdType.AUTO)
+    @TableField("id")
     private Long id;
 
     private Long userId;
@@ -26,6 +32,5 @@ public class ThNotification {
 
     private Integer isRead;
 
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

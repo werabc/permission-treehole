@@ -11,12 +11,18 @@ import com.permission.system.mapper.ThPostMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Tag(name = "树洞内容审核")
 @RestController
 @RequestMapping("/api/admin/th/moderation")
@@ -36,7 +42,9 @@ public class ThModerationController {
                 .eq(ThPost::getDeleted, 0)
                 .eq(ThPost::getStatus, 0)
                 .orderByDesc(ThPost::getCreateTime);
-        return R.ok(postMapper.selectPage(page, wrapper));
+        IPage<ThPost> result = postMapper.selectPage(page, wrapper);
+        log.debug("Fetched {} pending posts", result.getTotal());
+        return R.ok(result);
     }
 
     @Operation(summary = "待审核评论")
@@ -49,7 +57,9 @@ public class ThModerationController {
                 .eq(ThComment::getDeleted, 0)
                 .eq(ThComment::getStatus, 0)
                 .orderByDesc(ThComment::getCreateTime);
-        return R.ok(commentMapper.selectPage(page, wrapper));
+        IPage<ThComment> result = commentMapper.selectPage(page, wrapper);
+        log.debug("Fetched {} pending comments", result.getTotal());
+        return R.ok(result);
     }
 
     @Operation(summary = "批量审核")
@@ -58,18 +68,23 @@ public class ThModerationController {
     public R<Void> batchAudit(@RequestBody Map<String, Object> body) {
         String type = (String) body.get("type");
         @SuppressWarnings("unchecked")
-        List<Long> ids = (List<Long>) body.get("ids");
+        List<Long> ids = ((List<?>) body.get("ids")).stream()
+                .map(o -> Long.valueOf(o.toString()))
+                .collect(java.util.stream.Collectors.toList());
         Integer status = (Integer) body.get("status");
 
         if (ids == null || ids.isEmpty()) return R.fail(400, "ID列表不能为空");
+        if (status == null || (status != 1 && status != 2)) return R.fail(400, "审核状态无效");
 
+        int count = 0;
         if ("post".equals(type)) {
             for (Long id : ids) {
                 ThPost post = postMapper.selectById(id);
                 if (post != null) {
                     post.setStatus(status);
-                    post.setAuditTime(java.time.LocalDateTime.now());
+                    post.setAuditTime(LocalDateTime.now());
                     postMapper.updateById(post);
+                    count++;
                 }
             }
         } else if ("comment".equals(type)) {
@@ -78,9 +93,13 @@ public class ThModerationController {
                 if (comment != null) {
                     comment.setStatus(status);
                     commentMapper.updateById(comment);
+                    count++;
                 }
             }
+        } else {
+            return R.fail(400, "类型无效");
         }
+        log.info("Batch audited {} {} items with status={}", count, type, status);
         return R.ok();
     }
 
@@ -97,6 +116,16 @@ public class ThModerationController {
                 .eq(ThPost::getDeleted, 0).eq(ThPost::getStatus, 1)));
         result.put("rejectedPosts", postMapper.selectCount(new LambdaQueryWrapper<ThPost>()
                 .eq(ThPost::getDeleted, 0).eq(ThPost::getStatus, 2)));
+
+        // 今日已审核数量
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
+        result.put("todayAudited", postMapper.selectCount(new LambdaQueryWrapper<ThPost>()
+                .eq(ThPost::getDeleted, 0)
+                .in(ThPost::getStatus, 1, 2)
+                .ge(ThPost::getAuditTime, todayStart)
+                .le(ThPost::getAuditTime, todayEnd)));
+
         return R.ok(result);
     }
 }
