@@ -1,5 +1,6 @@
 package com.permission.controller;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -45,9 +46,13 @@ public class ThPostAdminController {
                 .eq(ThPost::getDeleted, 0)
                 .eq(status != null, ThPost::getStatus, status)
                 .eq(categoryId != null, ThPost::getCategoryId, categoryId)
-                .like(keyword != null && !keyword.isEmpty(), ThPost::getContent, keyword)
                 .orderByDesc(ThPost::getIsTop)
                 .orderByDesc(ThPost::getCreateTime);
+        // 转义LIKE通配符，防止通配符注入
+        if (StrUtil.isNotBlank(keyword)) {
+            String safeKeyword = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            wrapper.like(ThPost::getContent, safeKeyword);
+        }
 
         IPage<ThPost> result = postMapper.selectPage(page, wrapper);
         for (ThPost post : result.getRecords()) {

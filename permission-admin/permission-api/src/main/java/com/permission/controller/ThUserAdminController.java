@@ -1,5 +1,6 @@
 package com.permission.controller;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -41,9 +42,14 @@ public class ThUserAdminController {
         Page<ThUser> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ThUser> wrapper = new LambdaQueryWrapper<ThUser>()
                 .eq(ThUser::getDeleted, 0)
-                .like(keyword != null && !keyword.isEmpty(), ThUser::getUsername, keyword)
                 .eq(status != null, ThUser::getStatus, status)
                 .orderByDesc(ThUser::getCreateTime);
+        // 转义LIKE通配符，防止通配符注入
+        if (StrUtil.isNotBlank(keyword)) {
+            String safeKeyword = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            wrapper.and(w -> w.like(ThUser::getUsername, safeKeyword)
+                    .or().like(ThUser::getNickname, safeKeyword));
+        }
         IPage<ThUser> result = userMapper.selectPage(page, wrapper);
         // 清除密码字段，防止泄露
         result.getRecords().forEach(u -> u.setPassword(null));

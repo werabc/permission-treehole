@@ -11,6 +11,7 @@ import com.permission.system.mapper.ThUserMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Tag(name = "树洞举报管理")
 @RestController
 @RequestMapping("/api/admin/th/report")
@@ -118,7 +120,9 @@ public class ThReportAdminController {
         String result = body.get("result") != null ? body.get("result").toString() : null;
 
         if (ids.isEmpty()) return R.fail(400, "ID列表不能为空");
+        if (status == null || (status != 1 && status != 2)) return R.fail(400, "处理状态无效");
 
+        int count = 0;
         for (Long id : ids) {
             ThReport report = reportMapper.selectById(id);
             if (report != null && report.getStatus() == 0) {
@@ -127,8 +131,10 @@ public class ThReportAdminController {
                 report.setHandlerId(loginUser.getUserId());
                 report.setHandleTime(java.time.LocalDateTime.now());
                 reportMapper.updateById(report);
+                count++;
             }
         }
+        log.info("Batch handled {} reports with status={}", count, status);
         return R.ok();
     }
 

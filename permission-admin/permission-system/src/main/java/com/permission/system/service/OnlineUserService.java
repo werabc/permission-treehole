@@ -72,21 +72,13 @@ public class OnlineUserService {
     }
 
     /**
-     * 强制用户下线
+     * 强制用户下线 - 清除在线状态
+     * 注意：token 黑名单应由 logout 接口处理（需要 token 本身才能加入黑名单）
      */
     public void forceLogout(Long userId) {
         String key = ONLINE_KEY_PREFIX + userId;
         redisTemplate.delete(key);
         redisTemplate.opsForSet().remove(ONLINE_INDEX_KEY, userId.toString());
-
-        // 同时加入黑名单，使 token 失效
-        String tokenKey = "token:" + userId;
-        String token = (String) redisTemplate.opsForValue().get(tokenKey);
-        if (token != null) {
-            redisTemplate.opsForValue().set("blacklist:" + token, "1",
-                    Duration.ofHours(2));
-            redisTemplate.delete(tokenKey);
-        }
     }
 
     /**
