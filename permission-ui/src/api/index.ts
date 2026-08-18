@@ -77,6 +77,7 @@ function handleTokenRefresh(originalConfig: any): Promise<any> {
         const newRefreshToken = refreshRes.data.refreshToken
         localStorage.setItem('accessToken', newToken)
         localStorage.setItem('refreshToken', newRefreshToken)
+        // 通知所有等待的请求，并清空订阅列表
         onTokenRefreshed(newToken)
         // 重试原请求
         originalConfig.headers.Authorization = `Bearer ${newToken}`
@@ -89,7 +90,6 @@ function handleTokenRefresh(originalConfig: any): Promise<any> {
       })
       .finally(() => {
         isRefreshing = false
-        refreshSubscribers = []
       })
   }
   // 正在刷新中，将请求加入队列

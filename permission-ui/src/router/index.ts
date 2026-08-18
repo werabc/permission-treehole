@@ -45,20 +45,23 @@ const router = createRouter({
 })
 
 let routesAdded = false
+const addedRouteNames: string[] = []
 
 /**
  * 递归添加路由 - 将嵌套路由扁平化后全部添加到 Layout 下
  */
 function addRoutesRecursively(route: RouteRecordRaw) {
   // 添加当前路由（如果有组件）
-  if (route.component) {
+  if (route.component && route.name) {
+    const routeName = String(route.name)
     router.addRoute('Layout', {
       path: route.path,
-      name: route.name,
+      name: routeName,
       component: route.component,
       meta: route.meta,
       redirect: route.redirect,
     })
+    addedRouteNames.push(routeName)
   }
   // 递归添加子路由
   if (route.children && route.children.length > 0) {
@@ -77,6 +80,13 @@ export function addDynamicRoutes(routes: RouteRecordRaw[]) {
 }
 
 export function resetDynamicRoutes() {
+  // 真正移除所有动态添加的路由
+  for (const name of addedRouteNames) {
+    if (router.hasRoute(name)) {
+      router.removeRoute(name)
+    }
+  }
+  addedRouteNames.length = 0
   routesAdded = false
 }
 
