@@ -46,8 +46,10 @@ docker-compose logs -f
 | 服务 | 地址 | 默认账号 |
 |------|------|----------|
 | 管理后台 | http://your-server-ip/admin/ | admin / Admin@1234 |
-| 树洞前端 | http://your-server/ip/ | 自主注册 |
+| 树洞前端 | http://your-server-ip/treehole/ | 自主注册 |
 | API文档 | http://your-server-ip/api/swagger-ui.html | - |
+
+> 访问 `http://your-server-ip/` 会自动跳转到树洞前端
 
 ## 生产环境配置
 

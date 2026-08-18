@@ -37,7 +37,7 @@ services:
 
   backend:
     build:
-      context: ../permission-admin
+      context: ./backend
       dockerfile: Dockerfile
     container_name: permission_backend
     environment:
