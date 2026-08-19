@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.permission.common.constant.SecurityConstants;
 import com.permission.common.dto.LoginDTO;
+import com.permission.common.dto.ThProfileDTO;
 import com.permission.common.entity.*;
 import com.permission.common.exception.BusinessException;
 import com.permission.common.ResultCode;
@@ -18,11 +19,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -41,6 +47,24 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
     // 最大分页大小限制
     private static final long MAX_PAGE_SIZE = 100;
 
+    // ========== 密码策略（与 Admin 保持一致的高强度要求） ==========
+    private static final Pattern PASSWORD_PATTERN = Pattern.compile(
+            "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[~!@#$%^&*()_+\\-=\\[\\]{}|;:',.<>?/]).{8,}$");
+    private static final Set<String> COMMON_PASSWORDS = Set.of(
+            "123456", "password", "123456789", "12345678", "12345",
+            "admin", "qwerty", "abc123", "letmein", "monkey", "111111",
+            "123123", "dragon", "1234", "1234567890", "iloveyou");
+
+    // ========== 树洞登录限流/锁定常量 ==========
+    private static final int TH_MAX_LOGIN_FAIL = 5;          // 连续失败次数锁定
+    private static final int TH_ACCOUNT_LOCK_MINUTES = 30;   // 锁定时间
+    private static final int TH_RATE_LIMIT_MAX = 10;         // 每窗口最大登录尝试
+    private static final int TH_RATE_LIMIT_WINDOW = 60;      // 窗口秒数
+    private static final int TH_REGISTER_LIMIT_MAX = 3;      // 每窗口最大注册数
+    private static final String TH_RATE_PREFIX = "rate_limit:th_login:";
+    private static final String TH_REG_PREFIX = "rate_limit:th_register:";
+    private static final String TH_FAIL_PREFIX = "th_login_fail:";
+
     @Override
     public ThUser register(LoginDTO loginDTO) {
         if (StrUtil.isBlank(loginDTO.getUsername()) || StrUtil.isBlank(loginDTO.getPassword())) {
@@ -49,8 +73,18 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         if (loginDTO.getUsername().length() < 3 || loginDTO.getUsername().length() > 20) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "用户名长度应为3-20位");
         }
-        if (loginDTO.getPassword().length() < 6) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "密码至少6位");
+        // 强密码策略：8位以上，包含大小写字母、数字和特殊字符
+        validatePassword(loginDTO.getPassword(), loginDTO.getUsername());
+
+        // 注册速率限制（按 IP）
+        String clientIp = getClientIp();
+        String regKey = TH_REG_PREFIX + clientIp;
+        Long regCount = redisTemplate.opsForValue().increment(regKey);
+        if (regCount == 1) {
+            redisTemplate.expire(regKey, TH_RATE_LIMIT_WINDOW, TimeUnit.SECONDS);
+        }
+        if (regCount != null && regCount > TH_REGISTER_LIMIT_MAX) {
+            throw new BusinessException(ResultCode.RATE_LIMITED, "注册过于频繁，请稍后再试");
         }
 
         // 检查用户名唯一
@@ -78,17 +112,44 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
 
     @Override
     public Map<String, String> login(LoginDTO loginDTO) {
+        String username = loginDTO.getUsername();
+
+        // 1. 登录速率限制（按 IP）
+        String clientIp = getClientIp();
+        String rateLimitKey = TH_RATE_PREFIX + clientIp;
+        Long rateCount = redisTemplate.opsForValue().increment(rateLimitKey);
+        if (rateCount == 1) {
+            redisTemplate.expire(rateLimitKey, TH_RATE_LIMIT_WINDOW, TimeUnit.SECONDS);
+        }
+        if (rateCount != null && rateCount > TH_RATE_LIMIT_MAX) {
+            throw new BusinessException(ResultCode.RATE_LIMITED, "登录过于频繁，请稍后再试");
+        }
+
+        // 2. 账号锁定检查
+        String failKey = TH_FAIL_PREFIX + username;
+        Object failCountObj = redisTemplate.opsForValue().get(failKey);
+        int failCount = failCountObj instanceof Integer ? (Integer) failCountObj : 0;
+        if (failCount >= TH_MAX_LOGIN_FAIL) {
+            throw new BusinessException(ResultCode.ACCOUNT_TEMP_LOCKED, "账号已被临时锁定，请" + TH_ACCOUNT_LOCK_MINUTES + "分钟后再试");
+        }
+
         ThUser user = userMapper.selectOne(new LambdaQueryWrapper<ThUser>()
-                .eq(ThUser::getUsername, loginDTO.getUsername()));
+                .eq(ThUser::getUsername, username));
 
         if (user == null || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
-            log.warn("Failed login attempt for user: {}", loginDTO.getUsername());
+            // 累加失败计数
+            redisTemplate.opsForValue().increment(failKey);
+            redisTemplate.expire(failKey, TH_ACCOUNT_LOCK_MINUTES, TimeUnit.MINUTES);
+            log.warn("Failed login attempt for user: {} (failCount={})", username, failCount + 1);
             throw new BusinessException(ResultCode.USERNAME_OR_PASSWORD_ERROR);
         }
 
         if (user.getStatus() == 0) {
             throw new BusinessException(ResultCode.USER_ACCOUNT_DISABLED, "账号已被封禁");
         }
+
+        // 登录成功，清除失败计数
+        redisTemplate.delete(failKey);
 
         // 生成 Token
         Map<String, Object> claims = new HashMap<>();
@@ -212,16 +273,71 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
     }
 
     @Override
-    public void updateProfile(ThUser user) {
-        ThUser existing = userMapper.selectById(user.getId());
+    public void updateProfile(Long userId, ThProfileDTO dto) {
+        ThUser existing = userMapper.selectById(userId);
         if (existing == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
-        if (user.getNickname() != null) existing.setNickname(user.getNickname());
-        if (user.getBio() != null) existing.setBio(user.getBio());
-        if (user.getGender() != null) existing.setGender(user.getGender());
-        if (user.getAvatar() != null) existing.setAvatar(user.getAvatar());
+        // 使用 DTO 白名单 + HTML 转义，防止 Mass Assignment 和 Stored XSS
+        if (dto.getNickname() != null) existing.setNickname(sanitizeHtml(dto.getNickname()));
+        if (dto.getBio() != null) existing.setBio(sanitizeHtml(dto.getBio()));
+        if (dto.getGender() != null) existing.setGender(dto.getGender());
+        if (dto.getAvatar() != null) existing.setAvatar(dto.getAvatar());
+        if (dto.getEmail() != null) existing.setEmail(dto.getEmail());
         userMapper.updateById(existing);
         log.info("Updated profile for user={}", existing.getUsername());
+    }
+
+    // ========== 私有辅助方法 ==========
+
+    /**
+     * 密码强度校验：8-64位，包含大小写字母、数字、特殊字符，且不能与用户名相同
+     */
+    private void validatePassword(String password, String username) {
+        if (StrUtil.isBlank(password) || !PASSWORD_PATTERN.matcher(password).matches()) {
+            throw new BusinessException(ResultCode.PASSWORD_WEAK,
+                    "密码至少8位，需包含大写字母、小写字母、数字和特殊字符");
+        }
+        if (password.length() > 64) {
+            throw new BusinessException(ResultCode.PASSWORD_WEAK, "密码长度不能超过64位");
+        }
+        if (password.equalsIgnoreCase(username)) {
+            throw new BusinessException(ResultCode.PASSWORD_WEAK, "密码不能与用户名相同");
+        }
+        if (COMMON_PASSWORDS.contains(password.toLowerCase())) {
+            throw new BusinessException(ResultCode.PASSWORD_WEAK, "密码过于简单，请使用更复杂的密码");
+        }
+    }
+
+    /**
+     * HTML 转义：将 < > " ' & 转为实体，防止 Stored XSS
+     */
+    private String sanitizeHtml(String input) {
+        if (input == null) return null;
+        return input.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#x27;");
+    }
+
+    /**
+     * 获取客户端 IP（优先从 X-Forwarded-For / X-Real-IP，需由可信反向代理覆盖）
+     */
+    private String getClientIp() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs == null) return "unknown";
+        jakarta.servlet.http.HttpServletRequest request = attrs.getRequest();
+        String ip = request.getHeader("X-Forwarded-For");
+        if (StrUtil.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (StrUtil.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
     }
 }

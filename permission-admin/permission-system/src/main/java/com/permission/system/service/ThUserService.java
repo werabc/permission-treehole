@@ -3,6 +3,7 @@ package com.permission.system.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.permission.common.dto.LoginDTO;
+import com.permission.common.dto.ThProfileDTO;
 import com.permission.common.entity.ThComment;
 import com.permission.common.entity.ThNotification;
 import com.permission.common.entity.ThPost;
@@ -31,5 +32,8 @@ public interface ThUserService extends IService<ThUser> {
 
     void markNotificationsRead(Long userId, List<Long> ids);
 
-    void updateProfile(ThUser user);
+    /**
+     * 更新树洞用户资料 — 使用 DTO 白名单，仅更新允许的字段
+     */
+    void updateProfile(Long userId, ThProfileDTO dto);
 }

@@ -7,6 +7,7 @@ import com.permission.common.dto.LoginDTO;
 import com.permission.common.entity.ThUser;
 import com.permission.framework.security.JwtAuthenticationUtil;
 import com.permission.framework.security.JwtTokenProvider;
+import com.permission.system.service.ThSettingsService;
 import com.permission.system.service.ThUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 public class ThAuthController {
 
     private final ThUserService userService;
+    private final ThSettingsService settingsService;
     private final JwtAuthenticationUtil jwtUtil;
     private final JwtTokenProvider jwtTokenProvider;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -33,6 +35,10 @@ public class ThAuthController {
     @Operation(summary = "注册")
     @PostMapping("/register")
     public R<Map<String, String>> register(@RequestBody LoginDTO loginDTO) {
+        // 检查是否允许注册
+        if (!settingsService.isRegistrationAllowed()) {
+            return R.fail(com.permission.common.ResultCode.BAD_REQUEST, "当前不开放注册");
+        }
         ThUser user = userService.register(loginDTO);
         Map<String, String> result = new HashMap<>();
         result.put("id", String.valueOf(user.getId()));
@@ -74,10 +80,10 @@ public class ThAuthController {
     @GetMapping("/user-info")
     public R<Map<String, Object>> userInfo(HttpServletRequest request) {
         Long userId = jwtUtil.extractUserId(request);
-        if (userId == null) return R.fail(401, "未登录");
+        if (userId == null) throw new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException("未登录");
 
         ThUser user = userService.getUserById(userId);
-        if (user == null) return R.fail(401, "用户不存在");
+        if (user == null) throw new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException("用户不存在");
 
         Map<String, Object> info = new HashMap<>();
         info.put("id", user.getId());

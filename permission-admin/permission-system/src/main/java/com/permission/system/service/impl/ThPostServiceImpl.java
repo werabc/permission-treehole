@@ -200,6 +200,7 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
         for (ThPost post : posts) {
             if (post.getIsAnonymous() != null && post.getIsAnonymous() == 1) {
                 post.setAuthorName("匿名用户");
+                post.setUserId(null);  // 匿名帖子清除 userId，防止去匿名化
             } else {
                 ThUser user = userMap.get(post.getUserId());
                 post.setAuthorName(user != null ? user.getNickname() : "未知用户");
@@ -208,6 +209,10 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
                 ThCategory cat = categoryMap.get(post.getCategoryId());
                 post.setCategoryName(cat != null ? cat.getName() : "未分类");
             }
+            // 公开接口不返回敏感字段
+            post.setIp(null);
+            post.setAuditRemark(null);
+            post.setAuditorId(null);
         }
     }
 }

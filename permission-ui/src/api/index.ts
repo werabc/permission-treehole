@@ -21,6 +21,8 @@ service.interceptors.request.use(
 
 let isRefreshing = false
 let refreshSubscribers: Array<(token: string) => void> = []
+// 记录已尝试刷新过的请求 URL+方法，防止 403 无权限时无限刷新 token
+const refreshedUrls = new Set<string>()
 
 function onTokenRefreshed(token: string) {
   refreshSubscribers.forEach(cb => cb(token))
@@ -52,7 +54,22 @@ service.interceptors.response.use(
     return res
   },
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status
+    if (status === 401 || status === 403) {
+      // 403 无权限：普通用户访问了 admin 接口，直接提示并跳转
+      if (status === 403 && error.config?.url) {
+        const urlKey = `${error.config.method}_${error.config.url}`
+        if (refreshedUrls.has(urlKey)) {
+          // 已尝试过刷新仍 403，说明是权限不足而非 token 过期
+          refreshedUrls.delete(urlKey)
+          ElMessage.warning('权限不足，即将跳转登录')
+          localStorage.clear()
+          setTimeout(() => { window.location.hash = '/login' }, 1500)
+          return Promise.reject(error)
+        }
+        refreshedUrls.add(urlKey)
+      }
+      // 401 未认证 或 403 首次：尝试刷新 Token
       const refreshTokenVal = localStorage.getItem('refreshToken')
       if (refreshTokenVal) {
         return handleTokenRefresh(error.config)
@@ -77,6 +94,8 @@ function handleTokenRefresh(originalConfig: any): Promise<any> {
         const newRefreshToken = refreshRes.data.refreshToken
         localStorage.setItem('accessToken', newToken)
         localStorage.setItem('refreshToken', newRefreshToken)
+        // 刷新成功，清除 403 重试记录，允许后续请求重新尝试
+        refreshedUrls.clear()
         // 通知所有等待的请求，并清空订阅列表
         onTokenRefreshed(newToken)
         // 重试原请求

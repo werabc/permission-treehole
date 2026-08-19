@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.permission.common.R;
 import com.permission.common.annotation.OperationLog;
 import com.permission.common.dto.LoginUser;
+import com.permission.common.dto.ThProfileDTO;
 import com.permission.common.entity.*;
 import com.permission.system.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +35,7 @@ public class ThPublicController {
     private final ThReportService reportService;
     private final ThUserService userService;
     private final ThCategoryService categoryService;
+    private final ThSettingsService settingsService;
     private final com.permission.system.mapper.ThAnnouncementMapper announcementMapper;
 
     /**
@@ -82,6 +85,14 @@ public class ThPublicController {
         if (post == null || post.getDeleted() == 1) return R.fail(404, "帖子不存在");
         if (post.getStatus() != 1) return R.fail(404, "帖子不存在");
         postService.incrementViewCount(id);
+        // 清除敏感字段，防止信息泄露
+        post.setIp(null);
+        post.setAuditRemark(null);
+        post.setAuditorId(null);
+        if (post.getIsAnonymous() != null && post.getIsAnonymous() == 1) {
+            post.setUserId(null);
+            post.setAuthorName("匿名用户");
+        }
         return R.ok(post);
     }
 
@@ -98,6 +109,11 @@ public class ThPublicController {
     @OperationLog(module = "树洞帖子", value = "创建帖子")
     public R<Long> createPost(@RequestBody ThPost post,
                                @AuthenticationPrincipal LoginUser loginUser) {
+        // 检查是否允许匿名发帖
+        if (post.getIsAnonymous() != null && post.getIsAnonymous() == 1
+                && !settingsService.isAnonymousAllowed()) {
+            return R.fail(com.permission.common.ResultCode.BAD_REQUEST, "匿名发帖已关闭");
+        }
         post.setUserId(requireUserId(loginUser));
         postService.createPost(post);
         return R.ok(post.getId());
@@ -209,10 +225,9 @@ public class ThPublicController {
 
     @Operation(summary = "更新个人资料")
     @PutMapping("/user/profile")
-    public R<Void> updateProfile(@RequestBody ThUser user,
+    public R<Void> updateProfile(@RequestBody @Valid ThProfileDTO dto,
                                   @AuthenticationPrincipal LoginUser loginUser) {
-        user.setId(requireUserId(loginUser));
-        userService.updateProfile(user);
+        userService.updateProfile(requireUserId(loginUser), dto);
         return R.ok();
     }
 }

@@ -167,6 +167,7 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
         for (ThComment comment : comments) {
             if (comment.getIsAnonymous() != null && comment.getIsAnonymous() == 1) {
                 comment.setAuthorName("匿名用户");
+                comment.setUserId(null);  // 匿名评论清除 userId，防止去匿名化
             } else {
                 ThUser user = userMap.get(comment.getUserId());
                 comment.setAuthorName(user != null ? user.getNickname() : "未知用户");
@@ -175,6 +176,8 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
                 ThUser replyUser = userMap.get(comment.getReplyUserId());
                 comment.setReplyUserName(replyUser != null ? replyUser.getNickname() : "未知用户");
             }
+            // 公开接口不返回敏感字段
+            comment.setIp(null);
         }
     }
 }

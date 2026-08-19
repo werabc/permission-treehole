@@ -12,13 +12,13 @@ service.interceptors.request.use((config) => {
   return config
 })
 
-// Alibaba-Java: 401 处理 — Token 过期时跳转登录
+// 401/403 处理 — Token 过期或无权限时跳转登录
 service.interceptors.response.use(
   (response) => {
     const res = response.data
     if (res.code !== 200) {
-      // 401 未授权，清除本地状态并跳转登录
-      if (res.code === 401) {
+      // 401 未授权 或 403 无权限，清除本地状态并跳转登录
+      if (res.code === 401 || res.code === 403) {
         logout()
         window.location.hash = '/login'
       }
@@ -27,8 +27,9 @@ service.interceptors.response.use(
     return res
   },
   (error) => {
-    // 网络层 401 处理
-    if (error.response?.status === 401) {
+    // 网络层 401/403 处理
+    const status = error.response?.status
+    if (status === 401 || status === 403) {
       logout()
       window.location.hash = '/login'
     }

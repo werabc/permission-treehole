@@ -110,7 +110,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElDialog, ElForm, ElFormItem, ElSelect, ElOption, ElInput, ElButton } from 'element-plus'
-import { getPostDetail, likePost, unlikePost, getCommentPage, createComment, likeComment, submitReport } from '../api/treehole'
+import { getPostDetail, likePost, unlikePost, getCommentPage, createComment, likeComment, submitReport as submitReportApi } from '../api/treehole'
 import type { Post, Comment } from '../api/treehole'
 
 const route = useRoute()
@@ -227,7 +227,7 @@ async function submitReport() {
   }
   reportSubmitting.value = true
   try {
-    await submitReport({
+    await submitReportApi({
       targetType: 'POST',
       targetId: post.value!.id,
       reason: reportForm.value.reason,

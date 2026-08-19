@@ -75,18 +75,20 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new BusinessException(ResultCode.RATE_LIMITED);
         }
 
-        // 2. Captcha check
-        if (StrUtil.isNotBlank(loginDTO.getCaptchaKey()) || StrUtil.isNotBlank(loginDTO.getCaptchaCode())) {
-            String captchaKey = loginDTO.getCaptchaKey();
-            String correctCode = (String) redisTemplate.opsForValue().get(SecurityConstants.CAPTCHA_PREFIX + captchaKey);
-            if (StrUtil.isBlank(correctCode)) {
-                throw new BusinessException(ResultCode.CAPTCHA_ERROR);
-            }
-            if (!correctCode.equalsIgnoreCase(loginDTO.getCaptchaCode())) {
-                throw new BusinessException(ResultCode.CAPTCHA_ERROR);
-            }
-            redisTemplate.delete(SecurityConstants.CAPTCHA_PREFIX + captchaKey);
+        // 2. Captcha check — 强制校验，不可绕过
+        String captchaKey = loginDTO.getCaptchaKey();
+        String captchaCode = loginDTO.getCaptchaCode();
+        if (StrUtil.isBlank(captchaKey) || StrUtil.isBlank(captchaCode)) {
+            throw new BusinessException(ResultCode.CAPTCHA_ERROR, "请完成验证码");
         }
+        String correctCode = (String) redisTemplate.opsForValue().get(SecurityConstants.CAPTCHA_PREFIX + captchaKey);
+        if (StrUtil.isBlank(correctCode)) {
+            throw new BusinessException(ResultCode.CAPTCHA_ERROR, "验证码已过期，请刷新");
+        }
+        if (!correctCode.equalsIgnoreCase(captchaCode)) {
+            throw new BusinessException(ResultCode.CAPTCHA_ERROR, "验证码错误");
+        }
+        redisTemplate.delete(SecurityConstants.CAPTCHA_PREFIX + captchaKey);
 
         // 3. Account lockout check
         String failKey = SecurityConstants.LOGIN_FAIL_PREFIX + username;

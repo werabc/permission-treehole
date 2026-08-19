@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.permission.common.R;
 import com.permission.common.entity.ThSetting;
 import com.permission.system.mapper.ThSettingMapper;
+import com.permission.system.service.ThSettingsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,17 +22,13 @@ import java.util.Map;
 public class ThSettingsController {
 
     private final ThSettingMapper settingMapper;
+    private final ThSettingsService settingsService;
 
     @Operation(summary = "获取所有配置")
     @GetMapping
     @PreAuthorize("hasAnyAuthority('admin')")
     public R<Map<String, String>> getAll() {
-        List<ThSetting> settings = settingMapper.selectList(new LambdaQueryWrapper<ThSetting>());
-        Map<String, String> result = new HashMap<>();
-        for (ThSetting s : settings) {
-            result.put(s.getSettingKey(), s.getSettingValue());
-        }
-        return R.ok(result);
+        return R.ok(settingsService.getAll());
     }
 
     @Operation(summary = "更新配置")
@@ -51,6 +48,8 @@ public class ThSettingsController {
                 settingMapper.insert(setting);
             }
         }
+        // 保存后刷新缓存，立即生效
+        settingsService.refresh();
         return R.ok();
     }
 }

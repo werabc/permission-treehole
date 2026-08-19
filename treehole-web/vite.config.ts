@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
+  // 生产环境使用 /treehole/ 作为基础路径，与开发服务器路径一致
+  base: process.env.NODE_ENV === 'production' ? '/treehole/' : '/',
   plugins: [vue()],
   server: {
     port: 3000,
