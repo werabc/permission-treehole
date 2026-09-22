@@ -3,9 +3,11 @@ package com.permission.system.security;
 import cn.hutool.core.collection.CollUtil;
 import com.permission.common.dto.LoginUser;
 import com.permission.common.entity.*;
+import com.permission.common.enums.DataScope;
 import com.permission.common.enums.UserStatus;
 import com.permission.framework.security.CustomUserDetailsService;
 import com.permission.system.mapper.*;
+import com.permission.system.support.DataScopeHelper;
 import com.permission.common.entity.ThUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, CustomUserDet
     private final SysDeptMapper deptMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final ThUserMapper thUserMapper;
+    private final SysRoleDeptMapper roleDeptMapper;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -119,23 +122,51 @@ public class UserDetailsServiceImpl implements UserDetailsService, CustomUserDet
         }
 
         String deptName = "";
+        SysDept selfDept = null;
         if (user.getDeptId() != null) {
-            SysDept dept = deptMapper.selectById(user.getDeptId());
-            if (dept != null) {
-                deptName = dept.getDeptName();
+            selfDept = deptMapper.selectById(user.getDeptId());
+            if (selfDept != null) {
+                deptName = selfDept.getDeptName();
             }
         }
 
-        // Compute dataScope from already-loaded roles (lower value = broader scope)
-        Integer dataScope = 5; // Default: SELF
+        // ===== 数据权限：取最宽范围（code 越小范围越大），并预计算可见部门集合 =====
+        Integer dataScope = DataScope.SELF.getCode();
+        Integer limitLevel = null;
         for (SysRole role : roleList) {
+            if (role.getStatus() != null && role.getStatus() != 1) continue;
             if (role.getDataScope() != null && role.getDataScope() < dataScope) {
                 dataScope = role.getDataScope();
+                limitLevel = role.getDataScopeLevel();
             }
         }
 
-        // deptIds remains empty for now: CUSTOM scope filtering not fully implemented
-        List<Long> deptIds = new ArrayList<>();
+        Long groupId = DataScopeHelper.resolveGroupId(selfDept);
+        Long companyId = DataScopeHelper.resolveCompanyId(selfDept);
+        List<Long> deptIds = Collections.emptyList();
+        List<Long> deptTreeIds = Collections.emptyList();
+        try {
+            DataScope scope = DataScope.of(dataScope);
+            if (scope != DataScope.ALL && scope != DataScope.SELF) {
+                List<Long> customDeptIds = scope == DataScope.CUSTOM
+                        ? roleDeptMapper.selectDeptIdsByRoleIds(roleIds)
+                        : Collections.emptyList();
+                // 组织树规模小，一次性加载用于子树解析（避免运行时递归查询）
+                List<SysDept> allDepts = deptMapper.selectList(
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysDept>()
+                                .eq(SysDept::getDeleted, 0));
+                deptIds = DataScopeHelper.resolveVisibleDeptIds(dataScope, limitLevel,
+                        selfDept, allDepts, groupId, companyId, customDeptIds);
+                // 部门树查询需要连带祖先，否则父节点被过滤会导致整棵树渲染不出来
+                deptTreeIds = DataScopeHelper.withAncestors(deptIds, allDepts);
+            }
+        } catch (Exception e) {
+            // 数据范围解析失败时按最保守策略（仅本人）降级，避免放大权限
+            log.error("数据范围解析失败，降级为仅本人 userId={} dataScope={}", user.getId(), dataScope, e);
+            dataScope = DataScope.SELF.getCode();
+            deptIds = Collections.emptyList();
+            deptTreeIds = Collections.emptyList();
+        }
 
         return LoginUser.builder()
                 .userId(user.getId())
@@ -146,6 +177,12 @@ public class UserDetailsServiceImpl implements UserDetailsService, CustomUserDet
                 .deptName(deptName)
                 .dataScope(dataScope)
                 .deptIds(deptIds)
+                .deptTreeIds(deptTreeIds)
+                .deptLevel(selfDept == null ? null
+                        : (selfDept.getDeptLevel() != null ? selfDept.getDeptLevel()
+                        : DataScopeHelper.calcLevel(selfDept.getAncestors())))
+                .companyId(companyId)
+                .groupId(groupId)
                 .permissions(permissions)
                 .roles(roles)
                 .build();

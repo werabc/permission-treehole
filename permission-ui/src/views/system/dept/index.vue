@@ -15,6 +15,13 @@
     <div class="table-card">
       <el-table :data="deptList" v-loading="loading" row-key="id" stripe border default-expand-all>
         <el-table-column prop="deptName" label="部门名称" min-width="200" />
+        <el-table-column label="组织层级" width="130" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="levelTagType(row.deptLevel)">
+              L{{ row.deptLevel || 1 }} · {{ levelLabel(row.deptLevel) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="sort" label="排序" width="70" align="center" />
         <el-table-column prop="leader" label="负责人" width="120" />
         <el-table-column prop="phone" label="电话" width="140" />
@@ -107,6 +114,20 @@ import { getDeptTree, getDeptTreeSelect, getDeptById, createDept, updateDept, de
 import type { SysDept } from '@/types'
 
 const loading = ref(false)
+
+/** 组织层级显示：1-集团 2-公司 3-部门 4+-小组（数据权限的边界依据） */
+function levelLabel(level?: number) {
+  const map: Record<number, string> = { 1: '集团', 2: '公司', 3: '部门', 4: '小组' }
+  if (!level) return '集团'
+  return level >= 4 ? '小组' : (map[level] || '部门')
+}
+
+function levelTagType(level?: number): 'danger' | 'warning' | 'primary' | 'info' {
+  const map: Record<number, 'danger' | 'warning' | 'primary' | 'info'> = {
+    1: 'danger', 2: 'warning', 3: 'primary', 4: 'info',
+  }
+  return level && level >= 4 ? 'info' : (map[level || 1] || 'info')
+}
 const deptList = ref<SysDept[]>([])
 const deptTreeSelect = ref<SysDept[]>([])
 const keyword = ref('')

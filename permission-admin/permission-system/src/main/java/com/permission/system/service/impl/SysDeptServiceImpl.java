@@ -11,12 +11,14 @@ import com.permission.common.exception.BusinessException;
 import com.permission.system.mapper.SysDeptMapper;
 import com.permission.system.mapper.SysUserMapper;
 import com.permission.system.service.SysDeptService;
+import com.permission.system.support.DataScopeHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -46,18 +48,20 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void createDept(SysDept dept) {
         validateDeptNameUnique(dept.getDeptName(), dept.getParentId(), null);
         if (dept.getParentId() == null) {
             dept.setParentId(0L);
         }
         dept.setAncestors(getAncestors(dept.getParentId()));
+        // 组织层级由 ancestors 推导并冗余存储：1-集团 2-公司 3-部门 4+-小组
+        dept.setDeptLevel(DataScopeHelper.calcLevel(dept.getAncestors()));
         baseMapper.insert(dept);
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateDept(SysDept dept) {
         SysDept existing = baseMapper.selectById(dept.getId());
         if (existing == null) {
@@ -67,8 +71,36 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         if (dept.getParentId() == null) {
             dept.setParentId(0L);
         }
-        dept.setAncestors(getAncestors(dept.getParentId()));
+        String newAncestors = getAncestors(dept.getParentId());
+        boolean moved = !Objects.equals(newAncestors, existing.getAncestors());
+        dept.setAncestors(newAncestors);
+        dept.setDeptLevel(DataScopeHelper.calcLevel(newAncestors));
         baseMapper.updateById(dept);
+
+        // 部门被移动（换了上级）时，整棵子树的层级都会变，需要级联刷新
+        if (moved) {
+            refreshDescendantLevels(dept.getId());
+        }
+    }
+
+    /**
+     * 级联刷新子树层级：数据权限依赖 dept_level 判断"本部门及以下限N级"的边界，
+     * 层级不准会直接导致越权或漏看，因此移动部门后必须同步
+     */
+    private void refreshDescendantLevels(Long deptId) {
+        List<SysDept> descendants = baseMapper.selectList(
+                new LambdaQueryWrapper<SysDept>().eq(SysDept::getDeleted, 0));
+        for (SysDept d : descendants) {
+            if (Objects.equals(d.getId(), deptId)) continue;
+            if (!DataScopeHelper.isDescendantOf(d, deptId)) continue;
+            int level = DataScopeHelper.calcLevel(d.getAncestors());
+            if (d.getDeptLevel() == null || d.getDeptLevel() != level) {
+                SysDept patch = new SysDept();
+                patch.setId(d.getId());
+                patch.setDeptLevel(level);
+                baseMapper.updateById(patch);
+            }
+        }
     }
 
     @Override

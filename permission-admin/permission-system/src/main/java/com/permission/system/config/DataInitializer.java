@@ -187,6 +187,8 @@ public class DataInitializer implements CommandLineRunner {
         dept.setDeptName(name);
         dept.setParentId(parentId);
         dept.setAncestors(ancestors);
+        // 组织层级：数据权限（本集团/本公司/限N级）依赖该字段，必须与 ancestors 保持一致
+        dept.setDeptLevel(com.permission.system.support.DataScopeHelper.calcLevel(ancestors));
         dept.setSort(sort);
         dept.setLeader(leader);
         dept.setStatus(1);

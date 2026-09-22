@@ -42,8 +42,10 @@ public class SecurityConfig {
                 .requestMatchers(SecurityConstants.LOGIN_URL, SecurityConstants.REFRESH_TOKEN_URL).permitAll()
                 // Swagger/Doc 文档公开
                 .requestMatchers("/doc.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
-                // 认证接口公开
-                .requestMatchers("/api/auth/**").permitAll()
+                // 认证接口：只放行登录相关端点，其余（user-info/logout）必须携带有效 Token
+                // 注意：不要用 /api/auth/** 整体放行，否则日后在该路径下新增管理端点会直接公网可达
+                .requestMatchers("/api/auth/captcha", "/api/auth/login", "/api/auth/refresh").permitAll()
+                .requestMatchers("/api/auth/**").authenticated()
                 // 树洞认证接口（登录/注册/用户信息）
                 .requestMatchers("/api/th/auth/**").permitAll()
                 // 管理端 Dashboard 统计接口需要认证

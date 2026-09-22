@@ -339,22 +339,42 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         user.setPassword(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
 
-        // 改密后让已签发的 Token 失效，强制重新登录
+        // 改密后让已签发的 Token 真正失效：JwtAuthenticationFilter 只认黑名单，
+        // 因此必须把该用户所有已缓存 Token 加入黑名单，仅删缓存是无效的。
+        // 注意：缓存值可能是 Long（树洞端）也可能是 LoginUser 对象（管理端），
+        // 反序列化不可靠，因此统一从 key 里的 JWT 解析 userId 来判定归属。
         try {
             java.util.Set<String> keys = redisTemplate.keys(SecurityConstants.TOKEN_CACHE_PREFIX + "*");
+            int revoked = 0;
             if (keys != null) {
                 for (String key : keys) {
-                    Object cachedUserId = redisTemplate.opsForValue().get(key);
-                    if (cachedUserId != null && String.valueOf(userId).equals(String.valueOf(cachedUserId))) {
-                        redisTemplate.delete(key);
+                    String token = key.substring(SecurityConstants.TOKEN_CACHE_PREFIX.length());
+                    Long tokenUserId;
+                    try {
+                        tokenUserId = jwtTokenProvider.getUserId(token);
+                    } catch (Exception ignore) {
+                        continue; // 非法/损坏的缓存键直接跳过
                     }
+                    if (!userId.equals(tokenUserId)) {
+                        continue;
+                    }
+                    try {
+                        long remaining = jwtTokenProvider.getExpiration(token) - System.currentTimeMillis();
+                        if (remaining > 1000) {
+                            redisTemplate.opsForValue().set(SecurityConstants.TOKEN_BLACKLIST_PREFIX + token,
+                                    "1", remaining / 1000, TimeUnit.SECONDS);
+                        }
+                    } catch (Exception ignore) {
+                        // Token 已过期等情况忽略
+                    }
+                    redisTemplate.delete(key);
+                    revoked++;
                 }
             }
+            log.info("用户修改密码成功 userId={}，已吊销旧 Token {} 个", userId, revoked);
         } catch (Exception e) {
-            log.warn("清理旧 Token 缓存失败 userId={}", userId);
+            log.error("吊销旧 Token 失败 userId={}", userId, e);
         }
-
-        log.info("用户修改密码成功 userId={}", userId);
     }
 
     /**

@@ -15,10 +15,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Map;
 
@@ -29,8 +32,13 @@ import static org.mockito.Mockito.*;
 /**
  * 用户服务实现单元测试
  * Alibaba-Java: 单元测试 AIR 原则 — BCDE 原则
+ *
+ * 注意：SysUserServiceImpl 继承 ServiceImpl，业务代码走的是父类的 baseMapper 字段，
+ * Mockito 的 @InjectMocks 无法注入父类字段，必须用 ReflectionTestUtils 手动注入，
+ * 否则所有依赖 baseMapper 的用例都会 NPE（历史上此文件 4 个用例就是因此长期失败的）。
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class SysUserServiceImplTest {
 
     @InjectMocks
@@ -64,6 +72,8 @@ class SysUserServiceImplTest {
     @BeforeEach
     void setUp() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        // 关键修复：把 mock 的 mapper 注入到父类 ServiceImpl.baseMapper，否则业务代码 this.baseMapper 为 null
+        ReflectionTestUtils.setField(userService, "baseMapper", baseMapper);
     }
 
     @Test

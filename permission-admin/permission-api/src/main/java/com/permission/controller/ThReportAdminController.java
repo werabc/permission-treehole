@@ -30,6 +30,7 @@ public class ThReportAdminController {
 
     private final ThReportMapper reportMapper;
     private final ThUserMapper userMapper;
+    private final com.permission.system.service.ThReportService reportService;
 
     @Operation(summary = "举报列表")
     @GetMapping("/page")
@@ -85,15 +86,10 @@ public class ThReportAdminController {
                            @RequestParam Integer status,
                            @RequestParam(required = false) String result,
                            @AuthenticationPrincipal com.permission.common.dto.LoginUser loginUser) {
-        ThReport report = reportMapper.selectById(id);
-        if (report == null) return R.fail(404, "举报不存在");
-        if (report.getStatus() != 0) return R.fail(400, "该举报已处理");
-
-        report.setStatus(status);
-        report.setHandleResult(result);
-        report.setHandlerId(loginUser.getUserId());
-        report.setHandleTime(java.time.LocalDateTime.now());
-        reportMapper.updateById(report);
+        // 统一走 Service：举报成立会触发"内容下架 + 违规计分 + 自动处罚 + 通知举报人"闭环
+        // （原实现直接 updateById，闭环逻辑形同虚设，此为 E2E 测试发现的缺陷）
+        reportService.handleReport(id, status, result,
+                loginUser == null ? null : loginUser.getUserId());
         return R.ok();
     }
 
@@ -126,11 +122,9 @@ public class ThReportAdminController {
         for (Long id : ids) {
             ThReport report = reportMapper.selectById(id);
             if (report != null && report.getStatus() == 0) {
-                report.setStatus(status);
-                report.setHandleResult(result);
-                report.setHandlerId(loginUser.getUserId());
-                report.setHandleTime(java.time.LocalDateTime.now());
-                reportMapper.updateById(report);
+                // 同样走 Service，保证每条举报都触发完整闭环（下架/计分/通知）
+                reportService.handleReport(id, status, result,
+                        loginUser == null ? null : loginUser.getUserId());
                 count++;
             }
         }

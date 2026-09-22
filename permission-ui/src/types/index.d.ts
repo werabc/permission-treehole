@@ -46,7 +46,16 @@ export interface SysRole {
   roleName: string
   roleCode: string
   roleDesc: string
+  /** 数据权限范围，见后端 DataScope 枚举：1全部 2本集团及以下 3本公司及以下 4本部门及以下 5本部门及以下(限N级) 6本部门 7自定义部门 8仅本人 */
   dataScope: number
+  /** dataScope=5 时的层级深度 N */
+  dataScopeLevel?: number
+  /** 自定义数据范围时逗号分隔的部门ID串 */
+  deptIds?: string
+  /** 数据范围名称（后端回填） */
+  dataScopeName?: string
+  /** 是否内置角色（不可删除/不可改编码） */
+  builtin?: boolean
   status: number
   createTime: string
 }
@@ -71,6 +80,8 @@ export interface SysDept {
   deptName: string
   parentId: number | null
   ancestors: string
+  /** 组织层级：1-集团 2-公司 3-部门 4+-小组 */
+  deptLevel?: number
   sort: number
   leader: string
   phone: string

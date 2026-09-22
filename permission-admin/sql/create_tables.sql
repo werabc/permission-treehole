@@ -219,6 +219,7 @@ CREATE TABLE IF NOT EXISTS th_like (
     target_type VARCHAR(20)  NOT NULL COMMENT '目标类型: POST-帖子 COMMENT-评论',
     target_id   BIGINT       NOT NULL COMMENT '目标ID',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     UNIQUE KEY uk_user_target (user_id, target_type, target_id),
     INDEX idx_target (target_type, target_id)

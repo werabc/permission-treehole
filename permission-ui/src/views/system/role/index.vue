@@ -61,13 +61,32 @@
           <el-input v-model="formData.roleDesc" type="textarea" :rows="2" placeholder="请输入角色描述" />
         </el-form-item>
         <el-form-item label="数据范围" prop="dataScope">
-          <el-select v-model="formData.dataScope" style="width: 100%">
-            <el-option label="全部数据" :value="1" />
-            <el-option label="本部门及子部门" :value="2" />
-            <el-option label="本部门" :value="3" />
-            <el-option label="自定义" :value="4" />
-            <el-option label="仅本人" :value="5" />
+          <el-select v-model="formData.dataScope" style="width: 100%" @change="onScopeChange">
+            <el-option
+              v-for="opt in dataScopeOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
           </el-select>
+          <div class="scope-tip">{{ currentScopeTip }}</div>
+        </el-form-item>
+        <el-form-item v-if="formData.dataScope === 5" label="层级深度">
+          <el-input-number v-model="formData.dataScopeLevel" :min="1" :max="10" />
+          <span class="scope-tip" style="margin-left: 10px">本部门往下 N 级为止</span>
+        </el-form-item>
+        <el-form-item v-if="formData.dataScope === 7" label="指定部门">
+          <el-tree
+            ref="deptTreeRef"
+            :data="deptTree"
+            :props="{ label: 'deptName', children: 'children' }"
+            node-key="id"
+            show-checkbox
+            check-strictly
+            default-expand-all
+            class="dept-tree"
+            :default-checked-keys="checkedDeptIds"
+          />
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="formData.status">
@@ -106,11 +125,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getRolePage, getRoleById, createRole, updateRole, deleteRoles, assignMenus, getRoleMenuIds } from '@/api/role'
 import { getMenuTreeSelect } from '@/api/menu'
+import { getDeptTree } from '@/api/dept'
 import type { SysRole, SysMenu } from '@/types'
 
 const loading = ref(false)
@@ -131,16 +151,50 @@ async function fetchData() {
 
 function resetQuery() { keyword.value = ''; pageNum.value = 1; fetchData() }
 
+/** 数据范围选项：与后端 DataScope 枚举一一对应（8 级） */
+const dataScopeOptions = [
+  { value: 1, label: '1-全部数据', tip: '不受组织限制，可见全部数据（如超管、审计岗）' },
+  { value: 2, label: '2-本集团及以下', tip: '以组织树根节点(集团)为边界，覆盖全部下级公司' },
+  { value: 3, label: '3-本公司及以下', tip: '以所属公司为边界，不跨公司' },
+  { value: 4, label: '4-本部门及以下', tip: '以所属部门为边界，含全部子部门' },
+  { value: 5, label: '5-本部门及以下(限N级)', tip: '限定向下钻取层数，避免越权看到过深的组织数据' },
+  { value: 6, label: '6-本部门', tip: '仅本部门，不含子部门' },
+  { value: 7, label: '7-自定义部门', tip: '按下方勾选的部门生效（不含子部门，需要子部门请用第 4/5 项）' },
+  { value: 8, label: '8-仅本人', tip: '只能看到自己创建 / 属于自己的数据' },
+]
+const currentScopeTip = computed(() =>
+  dataScopeOptions.find(o => o.value === formData.value.dataScope)?.tip || '')
+
 function dataScopeLabel(scope: number) {
-  const map: Record<number, string> = { 1: '全部', 2: '本部门及子部门', 3: '本部门', 4: '自定义', 5: '仅本人' }
-  return map[scope] || '未知'
+  return dataScopeOptions.find(o => o.value === scope)?.label.replace(/^\d-/, '') || '未知'
 }
 
 function dataScopeType(scope: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
   const map: Record<number, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
-    1: 'info', 2: 'warning', 3: 'primary', 4: 'info', 5: 'danger',
+    1: 'danger', 2: 'warning', 3: 'warning', 4: 'primary',
+    5: 'primary', 6: 'success', 7: 'info', 8: 'info',
   }
   return map[scope] || 'info'
+}
+
+/** 部门树（自定义数据范围勾选用） */
+const deptTree = ref<any[]>([])
+const deptTreeRef = ref()
+const checkedDeptIds = ref<number[]>([])
+
+async function loadDeptTree() {
+  if (deptTree.value.length > 0) return
+  try {
+    const res = await getDeptTree()
+    deptTree.value = res.data || []
+  } catch (e) { /* ignore */ }
+}
+
+function onScopeChange(value: number) {
+  if (value === 7) {
+    checkedDeptIds.value = []
+    loadDeptTree()
+  }
 }
 
 // Form
@@ -156,10 +210,11 @@ const formRules = {
   dataScope: [{ required: true, message: '请选择数据范围', trigger: 'change' }],
 }
 
-const formData = ref({ roleName: '', roleCode: '', roleDesc: '', dataScope: 5, status: 1 })
+const formData = ref({ roleName: '', roleCode: '', roleDesc: '', dataScope: 8, dataScopeLevel: 1, status: 1, deptIds: '' })
 
 function resetForm() {
-  formData.value = { roleName: '', roleCode: '', roleDesc: '', dataScope: 5, status: 1 }
+  formData.value = { roleName: '', roleCode: '', roleDesc: '', dataScope: 8, dataScopeLevel: 1, status: 1, deptIds: '' }
+  checkedDeptIds.value = []
   currentId.value = undefined
 }
 
@@ -173,7 +228,18 @@ async function handleEdit(row: SysRole) {
     roleCode: res.data.roleCode,
     roleDesc: res.data.roleDesc || '',
     dataScope: res.data.dataScope,
+    dataScopeLevel: (res.data as any).dataScopeLevel || 1,
     status: res.data.status,
+    deptIds: (res.data as any).deptIds || '',
+  }
+  // 自定义数据范围：回显已选部门
+  if (res.data.dataScope === 7) {
+    checkedDeptIds.value = formData.value.deptIds
+      ? formData.value.deptIds.split(',').map((s: string) => Number(s)).filter((n: number) => !Number.isNaN(n))
+      : []
+    await loadDeptTree()
+    // 等树渲染完成再回填勾选
+    nextTick(() => deptTreeRef.value?.setCheckedKeys(checkedDeptIds.value))
   }
   currentId.value = row.id; dialogVisible.value = true
 }
@@ -181,13 +247,24 @@ async function handleEdit(row: SysRole) {
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
+  const payload: any = { ...formData.value }
+  if (payload.dataScope === 7) {
+    const checked = deptTreeRef.value?.getCheckedKeys() || []
+    if (checked.length === 0) {
+      ElMessage.warning('自定义数据范围至少需要勾选一个部门')
+      return
+    }
+    payload.deptIds = checked.join(',')
+  } else {
+    payload.deptIds = ''
+  }
   submitLoading.value = true
   try {
     if (isEdit.value && currentId.value) {
-      await updateRole(currentId.value, formData.value)
+      await updateRole(currentId.value, payload)
       ElMessage.success('修改成功')
     } else {
-      await createRole(formData.value)
+      await createRole(payload)
       ElMessage.success('新增成功')
     }
     dialogVisible.value = false; fetchData()
@@ -230,4 +307,13 @@ onMounted(fetchData)
 
 <style scoped>
 .pagination-wrap { margin-top: 16px; display: flex; justify-content: flex-end; }
+.scope-tip { color: #909399; font-size: 12px; line-height: 1.6; margin-top: 4px; }
+.dept-tree {
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 6px;
+}
 </style>

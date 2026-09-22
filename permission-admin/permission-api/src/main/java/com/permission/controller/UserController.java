@@ -113,6 +113,7 @@ public class UserController {
 
     @Operation(summary = "获取用户角色ID列表")
     @GetMapping("/{id}/roles")
+    @PreAuthorize("hasAnyAuthority('system:user:query', 'admin')")
     public R<Set<Long>> getUserRoleIds(@PathVariable Long id) {
         return R.ok(userService.getUserRoleIds(id));
     }
