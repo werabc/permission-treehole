@@ -36,6 +36,7 @@ public class ThPublicController {
     private final ThUserService userService;
     private final ThCategoryService categoryService;
     private final ThSettingsService settingsService;
+    private final com.permission.system.service.ThCollectService collectService;
     private final com.permission.system.mapper.ThAnnouncementMapper announcementMapper;
 
     /**
@@ -171,6 +172,84 @@ public class ThPublicController {
         report.setReporterId(requireUserId(loginUser));
         reportService.createReport(report);
         return R.ok();
+    }
+
+    @Operation(summary = "删除自己的帖子")
+    @DeleteMapping("/post/{id}")
+    public R<Void> deletePost(@PathVariable Long id,
+                              @AuthenticationPrincipal LoginUser loginUser) {
+        postService.deletePost(id, requireUserId(loginUser), false);
+        return R.ok();
+    }
+
+    @Operation(summary = "删除自己的评论")
+    @DeleteMapping("/comment/{id}")
+    public R<Void> deleteComment(@PathVariable Long id,
+                                 @AuthenticationPrincipal LoginUser loginUser) {
+        commentService.deleteComment(id, requireUserId(loginUser), false);
+        return R.ok();
+    }
+
+    // ==================== 搜索 ====================
+
+    @Operation(summary = "搜索帖子（内容 + 作者昵称）")
+    @GetMapping("/search")
+    public R<IPage<ThPost>> searchPosts(@RequestParam String keyword,
+                                        @RequestParam(defaultValue = "1") long pageNum,
+                                        @RequestParam(defaultValue = "10") long pageSize) {
+        return R.ok(postService.searchPosts(keyword, pageNum, pageSize));
+    }
+
+    // ==================== 收藏 ====================
+
+    @Operation(summary = "切换收藏状态")
+    @PostMapping("/collect/{postId}")
+    public R<Boolean> toggleCollect(@PathVariable Long postId,
+                                    @AuthenticationPrincipal LoginUser loginUser) {
+        return R.ok(collectService.toggle(requireUserId(loginUser), postId));
+    }
+
+    @Operation(summary = "是否已收藏")
+    @GetMapping("/post/{id}/collected")
+    public R<Boolean> isCollected(@PathVariable Long id,
+                                  @AuthenticationPrincipal LoginUser loginUser) {
+        if (loginUser == null) return R.ok(false);
+        return R.ok(collectService.isCollected(loginUser.getUserId(), id));
+    }
+
+    @Operation(summary = "我收藏的帖子")
+    @GetMapping("/user/collects")
+    public R<IPage<ThPost>> getMyCollects(@RequestParam(defaultValue = "1") long pageNum,
+                                          @RequestParam(defaultValue = "10") long pageSize,
+                                          @AuthenticationPrincipal LoginUser loginUser) {
+        return R.ok(postService.getCollectedPosts(requireUserId(loginUser), pageNum, pageSize));
+    }
+
+    @Operation(summary = "收藏数量")
+    @GetMapping("/user/collect-count")
+    public R<Long> getCollectCount(@AuthenticationPrincipal LoginUser loginUser) {
+        return R.ok(collectService.countByUser(requireUserId(loginUser)));
+    }
+
+    // ==================== 他人主页 ====================
+
+    @Operation(summary = "用户公开主页（不含隐私字段）")
+    @GetMapping("/user/public/{id}")
+    public R<Map<String, Object>> getPublicProfile(@PathVariable Long id) {
+        return R.ok(userService.getPublicProfile(id));
+    }
+
+    @Operation(summary = "指定用户的公开帖子")
+    @GetMapping("/user/{id}/posts")
+    public R<IPage<ThPost>> getUserPosts(@PathVariable Long id,
+                                         @RequestParam(defaultValue = "1") long pageNum,
+                                         @RequestParam(defaultValue = "10") long pageSize) {
+        IPage<ThPost> page = userService.getPosts(id, pageNum, pageSize);
+        // 仅返回已通过审核的帖子，避免待审/下架内容外泄
+        page.setRecords(page.getRecords().stream()
+                .filter(p -> p.getStatus() != null && p.getStatus() == 1)
+                .collect(java.util.stream.Collectors.toList()));
+        return R.ok(page);
     }
 
     // ==================== 个人中心 ====================

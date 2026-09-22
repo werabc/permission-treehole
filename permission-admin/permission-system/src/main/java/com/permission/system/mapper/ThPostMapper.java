@@ -23,4 +23,7 @@ public interface ThPostMapper extends BaseMapper<ThPost> {
 
     @Update("UPDATE th_post SET comment_count = GREATEST(comment_count - 1, 0) WHERE id = #{id}")
     int decrementCommentCount(@Param("id") Long id);
+
+    @Update("UPDATE th_post SET report_count = report_count + 1 WHERE id = #{id}")
+    int incrementReportCount(@Param("id") Long id);
 }

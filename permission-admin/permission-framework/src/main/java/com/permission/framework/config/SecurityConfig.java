@@ -40,24 +40,43 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(SecurityConstants.LOGIN_URL, SecurityConstants.REFRESH_TOKEN_URL).permitAll()
-                // Dashboard 统计接口需要认证
-                .requestMatchers("/api/dashboard/**").authenticated()
                 // Swagger/Doc 文档公开
                 .requestMatchers("/doc.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                 // 认证接口公开
                 .requestMatchers("/api/auth/**").permitAll()
-                // 树洞公开接口
-                .requestMatchers("/api/th/category/list", "/api/th/post/page", "/api/th/post/{id}", "/api/th/comment/page", "/api/th/post/{id}/liked", "/api/th/announcements").permitAll()
                 // 树洞认证接口（登录/注册/用户信息）
                 .requestMatchers("/api/th/auth/**").permitAll()
-                // 树洞写操作需要 JWT 认证（通过 JwtAuthenticationFilter 解析 token 中的 userId）
-                .requestMatchers("/api/th/post", "/api/th/comment").authenticated()
-                .requestMatchers("/api/th/post/{id}/like", "/api/th/comment/{id}/like").authenticated()
-                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/th/post/{id}/like").authenticated()
+                // 管理端 Dashboard 统计接口需要认证
+                .requestMatchers("/api/dashboard/**").authenticated()
+
+                // ===== 树洞公开读接口（全部限定 GET，避免误放行写操作） =====
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                        "/api/th/category/list",
+                        "/api/th/announcements",
+                        "/api/th/post/page",
+                        "/api/th/post/{id}",
+                        "/api/th/post/{id}/liked",
+                        "/api/th/post/{id}/collected",
+                        "/api/th/comment/page",
+                        "/api/th/search",
+                        "/api/th/user/public/{id}",
+                        "/api/th/user/{id}/posts").permitAll()
+
+                // ===== 树洞写操作需要 JWT 认证 =====
+                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                        "/api/th/post",
+                        "/api/th/comment",
+                        "/api/th/report",
+                        "/api/th/collect/{postId}",
+                        "/api/th/post/{id}/like",
+                        "/api/th/comment/{id}/like").authenticated()
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE,
+                        "/api/th/post/{id}",
+                        "/api/th/comment/{id}",
+                        "/api/th/post/{id}/like").authenticated()
+
                 // 个人中心需要认证
                 .requestMatchers("/api/th/user/**").authenticated()
-                // 举报需要认证
-                .requestMatchers("/api/th/report/**").authenticated()
                 // 管理接口需要 admin 权限
                 .requestMatchers("/api/admin/**").hasAuthority("admin")
                 .anyRequest().authenticated())

@@ -13,10 +13,15 @@ import com.permission.system.mapper.ThLikeMapper;
 import com.permission.system.mapper.ThNotificationMapper;
 import com.permission.system.mapper.ThPostMapper;
 import com.permission.system.mapper.ThUserMapper;
+import com.permission.system.service.SensitiveWordService;
 import com.permission.system.service.ThCommentService;
+import com.permission.system.service.ThSettingsService;
+import com.permission.system.support.ThRateLimiter;
+import com.permission.system.support.ThUserGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,6 +36,10 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
     private final ThUserMapper userMapper;
     private final ThLikeMapper likeMapper;
     private final ThNotificationMapper notificationMapper;
+    private final SensitiveWordService sensitiveWordService;
+    private final ThUserGuard userGuard;
+    private final ThRateLimiter rateLimiter;
+    private final ThSettingsService settingsService;
 
     // 最大分页大小限制
     private static final long MAX_PAGE_SIZE = 100;
@@ -76,13 +85,32 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
             throw new BusinessException(ResultCode.BAD_REQUEST, "帖子不存在");
         }
 
-        comment.setStatus(1);
+        // ========== 内容治理三道闸门（禁言 → 限额 → 敏感词） ==========
+        userGuard.checkMuted(comment.getUserId());
+        rateLimiter.checkDaily(comment.getUserId(), "comment",
+                settingsService.getMaxCommentPerDay(), "今日评论");
+        int status = settingsService.isCommentNeedAudit() ? 0 : 1;
+        if (sensitiveWordService.isEnabled()) {
+            SensitiveWordService.SensitiveHit hit = sensitiveWordService.check(comment.getContent());
+            if (hit != null) {
+                if (hit.level() == 1) {
+                    log.warn("评论命中拦截词 userId={} word={}", comment.getUserId(), hit.word());
+                    throw new BusinessException(ResultCode.BAD_REQUEST,
+                            "评论包含违规词「" + hit.word() + "」，请修改后重新发送");
+                }
+                status = 0;
+                log.info("评论命中转审词 userId={} word={}，转人工审核", comment.getUserId(), hit.word());
+            }
+        }
+
+        comment.setStatus(status);
         comment.setLikeCount(0);
         comment.setIsAnonymous(comment.getIsAnonymous() != null ? comment.getIsAnonymous() : 0);
         commentMapper.insert(comment);
 
-        // 更新帖子评论数
+        // 更新帖子评论数 + 作者评论数统计
         postMapper.incrementCommentCount(comment.getPostId());
+        userMapper.incrementCommentCount(comment.getUserId());
 
         // 创建通知（如果评论的不是自己的帖子）
         if (post.getUserId() != null && !post.getUserId().equals(comment.getUserId())) {
@@ -115,7 +143,32 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteComment(Long id, Long userId, boolean isAdmin) {
+        ThComment comment = commentMapper.selectById(id);
+        if (comment == null || comment.getDeleted() == 1) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "评论不存在");
+        }
+        if (!isAdmin && !java.util.Objects.equals(comment.getUserId(), userId)) {
+            throw new BusinessException(ResultCode.DATA_FORBIDDEN, "只能删除自己的评论");
+        }
+
+        commentMapper.deleteById(id);
+        likeMapper.delete(new LambdaQueryWrapper<ThLike>()
+                .eq(ThLike::getTargetType, "COMMENT")
+                .eq(ThLike::getTargetId, id));
+        postMapper.decrementCommentCount(comment.getPostId());
+        if (comment.getUserId() != null) {
+            userMapper.decrementCommentCount(comment.getUserId());
+        }
+
+        log.info("Deleted comment id={} postId={} operator={} admin={}",
+                id, comment.getPostId(), userId, isAdmin);
+    }
+
+    @Override
     public void likeComment(Long id, Long userId) {
+        userGuard.checkMuted(userId);
         ThComment comment = commentMapper.selectById(id);
         if (comment == null || comment.getDeleted() == 1) {
             throw new BusinessException(ResultCode.NOT_FOUND, "评论不存在");

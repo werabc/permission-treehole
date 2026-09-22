@@ -82,4 +82,43 @@ public class ThSettingsService {
     public Map<String, String> getAll() {
         return new HashMap<>(cache);
     }
+
+    // ========== 内容治理相关配置（v1.1.0 新增） ==========
+
+    /** 每日最大发帖数，<=0 表示不限制 */
+    public int getMaxPostPerDay() {
+        return getInt("max_post_per_day", 10);
+    }
+
+    /** 每日最大评论数，<=0 表示不限制 */
+    public int getMaxCommentPerDay() {
+        return getInt("max_comment_per_day", 50);
+    }
+
+    /** 发帖是否需要先审后发 */
+    public boolean isPostNeedAudit() {
+        return isEnabled("post_need_audit");
+    }
+
+    /** 评论是否需要先审后发 */
+    public boolean isCommentNeedAudit() {
+        return isEnabled("comment_need_audit");
+    }
+
+    /** 敏感词过滤是否开启 */
+    public boolean isSensitiveFilterEnabled() {
+        return isEnabled("sensitive_filter_enabled");
+    }
+
+    /** 读取整型配置，非法值回退默认值 */
+    public int getInt(String key, int defaultValue) {
+        String val = cache.get(key);
+        if (val == null || val.isBlank()) return defaultValue;
+        try {
+            return Integer.parseInt(val.trim());
+        } catch (NumberFormatException e) {
+            log.warn("站点配置 {} 值非法（{}），回退默认值 {}", key, val, defaultValue);
+            return defaultValue;
+        }
+    }
 }

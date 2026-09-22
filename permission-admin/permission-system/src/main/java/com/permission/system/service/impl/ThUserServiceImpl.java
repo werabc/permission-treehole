@@ -14,6 +14,7 @@ import com.permission.framework.security.JwtTokenProvider;
 import com.permission.system.mapper.*;
 import com.permission.system.service.OnlineUserService;
 import com.permission.system.service.ThUserService;
+import com.permission.system.support.ThUserGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -43,6 +44,7 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
     private final OnlineUserService onlineUserService;
+    private final ThUserGuard userGuard;
 
     // 最大分页大小限制
     private static final long MAX_PAGE_SIZE = 100;
@@ -147,9 +149,19 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         if (user.getStatus() == 0) {
             throw new BusinessException(ResultCode.USER_ACCOUNT_DISABLED, "账号已被封禁");
         }
+        // 治理：封号（ban_until）校验，与 status=0 的永久封禁叠加生效
+        userGuard.checkBanned(user);
 
         // 登录成功，清除失败计数
         redisTemplate.delete(failKey);
+
+        // 记录登录 IP（用于风控与审计）
+        try {
+            user.setLastLoginIp(clientIp);
+            userMapper.updateById(user);
+        } catch (Exception e) {
+            log.warn("更新登录IP失败 userId={}", user.getId());
+        }
 
         // 生成 Token
         Map<String, Object> claims = new HashMap<>();
@@ -289,6 +301,61 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
     }
 
     // ========== 私有辅助方法 ==========
+
+    @Override
+    public Map<String, Object> getPublicProfile(Long userId) {
+        ThUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("id", user.getId());
+        profile.put("nickname", user.getNickname());
+        profile.put("avatar", user.getAvatar());
+        profile.put("bio", user.getBio());
+        profile.put("gender", user.getGender());
+        profile.put("postCount", user.getPostCount());
+        profile.put("commentCount", user.getCommentCount());
+        profile.put("createTime", user.getCreateTime());
+        // 不返回 username / email / lastLoginIp 等隐私字段
+        return profile;
+    }
+
+    @Override
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        ThUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        if (StrUtil.isBlank(oldPassword) || !passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new BusinessException(ResultCode.OLD_PASSWORD_ERROR);
+        }
+        if (oldPassword.equals(newPassword)) {
+            throw new BusinessException(ResultCode.PASSWORD_WEAK, "新密码不能与原密码相同");
+        }
+        // 复用注册时的强密码策略
+        validatePassword(newPassword, user.getUsername());
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
+
+        // 改密后让已签发的 Token 失效，强制重新登录
+        try {
+            java.util.Set<String> keys = redisTemplate.keys(SecurityConstants.TOKEN_CACHE_PREFIX + "*");
+            if (keys != null) {
+                for (String key : keys) {
+                    Object cachedUserId = redisTemplate.opsForValue().get(key);
+                    if (cachedUserId != null && String.valueOf(userId).equals(String.valueOf(cachedUserId))) {
+                        redisTemplate.delete(key);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("清理旧 Token 缓存失败 userId={}", userId);
+        }
+
+        log.info("用户修改密码成功 userId={}", userId);
+    }
 
     /**
      * 密码强度校验：8-64位，包含大小写字母、数字、特殊字符，且不能与用户名相同

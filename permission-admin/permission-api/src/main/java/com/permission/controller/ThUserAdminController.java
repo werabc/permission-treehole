@@ -5,19 +5,21 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.permission.common.R;
+import com.permission.common.dto.LoginUser;
 import com.permission.common.entity.ThUser;
 import com.permission.common.entity.ThUserLog;
 import com.permission.system.mapper.ThCommentMapper;
 import com.permission.system.mapper.ThPostMapper;
 import com.permission.system.mapper.ThUserLogMapper;
 import com.permission.system.mapper.ThUserMapper;
+import com.permission.system.support.ThUserGuard;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,6 +33,7 @@ public class ThUserAdminController {
     private final ThPostMapper postMapper;
     private final ThCommentMapper commentMapper;
     private final ThUserLogMapper userLogMapper;
+    private final ThUserGuard userGuard;
 
     @Operation(summary = "用户列表")
     @GetMapping("/page")
@@ -97,57 +100,70 @@ public class ThUserAdminController {
     @Operation(summary = "禁言用户")
     @PutMapping("/{id}/mute")
     @PreAuthorize("hasAnyAuthority('admin')")
-    public R<Void> mute(@PathVariable Long id, @RequestParam(required = false) Integer hours) {
-        ThUser user = userMapper.selectById(id);
-        if (user == null) return R.fail(404, "用户不存在");
-
-        if (hours != null && hours > 0) {
-            user.setMuteUntil(LocalDateTime.now().plusHours(hours));
-        } else {
-            user.setMuteUntil(LocalDateTime.now().plusYears(100)); // 永久禁言
-        }
-        userMapper.updateById(user);
+    public R<Void> mute(@PathVariable Long id,
+                        @RequestParam(required = false) Integer hours,
+                        @RequestParam(required = false) Integer days,
+                        @RequestParam(required = false) String reason,
+                        @AuthenticationPrincipal LoginUser operator) {
+        // 兼容旧调用（hours）：1 天 = 24 小时
+        int parsedDays = days != null ? days : (hours != null ? Math.max(hours / 24, 1) : 0);
+        userGuard.mute(id, parsedDays <= 0 ? 36500 : parsedDays,
+                StrUtil.blankToDefault(reason, "管理员操作"), operatorId(operator));
         return R.ok();
     }
 
     @Operation(summary = "取消禁言")
     @PutMapping("/{id}/unmute")
     @PreAuthorize("hasAnyAuthority('admin')")
-    public R<Void> unmute(@PathVariable Long id) {
-        ThUser user = userMapper.selectById(id);
-        if (user == null) return R.fail(404, "用户不存在");
-        user.setMuteUntil(null);
-        userMapper.updateById(user);
+    public R<Void> unmute(@PathVariable Long id, @AuthenticationPrincipal LoginUser operator) {
+        userGuard.release(id, false, operatorId(operator));
         return R.ok();
     }
 
     @Operation(summary = "封号")
     @PutMapping("/{id}/ban")
     @PreAuthorize("hasAnyAuthority('admin')")
-    public R<Void> ban(@PathVariable Long id, @RequestParam(required = false) Integer days) {
-        ThUser user = userMapper.selectById(id);
-        if (user == null) return R.fail(404, "用户不存在");
-
-        if (days != null && days > 0) {
-            user.setBanUntil(LocalDateTime.now().plusDays(days));
-        } else {
-            user.setBanUntil(LocalDateTime.now().plusYears(100)); // 永久封号
-        }
-        user.setStatus(0);
-        userMapper.updateById(user);
+    public R<Void> ban(@PathVariable Long id,
+                       @RequestParam(required = false) Integer days,
+                       @RequestParam(required = false) String reason,
+                       @AuthenticationPrincipal LoginUser operator) {
+        // days<=0 视为永久封号（内部会置 status=0）
+        userGuard.ban(id, days == null ? 0 : days,
+                StrUtil.blankToDefault(reason, "管理员操作"), operatorId(operator));
         return R.ok();
     }
 
     @Operation(summary = "解封")
     @PutMapping("/{id}/unban")
     @PreAuthorize("hasAnyAuthority('admin')")
-    public R<Void> unban(@PathVariable Long id) {
-        ThUser user = userMapper.selectById(id);
-        if (user == null) return R.fail(404, "用户不存在");
-        user.setBanUntil(null);
-        user.setStatus(1);
-        userMapper.updateById(user);
+    public R<Void> unban(@PathVariable Long id, @AuthenticationPrincipal LoginUser operator) {
+        userGuard.release(id, false, operatorId(operator));
         return R.ok();
+    }
+
+    @Operation(summary = "解除全部处罚（可选清零违规分）")
+    @PutMapping("/{id}/release")
+    @PreAuthorize("hasAnyAuthority('admin')")
+    public R<Void> release(@PathVariable Long id,
+                           @RequestParam(defaultValue = "false") boolean resetViolation,
+                           @AuthenticationPrincipal LoginUser operator) {
+        userGuard.release(id, resetViolation, operatorId(operator));
+        return R.ok();
+    }
+
+    @Operation(summary = "手动加减违规分")
+    @PutMapping("/{id}/violation")
+    @PreAuthorize("hasAnyAuthority('admin')")
+    public R<Integer> addViolation(@PathVariable Long id,
+                                   @RequestParam Integer score,
+                                   @RequestParam(required = false) String reason) {
+        int total = userGuard.addViolation(id, score,
+                StrUtil.blankToDefault(reason, "管理员手动调整"));
+        return R.ok(total);
+    }
+
+    private Long operatorId(LoginUser operator) {
+        return operator == null ? null : operator.getUserId();
     }
 
     @Operation(summary = "用户行为日志")

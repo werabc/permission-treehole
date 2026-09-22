@@ -76,6 +76,18 @@ public class ThAuthController {
         return R.ok();
     }
 
+    @Operation(summary = "修改密码")
+    @PutMapping("/password")
+    public R<Void> changePassword(@RequestBody Map<String, String> body,
+                                  HttpServletRequest request) {
+        Long userId = jwtUtil.extractUserId(request);
+        if (userId == null) {
+            throw new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException("未登录");
+        }
+        userService.changePassword(userId, body.get("oldPassword"), body.get("newPassword"));
+        return R.ok();
+    }
+
     @Operation(summary = "获取当前用户信息")
     @GetMapping("/user-info")
     public R<Map<String, Object>> userInfo(HttpServletRequest request) {

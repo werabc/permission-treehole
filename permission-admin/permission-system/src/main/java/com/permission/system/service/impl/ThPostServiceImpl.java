@@ -9,14 +9,21 @@ import com.permission.common.entity.*;
 import com.permission.common.exception.BusinessException;
 import com.permission.common.ResultCode;
 import com.permission.system.mapper.ThCategoryMapper;
+import com.permission.system.mapper.ThCollectMapper;
+import com.permission.system.mapper.ThCommentMapper;
 import com.permission.system.mapper.ThLikeMapper;
 import com.permission.system.mapper.ThNotificationMapper;
 import com.permission.system.mapper.ThPostMapper;
 import com.permission.system.mapper.ThUserMapper;
+import com.permission.system.service.SensitiveWordService;
 import com.permission.system.service.ThPostService;
+import com.permission.system.service.ThSettingsService;
+import com.permission.system.support.ThRateLimiter;
+import com.permission.system.support.ThUserGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,6 +38,12 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
     private final ThUserMapper userMapper;
     private final ThLikeMapper likeMapper;
     private final ThNotificationMapper notificationMapper;
+    private final ThCommentMapper commentMapper;
+    private final ThCollectMapper collectMapper;
+    private final SensitiveWordService sensitiveWordService;
+    private final ThUserGuard userGuard;
+    private final ThRateLimiter rateLimiter;
+    private final ThSettingsService settingsService;
 
     // 最大分页大小限制
     private static final long MAX_PAGE_SIZE = 100;
@@ -79,7 +92,29 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
                 throw new BusinessException(ResultCode.BAD_REQUEST, "分类不存在");
             }
         }
-        post.setStatus(1); // 默认审核通过（可手动打回）
+
+        // ========== 内容治理三道闸门（禁言 → 限额 → 敏感词） ==========
+        // 1. 禁言/封号校验
+        userGuard.checkMuted(post.getUserId());
+        // 2. 每日发帖限额
+        rateLimiter.checkDaily(post.getUserId(), "post",
+                settingsService.getMaxPostPerDay(), "今日发帖");
+        // 3. 敏感词分级处理：L1 直接拦截，L2 转人工审核
+        int status = settingsService.isPostNeedAudit() ? 0 : 1;
+        if (sensitiveWordService.isEnabled()) {
+            SensitiveWordService.SensitiveHit hit = sensitiveWordService.check(post.getContent());
+            if (hit != null) {
+                if (hit.level() == 1) {
+                    log.warn("发帖命中拦截词 userId={} word={}", post.getUserId(), hit.word());
+                    throw new BusinessException(ResultCode.BAD_REQUEST,
+                            "内容包含违规词「" + hit.word() + "」，请修改后重新发布");
+                }
+                status = 0;
+                log.info("发帖命中转审词 userId={} word={}，转人工审核", post.getUserId(), hit.word());
+            }
+        }
+
+        post.setStatus(status);
         post.setViewCount(0);
         post.setLikeCount(0);
         post.setCommentCount(0);
@@ -87,11 +122,117 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
         post.setIsTop(0);
         post.setIsAnonymous(post.getIsAnonymous() != null ? post.getIsAnonymous() : 0);
         postMapper.insert(post);
-        log.info("Created post id={} userId={}", post.getId(), post.getUserId());
+
+        // 维护作者统计（原实现遗漏，导致个人主页发帖数永远为 0）
+        userMapper.incrementPostCount(post.getUserId());
+
+        log.info("Created post id={} userId={} status={}", post.getId(), post.getUserId(), status);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deletePost(Long id, Long userId, boolean isAdmin) {
+        ThPost post = postMapper.selectById(id);
+        if (post == null || post.getDeleted() == 1) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "帖子不存在");
+        }
+        if (!isAdmin && !Objects.equals(post.getUserId(), userId)) {
+            throw new BusinessException(ResultCode.DATA_FORBIDDEN, "只能删除自己发布的帖子");
+        }
+
+        // 1. 逻辑删除帖子本体
+        postMapper.deleteById(id);
+        // 2. 级联逻辑删除评论
+        commentMapper.delete(new LambdaQueryWrapper<ThComment>().eq(ThComment::getPostId, id));
+        // 3. 级联删除点赞记录
+        likeMapper.delete(new LambdaQueryWrapper<ThLike>()
+                .eq(ThLike::getTargetType, "POST")
+                .eq(ThLike::getTargetId, id));
+        // 4. 级联删除收藏记录，避免收藏夹出现"幽灵帖子"
+        collectMapper.delete(new LambdaQueryWrapper<ThCollect>()
+                .eq(ThCollect::getTargetType, "POST")
+                .eq(ThCollect::getTargetId, id));
+        // 5. 清理指向该帖的通知（th_notification 无逻辑删除字段，物理删除）
+        notificationMapper.delete(new LambdaQueryWrapper<ThNotification>()
+                .eq(ThNotification::getTargetType, "POST")
+                .eq(ThNotification::getTargetId, id));
+        // 6. 修正作者发帖数
+        if (post.getUserId() != null) {
+            userMapper.decrementPostCount(post.getUserId());
+        }
+
+        log.info("Deleted post id={} operator={} admin={}", id, userId, isAdmin);
+    }
+
+    @Override
+    public IPage<ThPost> searchPosts(String keyword, long pageNum, long pageSize) {
+        if (StrUtil.isBlank(keyword)) {
+            return new Page<>(pageNum, Math.min(pageSize, MAX_PAGE_SIZE));
+        }
+        if (pageSize > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
+
+        // 转义 LIKE 通配符，防止通配符注入
+        String safeKeyword = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+
+        // 作者昵称命中的用户ID（昵称在 th_user 表，先查出候选作者）
+        List<Long> authorIds = userMapper.selectList(new LambdaQueryWrapper<ThUser>()
+                        .eq(ThUser::getDeleted, 0)
+                        .like(ThUser::getNickname, safeKeyword))
+                .stream().map(ThUser::getId).collect(Collectors.toList());
+
+        Page<ThPost> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<ThPost> wrapper = new LambdaQueryWrapper<ThPost>()
+                .eq(ThPost::getDeleted, 0)
+                .eq(ThPost::getStatus, 1)
+                .and(w -> {
+                    w.like(ThPost::getContent, safeKeyword);
+                    if (!authorIds.isEmpty()) {
+                        w.or().in(ThPost::getUserId, authorIds);
+                    }
+                })
+                .orderByDesc(ThPost::getCreateTime);
+
+        IPage<ThPost> result = postMapper.selectPage(page, wrapper);
+        fillPostExtras(result.getRecords());
+        return result;
+    }
+
+    @Override
+    public IPage<ThPost> getCollectedPosts(Long userId, long pageNum, long pageSize) {
+        if (pageSize > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
+
+        // 先分页查收藏记录，再按收藏顺序取帖子，保证"最近收藏在最前"
+        Page<ThCollect> collectPage = new Page<>(pageNum, pageSize);
+        IPage<ThCollect> collects = collectMapper.selectPage(collectPage,
+                new LambdaQueryWrapper<ThCollect>()
+                        .eq(ThCollect::getUserId, userId)
+                        .eq(ThCollect::getTargetType, "POST")
+                        .eq(ThCollect::getDeleted, 0)
+                        .orderByDesc(ThCollect::getCreateTime));
+
+        Page<ThPost> result = new Page<>(pageNum, pageSize, collects.getTotal());
+        if (collects.getRecords().isEmpty()) {
+            return result;
+        }
+
+        List<Long> postIds = collects.getRecords().stream()
+                .map(ThCollect::getTargetId).collect(Collectors.toList());
+        Map<Long, ThPost> postMap = postMapper.selectBatchIds(postIds).stream()
+                .filter(p -> p.getDeleted() == 0 && p.getStatus() == 1)
+                .collect(Collectors.toMap(ThPost::getId, p -> p));
+
+        List<ThPost> ordered = postIds.stream()
+                .map(postMap::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        fillPostExtras(ordered);
+        result.setRecords(ordered);
+        return result;
     }
 
     @Override
     public void likePost(Long id, Long userId) {
+        userGuard.checkMuted(userId);
         ThPost post = postMapper.selectById(id);
         if (post == null) throw new BusinessException(ResultCode.NOT_FOUND, "帖子不存在");
 
