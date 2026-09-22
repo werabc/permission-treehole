@@ -2,14 +2,7 @@
   <div class="category-page">
     <h2 class="page-title">{{ categoryName }}</h2>
     <div class="post-list">
-      <div v-for="post in posts" :key="post.id" class="post-card" @click="$router.push(`/post/${post.id}`)">
-        <p class="post-content">{{ post.content }}</p>
-        <div class="post-meta">
-          <span>👍 {{ post.likeCount }}</span>
-          <span>💬 {{ post.commentCount }}</span>
-          <span class="time">{{ formatTime(post.createTime) }}</span>
-        </div>
-      </div>
+      <PostCard v-for="post in posts" :key="post.id" :post="post" />
     </div>
     <div v-if="loading" class="loading">加载中...</div>
     <div v-if="!loading && posts.length === 0" class="empty">该分类暂无内容</div>
@@ -23,6 +16,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import PostCard from '../components/PostCard.vue'
 import { getPostPage, getCategoryList } from '../api/treehole'
 import type { Post, Category } from '../api/treehole'
 

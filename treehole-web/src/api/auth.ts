@@ -40,6 +40,11 @@ export function getToken() {
   return localStorage.getItem('th_token')
 }
 
+/** 修改密码（成功后需重新登录） */
+export function changePassword(data: { oldPassword: string; newPassword: string }) {
+  return request.put('/th/auth/password', data)
+}
+
 // Alibaba-Java: 安全规约 — 登出时调用后端接口并清除本地状态
 export function logout() {
   const token = localStorage.getItem('th_token')

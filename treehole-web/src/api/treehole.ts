@@ -129,6 +129,75 @@ export function markNotificationsRead(ids: number[]) {
   return request.put('/th/user/notifications/read', { ids })
 }
 
-export function updateProfile(data: { nickname?: string; bio?: string; gender?: number }) {
+export function updateProfile(data: { nickname?: string; bio?: string; gender?: number; avatar?: string; email?: string }) {
   return request.put('/th/user/profile', data)
+}
+
+// ==================== v1.1.0 新增 ====================
+
+/** 搜索帖子（内容 + 作者昵称） */
+export function searchPosts(params: { keyword: string; pageNum: number; pageSize: number }) {
+  return request.get('/th/search', { params }) as Promise<{ data: { records: Post[]; total: number } }>
+}
+
+/** 删除自己的帖子 */
+export function deletePost(id: number) {
+  return request.delete(`/th/post/${id}`)
+}
+
+/** 删除自己的评论 */
+export function deleteComment(id: number) {
+  return request.delete(`/th/comment/${id}`)
+}
+
+/** 切换收藏状态，返回 true=已收藏 */
+export function toggleCollect(postId: number) {
+  return request.post(`/th/collect/${postId}`) as Promise<{ data: boolean }>
+}
+
+/** 是否已收藏 */
+export function isCollected(postId: number) {
+  return request.get(`/th/post/${postId}/collected`) as Promise<{ data: boolean }>
+}
+
+/** 我收藏的帖子 */
+export function getMyCollects(params: { pageNum: number; pageSize: number }) {
+  return request.get('/th/user/collects', { params }) as Promise<{ data: { records: Post[]; total: number } }>
+}
+
+/** 收藏数量 */
+export function getCollectCount() {
+  return request.get('/th/user/collect-count') as Promise<{ data: number }>
+}
+
+/** 他人公开主页信息 */
+export function getPublicProfile(userId: number) {
+  return request.get(`/th/user/public/${userId}`) as Promise<{ data: PublicProfile }>
+}
+
+/** 指定用户的公开帖子 */
+export function getUserPosts(userId: number, params: { pageNum: number; pageSize: number }) {
+  return request.get(`/th/user/${userId}/posts`, { params }) as Promise<{ data: { records: Post[]; total: number } }>
+}
+
+export interface PublicProfile {
+  id: number
+  nickname: string
+  avatar?: string
+  bio?: string
+  gender?: number
+  postCount: number
+  commentCount: number
+  createTime: string
+}
+
+export interface NotificationItem {
+  id: number
+  senderId?: number
+  type: string
+  targetType?: string
+  targetId?: number
+  content: string
+  isRead: number
+  createTime: string
 }

@@ -30,7 +30,15 @@
         <button :class="['action-btn', { liked }]" @click="handleLike">
           👍 {{ post.likeCount }}
         </button>
+        <button :class="['action-btn', { collected }]" @click="handleCollect" :disabled="!isLoggedIn()">
+          {{ collected ? '★ 已收藏' : '☆ 收藏' }}
+        </button>
         <span class="action">👁 {{ post.viewCount }}</span>
+        <button
+          v-if="isOwner"
+          class="action-btn danger-btn"
+          @click="handleDeletePost"
+        >删除</button>
         <button class="action-btn report-btn" @click="openReportDialog">
           🚩 举报
         </button>
@@ -107,20 +115,75 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage, ElDialog, ElForm, ElFormItem, ElSelect, ElOption, ElInput, ElButton } from 'element-plus'
-import { getPostDetail, likePost, unlikePost, getCommentPage, createComment, likeComment, submitReport as submitReportApi } from '../api/treehole'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox, ElDialog, ElForm, ElFormItem, ElSelect, ElOption, ElInput, ElButton } from 'element-plus'
+import { getPostDetail, likePost, unlikePost, getCommentPage, createComment, likeComment, submitReport as submitReportApi, toggleCollect, isCollected, deletePost as removePost } from '../api/treehole'
+import { isLoggedIn, getUserIdFromToken } from '../api/auth'
 import type { Post, Comment } from '../api/treehole'
 
 const route = useRoute()
+const router = useRouter()
 const post = ref<Post | null>(null)
 const comments = ref<Comment[]>([])
 const commentTotal = ref(0)
 const commentContent = ref('')
 const commentAnonymous = ref(false)
 const liked = ref(false)
+const collected = ref(false)
 const loading = ref(false)
+
+// 是否为当前登录用户发布的帖子（匿名帖作者也不显示删除入口，避免去匿名化）
+const isOwner = computed(() => {
+  if (!post.value) return false
+  if (post.value.isAnonymous === 1) return false
+  const myId = getUserIdFromToken()
+  return !!myId && !!post.value.userId && myId === post.value.userId
+})
+
+async function fetchCollected() {
+  if (!isLoggedIn() || !post.value) return
+  try {
+    const res = await isCollected(post.value.id)
+    collected.value = res.data
+  } catch (e) { /* 未登录或失败时不展示收藏态 */ }
+}
+
+async function handleCollect() {
+  if (!post.value) return
+  if (!isLoggedIn()) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  try {
+    const res = await toggleCollect(post.value.id)
+    collected.value = res.data
+    ElMessage.success(res.data ? '已收藏' : '已取消收藏')
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '操作失败')
+  }
+}
+
+async function handleDeletePost() {
+  if (!post.value) return
+  try {
+    await ElMessageBox.confirm('删除后帖子及其评论、点赞、收藏都会被清除，确定删除？', '删除帖子', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+  } catch {
+    return
+  }
+  try {
+    await removePost(post.value.id)
+    ElMessage.success('已删除')
+    router.push('/')
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '删除失败')
+  }
+}
 
 // Reply state
 const replyTo = ref<number | null>(null)
@@ -258,7 +321,7 @@ function formatTime(time: string) {
 }
 
 onMounted(() => {
-  fetchPost()
+  fetchPost().then(fetchCollected)
   fetchComments()
 })
 </script>
@@ -370,6 +433,20 @@ onMounted(() => {
 .action-btn.liked {
   background: #dbeafe;
   color: #3b82f6;
+}
+
+.action-btn.collected {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.danger-btn {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.danger-btn:hover {
+  background: #fee2e2;
 }
 
 .report-btn {

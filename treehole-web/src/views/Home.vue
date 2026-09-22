@@ -12,6 +12,18 @@
       </el-carousel>
     </div>
 
+    <!-- 搜索入口 -->
+    <div class="search-entry">
+      <input
+        v-model="keyword"
+        type="search"
+        placeholder="搜索帖子内容或作者昵称，回车开始"
+        aria-label="搜索"
+        @keyup.enter="goSearch"
+      />
+      <button type="button" @click="goSearch">搜索</button>
+    </div>
+
     <div class="category-bar">
       <button
         :class="['cat-btn', { active: !selectedCategory }]"
@@ -30,19 +42,7 @@
     </div>
 
     <div class="post-list">
-      <div v-for="post in posts" :key="post.id" class="post-card" @click="goDetail(post.id)">
-        <div class="post-header">
-          <span class="post-category th-tag th-tag-blue">{{ post.categoryName || '树洞' }}</span>
-          <span class="post-author-name">{{ post.authorName || '匿名' }}</span>
-          <span class="post-time">{{ formatTime(post.createTime) }}</span>
-        </div>
-        <p class="post-content">{{ post.content.length > 150 ? post.content.substring(0, 150) + '...' : post.content }}</p>
-        <div class="post-actions">
-          <span class="action">👁 {{ post.viewCount }}</span>
-          <span class="action">👍 {{ post.likeCount }}</span>
-          <span class="action">💬 {{ post.commentCount }}</span>
-        </div>
-      </div>
+      <PostCard v-for="post in posts" :key="post.id" :post="post" />
 
       <div v-if="loading" class="loading">加载中...</div>
       <div v-if="!loading && posts.length === 0" class="empty">暂无内容，来发布第一条吧！</div>
@@ -57,6 +57,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import PostCard from '../components/PostCard.vue'
 import { getPostPage, getCategoryList, getActiveAnnouncements } from '../api/treehole'
 import type { Post, Category, Announcement } from '../api/treehole'
 
@@ -69,8 +70,15 @@ const pageNum = ref(1)
 const pageSize = 10
 const total = ref(0)
 const selectedCategory = ref<number | undefined>(undefined)
+const keyword = ref('')
 
 const hasMore = ref(false)
+
+function goSearch() {
+  const kw = keyword.value.trim()
+  if (!kw) return
+  router.push({ path: '/search', query: { keyword: kw } })
+}
 
 async function fetchPosts() {
   loading.value = true
@@ -100,22 +108,6 @@ async function loadMore() {
 async function loadCategories() {
   const res = await getCategoryList()
   categories.value = res.data
-}
-
-function goDetail(id: number) {
-  router.push(`/post/${id}`)
-}
-
-function formatTime(time: string) {
-  const date = new Date(time)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
-  return date.toLocaleDateString()
 }
 
 async function loadAnnouncements() {
@@ -196,58 +188,6 @@ onMounted(() => {
 .post-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.post-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.post-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-.post-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.post-author-name {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.post-time {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.post-content {
-  font-size: 15px;
-  color: #334155;
-  line-height: 1.7;
-  margin-bottom: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.post-actions {
-  display: flex;
-  gap: 16px;
-}
-
-.action {
-  font-size: 13px;
-  color: #64748b;
 }
 
 .loading, .empty {
@@ -255,6 +195,35 @@ onMounted(() => {
   padding: 40px;
   color: #94a3b8;
 }
+
+.search-entry {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.search-entry input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-entry input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.10);
+}
+.search-entry button {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.search-entry button:hover { background: #2563eb; }
 
 .load-more {
   text-align: center;

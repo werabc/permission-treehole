@@ -28,9 +28,10 @@
     </div>
 
     <div class="profile-tabs">
-      <button :class="['tab-btn', { active: activeTab === 'posts' }]" @click="activeTab = 'posts'">我的帖子</button>
-      <button :class="['tab-btn', { active: activeTab === 'received' }]" @click="activeTab = 'received'">谁评论了我</button>
-      <button :class="['tab-btn', { active: activeTab === 'comments' }]" @click="activeTab = 'comments'">我的评论</button>
+      <button :class="['tab-btn', { active: activeTab === 'posts' }]" @click="switchTab('posts')">我的帖子</button>
+      <button :class="['tab-btn', { active: activeTab === 'received' }]" @click="switchTab('received')">谁评论了我</button>
+      <button :class="['tab-btn', { active: activeTab === 'comments' }]" @click="switchTab('comments')">我的评论</button>
+      <button :class="['tab-btn', { active: activeTab === 'collects' }]" @click="switchTab('collects')">我的收藏</button>
     </div>
 
     <div class="profile-content">
@@ -43,8 +44,21 @@
             <span>💬 {{ post.commentCount }}</span>
             <span>👁 {{ post.viewCount }}</span>
             <span class="post-time">{{ formatTime(post.createTime) }}</span>
+            <button class="del-btn" type="button" @click.stop="handleDeletePost(post)">删除</button>
           </div>
         </div>
+      </div>
+
+      <div v-if="activeTab === 'collects'">
+        <div v-if="myCollects.length === 0" class="empty">还没有收藏过帖子</div>
+        <PostCard
+          v-for="post in myCollects"
+          :key="post.id"
+          :post="post"
+          show-collect
+          :collected="true"
+          @collect="handleUncollect"
+        />
       </div>
 
       <div v-if="activeTab === 'received'">
@@ -65,7 +79,10 @@
         <div v-for="item in myComments" :key="item.commentId" class="comment-item" @click="$router.push(`/post/${item.postId}`)">
           <p class="comment-content">{{ item.content }}</p>
           <p class="original-post">原帖: {{ item.postContent?.substring(0, 50) }}...</p>
-          <span class="comment-time">{{ formatTime(item.createTime) }}</span>
+          <div class="comment-foot">
+            <span class="comment-time">{{ formatTime(item.createTime) }}</span>
+            <button class="del-btn" type="button" @click.stop="handleDeleteComment(item)">删除</button>
+          </div>
         </div>
       </div>
     </div>
@@ -101,7 +118,10 @@
         <span class="notif-time">{{ formatTime(notif.createTime) }}</span>
       </div>
       <template #footer>
-        <el-button v-if="notifications.length > 0" @click="markAllRead" size="small">全部已读</el-button>
+        <div class="drawer-foot">
+          <router-link to="/notifications" class="to-center" @click="showNotifications = false">进入消息中心 →</router-link>
+          <el-button v-if="notifications.length > 0" @click="markAllRead" size="small">全部已读</el-button>
+        </div>
       </template>
     </el-drawer>
   </div>
@@ -109,16 +129,19 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElDialog, ElForm, ElFormItem, ElInput, ElButton, ElRadioGroup, ElRadio, ElDrawer } from 'element-plus'
+import { ElMessage, ElMessageBox, ElDialog, ElForm, ElFormItem, ElInput, ElButton, ElRadioGroup, ElRadio, ElDrawer } from 'element-plus'
 import { getUserInfo } from '../api/auth'
+import PostCard from '../components/PostCard.vue'
 import {
-  getMyPosts, getReceivedComments, getMyComments,
+  getMyPosts, getReceivedComments, getMyComments, getMyCollects,
+  deletePost as removePost, deleteComment as removeComment, toggleCollect,
   getNotifications, getUnreadCount, markNotificationsRead, updateProfile
 } from '../api/treehole'
 
 const userInfo = ref<any>({})
 const activeTab = ref('posts')
 const myPosts = ref<any[]>([])
+const myCollects = ref<any[]>([])
 const receivedComments = ref<any[]>([])
 const myComments = ref<any[]>([])
 const notifications = ref<any[]>([])
@@ -164,6 +187,71 @@ async function loadMyComments() {
     const res = await getMyComments({ pageNum: 1, pageSize: 20 })
     myComments.value = res.data.records
   } catch (e) { /* ignore */ }
+}
+
+async function loadMyCollects() {
+  try {
+    const res = await getMyCollects({ pageNum: 1, pageSize: 20 })
+    myCollects.value = res.data.records || []
+  } catch (e) { /* ignore */ }
+}
+
+/** 首次切换到某页签时按需加载，减少首屏请求 */
+function switchTab(tab: string) {
+  activeTab.value = tab
+  if (tab === 'posts' && myPosts.value.length === 0) loadMyPosts()
+  if (tab === 'received' && receivedComments.value.length === 0) loadReceivedComments()
+  if (tab === 'comments' && myComments.value.length === 0) loadMyComments()
+  if (tab === 'collects' && myCollects.value.length === 0) loadMyCollects()
+}
+
+async function handleDeletePost(post: any) {
+  try {
+    await ElMessageBox.confirm('删除后该帖子的评论、点赞、收藏也会一并清除，确定删除？', '删除帖子', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+  } catch {
+    return // 用户取消
+  }
+  try {
+    await removePost(post.id)
+    ElMessage.success('已删除')
+    myPosts.value = myPosts.value.filter((p) => p.id !== post.id)
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '删除失败')
+  }
+}
+
+async function handleDeleteComment(item: any) {
+  try {
+    await ElMessageBox.confirm('确定删除这条评论？', '删除评论', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+  } catch {
+    return
+  }
+  try {
+    await removeComment(item.commentId)
+    ElMessage.success('已删除')
+    myComments.value = myComments.value.filter((c) => c.commentId !== item.commentId)
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '删除失败')
+  }
+}
+
+/** 在"我的收藏"页取消收藏 */
+async function handleUncollect(post: any) {
+  try {
+    await toggleCollect(post.id)
+    myCollects.value = myCollects.value.filter((p) => p.id !== post.id)
+    ElMessage.success('已取消收藏')
+  } catch (e: any) {
+    ElMessage.error('操作失败')
+  }
 }
 
 async function loadNotifications() {
@@ -395,6 +483,46 @@ onMounted(() => {
 
 .post-time {
   margin-left: auto;
+}
+
+.del-btn {
+  margin-left: 10px;
+  background: none;
+  border: 1px solid #e2e8f0;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.del-btn:hover {
+  color: #ef4444;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.comment-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drawer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.to-center {
+  color: #3b82f6;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.to-center:hover {
+  text-decoration: underline;
 }
 
 .comment-item {

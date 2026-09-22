@@ -8,6 +8,10 @@ const routes = [
   { path: '/publish', name: 'Publish', component: () => import('../views/Publish.vue'), meta: { auth: true } },
   { path: '/post/:id', name: 'PostDetail', component: () => import('../views/PostDetail.vue') },
   { path: '/category/:code', name: 'Category', component: () => import('../views/Category.vue') },
+  { path: '/search', name: 'Search', component: () => import('../views/Search.vue'), meta: { title: '搜索' } },
+  { path: '/notifications', name: 'Notifications', component: () => import('../views/Notifications.vue'), meta: { auth: true, title: '消息中心' } },
+  { path: '/settings', name: 'Settings', component: () => import('../views/Settings.vue'), meta: { auth: true, title: '账号设置' } },
+  { path: '/user/:id', name: 'UserProfile', component: () => import('../views/UserProfile.vue'), meta: { title: '用户主页' } },
   { path: '/profile', name: 'Profile', component: () => import('../views/Profile.vue'), meta: { auth: true } },
   // Alibaba-Java: 增加 404 页面
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('../views/Home.vue') },
