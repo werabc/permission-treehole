@@ -25,6 +25,7 @@ const componentMap: Record<string, () => Promise<any>> = {
   '/admin/th/analytics':       () => import('@/views/th-admin/analytics/index.vue'),
   '/admin/th/settings':        () => import('@/views/th-admin/settings/index.vue'),
   '/admin/th/logs':            () => import('@/views/th-admin/logs/index.vue'),
+  '/admin/th/sensitive':       () => import('@/views/th-admin/sensitive/index.vue'),
   // 仪表盘和个人中心
   '/dashboard':                () => import('@/views/dashboard/index.vue'),
   '/profile':                  () => import('@/views/profile/index.vue'),

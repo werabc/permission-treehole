@@ -30,8 +30,15 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="violationCount" label="违规分" width="80" align="center" sortable>
+        <template #default="{ row }">
+          <el-tag :type="(row.violationCount || 0) >= 5 ? 'danger' : 'info'" size="small">
+            {{ row.violationCount || 0 }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="createTime" label="注册时间" width="170" sortable />
-      <el-table-column label="操作" width="320" fixed="right">
+      <el-table-column label="操作" width="380" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
           <el-button link type="info" size="small" @click="viewLogs(row)">日志</el-button>
@@ -39,6 +46,12 @@
           <el-button v-else link type="warning" size="small" @click="handleMute(row)">禁言</el-button>
           <el-button v-if="row.status === 1" link type="danger" size="small" @click="handleBan(row)">封号</el-button>
           <el-button v-else link type="success" size="small" @click="handleUnban(row)">解封</el-button>
+          <el-button
+            v-if="(row.muteUntil && new Date(row.muteUntil) > new Date()) || row.status !== 1 || (row.violationCount || 0) > 0"
+            link type="success"
+            size="small"
+            @click="handleRelease(row)"
+          >解除处罚</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -167,7 +180,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { getThUserPage, getThUserDetail, muteUser, unmuteUser, banUser, unbanUser, getThUserLogs, getThUserPosts, getThUserComments } from '@/api/treehole-admin'
+import { getThUserPage, getThUserDetail, muteUser, unmuteUser, banUser, unbanUser, releaseThUser, getThUserLogs, getThUserPosts, getThUserComments } from '@/api/treehole-admin'
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
@@ -323,6 +336,31 @@ function handleUnban(row: any) {
     ElMessage.success('已解封')
     fetchData()
   }).catch(() => {})
+}
+
+/** 一键解除全部处罚；可选同时清零违规分 */
+function handleRelease(row: any) {
+  ElMessageBox.confirm(
+    `确认解除该用户的禁言/封号处罚？<br/>是否同时清零违规分（当前 ${row.violationCount || 0} 分）？`,
+    '解除处罚',
+    {
+      dangerouslyUseHTMLString: true,
+      distinguishCancelAndClose: true,
+      confirmButtonText: '解除并清零',
+      cancelButtonText: '仅解除处罚',
+      type: 'warning'
+    }
+  ).then(async () => {
+    await releaseThUser(row.id, true)
+    ElMessage.success('已解除处罚并清零违规分')
+    fetchData()
+  }).catch(async (action: string) => {
+    if (action === 'cancel') {
+      await releaseThUser(row.id, false)
+      ElMessage.success('已解除处罚（保留违规分）')
+      fetchData()
+    }
+  })
 }
 
 onMounted(fetchData)

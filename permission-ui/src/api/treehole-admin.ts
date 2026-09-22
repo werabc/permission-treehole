@@ -137,3 +137,34 @@ export function getThSettings() {
 export function updateThSettings(data: any) {
   return request.put('/admin/th/settings', data)
 }
+
+// ==================== 敏感词管理 ====================
+export function getSensitiveWordPage(params: { pageNum: number; pageSize: number; keyword?: string; level?: number; status?: number }) {
+  return request.get('/admin/th/sensitive-word/page', { params })
+}
+export function getSensitiveWordStats() {
+  return request.get('/admin/th/sensitive-word/stats')
+}
+export function createSensitiveWord(data: any) {
+  return request.post('/admin/th/sensitive-word', data)
+}
+export function updateSensitiveWord(data: any) {
+  return request.put('/admin/th/sensitive-word', data)
+}
+export function deleteSensitiveWord(id: number) {
+  return request.delete(`/admin/th/sensitive-word/${id}`)
+}
+export function importSensitiveWords(data: { text: string; level?: number; category?: string }) {
+  return request.post('/admin/th/sensitive-word/import', data)
+}
+export function refreshSensitiveWords() {
+  return request.post('/admin/th/sensitive-word/refresh')
+}
+
+// ==================== 用户处罚扩展 ====================
+export function releaseThUser(id: number, resetViolation = false) {
+  return request.put(`/admin/th/user/${id}/release`, null, { params: { resetViolation } })
+}
+export function addThUserViolation(id: number, score: number, reason?: string) {
+  return request.put(`/admin/th/user/${id}/violation`, null, { params: { score, reason } })
+}
