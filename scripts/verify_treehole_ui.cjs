@@ -196,6 +196,26 @@ async function msgText(page, timeout = 8000) {
   console.log('\n=== 6. 登录 ===')
   await go(page, `${TREE}/#/login`)
   check('登录页为分屏布局', (await page.locator('.auth__art img').count()) === 1)
+
+  // 关键：必须校验「真实尺寸」而不是节点是否存在。
+  // 之前只数 .auth__art img 的个数，即使左侧插画被压成 0px 宽也能通过，
+  // 导致 App Shell 两列网格把访客页挤坏的问题一直没被这条断言发现。
+  const authBox = await page.evaluate(() => {
+    const auth = document.querySelector('.auth')
+    const art = document.querySelector('.auth__art')
+    const box = document.querySelector('.auth__box')
+    return {
+      authW: auth ? Math.round(auth.getBoundingClientRect().width) : 0,
+      artW: art ? Math.round(art.getBoundingClientRect().width) : 0,
+      boxX: box ? Math.round(box.getBoundingClientRect().x) : 0,
+      vw: document.documentElement.clientWidth,
+    }
+  })
+  check('登录页整屏铺满（不被外壳网格挤成窄列）',
+    authBox.authW >= authBox.vw - 2, `auth=${authBox.authW}px 视口=${authBox.vw}px`)
+  check('左侧插画占住分屏一半（未被压成 0 宽）',
+    authBox.artW > authBox.vw * 0.35, `art=${authBox.artW}px`)
+  check('表单位于右半屏', authBox.boxX > authBox.vw * 0.5, `box.x=${authBox.boxX}px`)
   await page.getByPlaceholder('请输入用户名').fill(U1)
   await page.getByPlaceholder('请输入密码').fill(PWD)
   await shot(page, '06-login')

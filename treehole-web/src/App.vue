@@ -4,7 +4,9 @@
     <BackdropFx />
 
     <!-- App Shell（布局 3）：宽屏左侧常驻导航，窄屏自动收起 -->
-    <div class="dh-shell">
+    <!-- 访客页（登录/注册）加 --guest：不参与「左导航 + 内容」两列网格，
+         否则左导航被隐藏后第一列空着，整屏分屏会被挤进 236px 窄列 -->
+    <div class="dh-shell" :class="{ 'dh-shell--guest': hideChrome }">
       <AppSidenav v-if="!hideChrome" :unread-count="unreadCount" :is-logged-in="isLoggedIn" />
 
       <div class="dh-shell__main">

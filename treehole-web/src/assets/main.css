@@ -359,6 +359,10 @@ html[data-theme="light"] .dh-seg button.is-on { color: #fff; }
 .dh-shell { position: relative; z-index: 1; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); }
 .dh-shell__main { min-width: 0; display: flex; flex-direction: column; }
 
+/* 访客页（登录/注册）：整屏分屏直接铺满，不参与外壳网格。
+   用双类提高优先级，确保能压过下面 @media(min-width:1081px) 里的两列定义 */
+.dh-shell.dh-shell--guest { display: block; max-width: none; margin: 0; padding: 0; gap: 0; }
+
 .dh-sidenav { display: none; }
 .dh-sidenav__in {
   /* 左导航在独立网格列里，头顶没有顶栏遮挡，所以吸顶位置可以贴顶 */
