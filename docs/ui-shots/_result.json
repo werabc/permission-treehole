@@ -1,0 +1,223 @@
+{
+  "pass": 43,
+  "fail": 0,
+  "errors": [],
+  "badResponses": [],
+  "results": [
+    {
+      "name": "主题默认为 dark",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "Hero 主标题渲染",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "极光背景图已加载并可见",
+      "ok": true,
+      "extra": "opacity=0.7"
+    },
+    {
+      "name": "星点 canvas 已铺满视口",
+      "ok": true,
+      "extra": "1440x940"
+    },
+    {
+      "name": "帖子卡片渲染",
+      "ok": true,
+      "extra": "数量=10"
+    },
+    {
+      "name": "图标为真实 SVG（替代 emoji）",
+      "ok": true,
+      "extra": "13.625x12.65625"
+    },
+    {
+      "name": "页面文本不再含 emoji 图标",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "滚动入场动效已触发",
+      "ok": true,
+      "extra": "已入场=1"
+    },
+    {
+      "name": "公告轮播有内容",
+      "ok": true,
+      "extra": "欢迎来到树洞！\n这是一个匿名分享的平台，请遵"
+    },
+    {
+      "name": "主题切到 light",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "主题切回 dark",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "搜索关键词命中结果",
+      "ok": true,
+      "extra": "命中=1"
+    },
+    {
+      "name": "搜索页展示命中总数",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "详情页正文渲染",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "详情页动作栏存在",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "回响列表渲染",
+      "ok": true,
+      "extra": "回响=2"
+    },
+    {
+      "name": "未登录点赞被引导登录（不产生 401 登出）",
+      "ok": true,
+      "extra": "http://localhost:3000/#/login"
+    },
+    {
+      "name": "注册页为分屏布局（左侧画面 + 右侧表单）",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "两次密码不一致被拦截",
+      "ok": true,
+      "extra": "两次密码不一致"
+    },
+    {
+      "name": "注册提交成功",
+      "ok": true,
+      "extra": "注册成功，请登录"
+    },
+    {
+      "name": "注册成功跳转登录页",
+      "ok": true,
+      "extra": "http://localhost:3000/#/login"
+    },
+    {
+      "name": "登录页为分屏布局",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "空用户名被前端拦截",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "登录成功并跳转首页",
+      "ok": true,
+      "extra": "http://localhost:3000/#/"
+    },
+    {
+      "name": "顶栏显示登录用户昵称",
+      "ok": true,
+      "extra": "夜航船"
+    },
+    {
+      "name": "顶栏未读消息徽标显示",
+      "ok": true,
+      "extra": "未读=3"
+    },
+    {
+      "name": "点赞切换生效",
+      "ok": true,
+      "extra": "false → true"
+    },
+    {
+      "name": "收藏切换生效",
+      "ok": true,
+      "extra": "false → true"
+    },
+    {
+      "name": "发表回响成功",
+      "ok": true,
+      "extra": "已发送回响"
+    },
+    {
+      "name": "回响列表已刷新",
+      "ok": true,
+      "extra": "回响=4"
+    },
+    {
+      "name": "字数计量随输入更新",
+      "ok": true,
+      "extra": "21 / 5000"
+    },
+    {
+      "name": "匿名/实名分段控件存在",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "发布成功并跳转详情",
+      "ok": true,
+      "extra": "发布成功"
+    },
+    {
+      "name": "消息列表渲染",
+      "ok": true,
+      "extra": "数量=4"
+    },
+    {
+      "name": "未读消息高亮",
+      "ok": true,
+      "extra": "未读=3"
+    },
+    {
+      "name": "消息页签 4 个",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "个人主页昵称渲染",
+      "ok": true,
+      "extra": "夜航船"
+    },
+    {
+      "name": "数据宫格 4 格",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "我的心事列表渲染",
+      "ok": true,
+      "extra": "数量=8"
+    },
+    {
+      "name": "帖子带删除入口",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "移动端无横向溢出",
+      "ok": true,
+      "extra": "溢出=0px"
+    },
+    {
+      "name": "非法帖子 ID 给出友好提示",
+      "ok": true,
+      "extra": "帖子不存在或已被删除"
+    },
+    {
+      "name": "非法用户 ID 给出友好提示",
+      "ok": true,
+      "extra": "用户不存在"
+    }
+  ]
+}

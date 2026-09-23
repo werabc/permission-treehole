@@ -1,33 +1,43 @@
 <template>
-  <div class="user-page">
-    <div v-if="loading" class="state">加载中…</div>
-    <div v-else-if="!profile" class="state">用户不存在</div>
+  <div class="dh-narrow user-page">
+    <div v-if="loading" class="loading-wrap">
+      <div class="dh-skeleton" style="height: 150px" />
+    </div>
+
+    <div v-else-if="!profile" class="dh-state">用户不存在</div>
 
     <template v-else>
-      <section class="profile-head">
-        <div class="avatar">{{ avatarText }}</div>
-        <div class="info">
+      <section class="dh-card head" v-reveal>
+        <div class="head__av">{{ avatarText }}</div>
+        <div class="head__info">
           <h2>{{ profile.nickname }}</h2>
-          <p class="bio">{{ profile.bio || '这个人很懒，什么都没留下' }}</p>
-          <p class="stats">
-            <span>发帖 {{ profile.postCount || 0 }}</span>
-            <span>评论 {{ profile.commentCount || 0 }}</span>
-            <span>加入于 {{ formatDate(profile.createTime) }}</span>
-          </p>
+          <p>{{ profile.bio || '这个人很懒，什么都没留下' }}</p>
+          <div class="head__tags">
+            <span class="dh-tag">发布 {{ profile.postCount || 0 }} 条心事</span>
+            <span class="dh-tag">写下 {{ profile.commentCount || 0 }} 条回响</span>
+            <span class="dh-tag">加入于 {{ formatDate(profile.createTime) }}</span>
+          </div>
         </div>
       </section>
 
-      <h3 class="section-title">TA 的帖子</h3>
+      <div class="dh-section-title">
+        <h3>TA 的心事</h3>
+        <span>{{ posts.length }} POSTS</span>
+      </div>
 
-      <div v-if="postsLoading" class="state">加载中…</div>
-      <div v-else-if="posts.length === 0" class="state">还没有发布过帖子</div>
-      <PostCard v-for="post in posts" :key="post.id" :post="post" />
+      <div v-if="postsLoading" class="feed">
+        <div class="dh-skeleton" />
+      </div>
+      <div v-else-if="posts.length === 0" class="dh-state">还没有发布过心事</div>
+      <div v-else class="feed">
+        <PostCard v-for="(post, i) in posts" :key="post.id" v-reveal="Math.min(i, 6) * 60" :post="post" />
+      </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import PostCard from '../components/PostCard.vue'
 import { getPublicProfile, getUserPosts, type Post, type PublicProfile } from '../api/treehole'
@@ -42,17 +52,22 @@ const postsLoading = ref(false)
 const avatarText = computed(() => (profile.value?.nickname || '?').slice(0, 1).toUpperCase())
 
 async function load(userId: number) {
+  if (!Number.isInteger(userId) || userId <= 0) {
+    profile.value = null
+    loading.value = false
+    postsLoading.value = false
+    return
+  }
   loading.value = true
   postsLoading.value = true
   try {
     const [profileRes, postsRes] = await Promise.all([
       getPublicProfile(userId),
-      getUserPosts(userId, { pageNum: 1, pageSize: 20 })
+      getUserPosts(userId, { pageNum: 1, pageSize: 20 }),
     ])
     profile.value = profileRes.data
     posts.value = postsRes.data.records || []
-  } catch (e) {
-    console.error('加载用户主页失败', e)
+  } catch {
     profile.value = null
   } finally {
     loading.value = false
@@ -79,25 +94,25 @@ watch(() => route.params.id, (id) => {
 </script>
 
 <style scoped>
-.user-page { max-width: 720px; margin: 0 auto; }
-.profile-head {
-  display: flex; gap: 18px; align-items: center;
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-  padding: 22px; margin-bottom: 22px;
+.user-page { padding: 40px 0 70px; }
+.loading-wrap { padding-top: 8px; }
+
+.head { display: flex; gap: 22px; align-items: center; padding: 28px 30px; border-radius: var(--r-xl); }
+.head__av {
+  width: 76px; height: 76px; border-radius: 24px; flex-shrink: 0; display: grid; place-items: center;
+  font-size: 30px; font-weight: 700; color: #04140f;
+  background: linear-gradient(140deg, var(--accent), var(--violet));
+  box-shadow: 0 16px 40px -16px color-mix(in srgb, var(--accent) 70%, transparent);
 }
-.avatar {
-  width: 64px; height: 64px; border-radius: 50%; flex: 0 0 auto;
-  background: linear-gradient(135deg, #60a5fa, #3b82f6); color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 26px; font-weight: 600;
-}
-.info { min-width: 0; }
-.info h2 { margin: 0 0 6px; font-size: 19px; color: #1e293b; }
-.bio { margin: 0 0 8px; color: #64748b; font-size: 14px; line-height: 1.6; word-break: break-word; }
-.stats { margin: 0; color: #94a3b8; font-size: 13px; display: flex; gap: 16px; flex-wrap: wrap; }
-.section-title { font-size: 16px; color: #1e293b; margin: 0 0 14px; }
-.state { text-align: center; color: #94a3b8; padding: 40px 0; font-size: 14px; }
-@media (max-width: 640px) {
-  .profile-head { flex-direction: column; text-align: center; }
+.head__info { min-width: 0; }
+.head__info h2 { font-size: 22px; letter-spacing: -0.02em; font-weight: 700; }
+.head__info > p { margin-top: 6px; color: var(--text-dim); font-size: 14px; line-height: 1.65; word-break: break-word; }
+.head__tags { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+.feed { display: grid; gap: 12px; }
+
+@media (max-width: 720px) {
+  .user-page { padding: 26px 0 60px; }
+  .head { flex-direction: column; align-items: flex-start; padding: 22px; }
 }
 </style>

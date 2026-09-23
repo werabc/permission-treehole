@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>树洞 · 前端改版设计方案预览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,300..700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   树洞 · 设计系统 "Deep Hollow / 深空树洞"
+   设计预览文件：不参与构建，仅用于方案评审
+   ============================================================ */
+
+/* ---------- Design Tokens ---------- */
+:root {
+  --font-sans: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, "Songti SC", "STSong", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --accent: #5fe0bd;
+  --accent-soft: rgba(95, 224, 189, 0.14);
+  --accent-line: rgba(95, 224, 189, 0.42);
+  --violet: #a78bfa;
+  --danger: #ff6b7f;
+
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --page: 1180px;
+}
+
+html[data-theme="dark"] {
+  --bg: #06060d;
+  --bg-2: #0a0a15;
+  --surface: rgba(255, 255, 255, 0.038);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --surface-solid: #12121f;
+  --border: rgba(255, 255, 255, 0.085);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #eceef7;
+  --text-dim: #a4a9c0;
+  --text-mute: #6a708c;
+  --shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.75);
+  --art-opacity: 0.7;
+  --art-blend: screen;
+  --grain-opacity: 0.05;
+  --grid-opacity: 0.035;
+}
+
+html[data-theme="light"] {
+  --bg: #f7f7f4;
+  --bg-2: #efeff0;
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-2: rgba(255, 255, 255, 0.92);
+  --surface-solid: #ffffff;
+  --border: rgba(18, 20, 40, 0.08);
+  --border-strong: rgba(18, 20, 40, 0.16);
+  --text: #14162a;
+  --text-dim: #4e5473;
+  --text-mute: #858ba6;
+  --accent: #0f9d7c;
+  --accent-soft: rgba(15, 157, 124, 0.1);
+  --accent-line: rgba(15, 157, 124, 0.35);
+  --shadow: 0 20px 50px -22px rgba(20, 22, 42, 0.24);
+  --art-opacity: 0.22;
+  --art-blend: luminosity;
+  --grain-opacity: 0.03;
+  --grid-opacity: 0.5;
+}
+
+/* ---------- Base ---------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  transition: background 0.6s var(--ease), color 0.4s var(--ease);
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+input, textarea, select { font: inherit; color: inherit; background: none; border: none; outline: none; }
+svg { display: block; }
+
+/* ---------- Ambient background stack ---------- */
+.bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.bg__art {
+  position: absolute; inset: -6%;
+  background: url("assets/hero-aurora-tree.jpg") center right / cover no-repeat;
+  opacity: var(--art-opacity);
+  mix-blend-mode: var(--art-blend);
+  filter: saturate(1.05) contrast(1.02);
+  animation: kenburns 40s ease-in-out infinite alternate;
+  transition: opacity 0.6s var(--ease);
+}
+.bg__veil {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 78% 12%, transparent 0%, var(--bg) 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent) 0%, var(--bg) 78%);
+}
+.bg__grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--text) 100%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--text) 100%, transparent) 1px, transparent 1px);
+  background-size: 72px 72px;
+  opacity: var(--grid-opacity);
+  mask-image: radial-gradient(110% 80% at 50% 0%, #000 0%, transparent 72%);
+}
+.bg__grain {
+  position: absolute; inset: 0; opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+#stars { position: absolute; inset: 0; width: 100%; height: 100%; }
+html[data-theme="light"] #stars { display: none; }
+
+@keyframes kenburns {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to   { transform: scale(1.09) translate3d(-1.5%, -1%, 0); }
+}
+
+/* ---------- Review toolbar ---------- */
+.bar {
+  position: sticky; top: 0; z-index: 60;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 20px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid var(--border);
+}
+.bar__tag {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em;
+  color: var(--accent); border: 1px solid var(--accent-line);
+  padding: 3px 9px; border-radius: 999px; text-transform: uppercase; white-space: nowrap;
+}
+.bar__tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tab {
+  font-size: 13px; color: var(--text-dim); padding: 6px 14px; border-radius: 999px;
+  border: 1px solid transparent; transition: all 0.28s var(--ease);
+}
+.tab:hover { color: var(--text); background: var(--surface); }
+.tab.is-active { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 500; }
+html[data-theme="light"] .tab.is-active { color: #fff; }
+.bar__right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.icon-btn {
+  width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px;
+  border: 1px solid var(--border); color: var(--text-dim); transition: all 0.28s var(--ease);
+}
+.icon-btn:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface); }
+
+/* ---------- Shell ---------- */
+.stage { position: relative; z-index: 1; }
+.view { display: none; animation: viewIn 0.55s var(--ease) both; }
+.view.is-active { display: block; }
+@keyframes viewIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.wrap { max-width: var(--page); margin: 0 auto; padding: 0 24px; }
+.narrow { max-width: 780px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- Header (floating glass) ---------- */
+.hdr {
+  position: sticky; top: 58px; z-index: 50;
+  max-width: var(--page); margin: 16px auto 0; padding: 0 24px;
+}
+.hdr__inner {
+  display: flex; align-items: center; gap: 22px;
+  padding: 10px 12px 10px 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-solid) 62%, transparent);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(22px) saturate(170%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.02em; font-size: 17px; }
+.brand__mark { width: 30px; height: 30px; }
+.brand em {
+  font-family: var(--font-display); font-style: italic; font-weight: 400;
+  font-size: 12px; color: var(--text-mute); letter-spacing: 0.04em; margin-left: 2px;
+}
+.nav { display: flex; gap: 2px; margin-left: 6px; }
+.nav a {
+  font-size: 14px; color: var(--text-dim); padding: 7px 14px; border-radius: 999px;
+  transition: all 0.28s var(--ease); position: relative;
+}
+.nav a:hover { color: var(--text); background: var(--surface); }
+.nav a.on { color: var(--text); background: var(--surface-2); }
+.nav a.on::after {
+  content: ""; position: absolute; left: 50%; bottom: 2px; width: 14px; height: 2px;
+  transform: translateX(-50%); border-radius: 2px; background: var(--accent);
+}
+.hdr__acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.chip-user {
+  display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px;
+  border: 1px solid var(--border); font-size: 13px; color: var(--text-dim); transition: all 0.28s var(--ease);
+}
+.chip-user:hover { border-color: var(--border-strong); color: var(--text); }
+.chip-user .av {
+  width: 26px; height: 26px; border-radius: 999px; display: grid; place-items: center;
+  background: linear-gradient(140deg, var(--accent), var(--violet)); color: #06121a; font-size: 12px; font-weight: 700;
+}
+.badge {
+  position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 600;
+  display: grid; place-items: center; font-family: var(--font-mono); line-height: 1;
+}
+.pos-r { position: relative; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 22px; border-radius: 999px; font-size: 14px; font-weight: 500;
+  border: 1px solid transparent; transition: all 0.32s var(--ease); white-space: nowrap;
+}
+.btn:active { transform: scale(0.975); }
+.btn--primary {
+  background: var(--accent); color: #04140f; font-weight: 600;
+  box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+html[data-theme="light"] .btn--primary { color: #fff; }
+.btn--primary:hover { transform: translateY(-2px); box-shadow: 0 18px 40px -14px color-mix(in srgb, var(--accent) 80%, transparent); }
+.btn--ghost { border-color: var(--border-strong); color: var(--text); background: var(--surface); }
+.btn--ghost:hover { background: var(--surface-2); transform: translateY(-2px); }
+.btn--quiet { color: var(--text-dim); padding: 9px 16px; }
+.btn--quiet:hover { color: var(--text); background: var(--surface); }
+.btn--lg { padding: 14px 30px; font-size: 15px; }
+.btn--sm { padding: 7px 15px; font-size: 13px; }
+.btn--block { width: 100%; }
+
+/* ---------- Glass card ---------- */
+.card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  transition: transform 0.4s var(--ease), border-color 0.4s var(--ease), box-shadow 0.4s var(--ease);
+}
+.card--hover:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+/* 扫光：hover 时一道柔光从左侧掠过 */
+.card--hover::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, color-mix(in srgb, var(--accent) 12%, transparent) 50%, transparent 62%);
+  opacity: 0; transition: opacity 0.4s var(--ease);
+}
+.card--hover:hover::after { opacity: 1; }
+
+/* ---------- Reveal on scroll ---------- */
+.reveal { opacity: 0; transform: translateY(26px); }
+.reveal.in {
+  opacity: 1; transform: none;
+  transition: opacity 0.85s var(--ease), transform 0.85s var(--ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+
+/* ============================================================
+   1. HERO
+   ============================================================ */
+.hero { position: relative; padding: 92px 0 68px; }
+.hero__grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: center; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 5px 13px;
+  background: var(--surface); backdrop-filter: blur(12px);
+}
+.dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); animation: pulse 2.6s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); } 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+.hero h1 {
+  margin: 22px 0 0; font-size: clamp(38px, 5.4vw, 64px); line-height: 1.06;
+  letter-spacing: -0.035em; font-weight: 700; color: var(--text);
+}
+.hero h1 i { font-style: normal; color: var(--accent); }
+.hero__sub {
+  margin-top: 20px; font-family: var(--font-display); font-style: italic;
+  font-size: clamp(17px, 2vw, 21px); color: var(--text-dim); letter-spacing: 0.01em; max-width: 30ch;
+}
+.hero__cta { margin-top: 34px; display: flex; gap: 12px; flex-wrap: wrap; }
+.hero__stats { margin-top: 44px; display: flex; gap: 34px; flex-wrap: wrap; }
+.stat b { display: block; font-family: var(--font-mono); font-size: 24px; font-weight: 500; letter-spacing: -0.02em; color: var(--text); }
+.stat span { font-size: 12px; color: var(--text-mute); letter-spacing: 0.05em; }
+
+/* 右侧：今日回声卡片 */
+.echo { padding: 26px; border-radius: var(--r-xl); }
+.echo__head { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-mute); letter-spacing: 0.1em; font-family: var(--font-mono); text-transform: uppercase; }
+.echo p {
+  margin: 18px 0 20px; font-family: var(--font-display); font-style: italic;
+  font-size: 19px; line-height: 1.6; color: var(--text);
+}
+.echo__foot { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-mute); }
+.wave { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+.wave i { width: 3px; border-radius: 3px; background: var(--accent-line); animation: wave 1.3s ease-in-out infinite; }
+.wave i:nth-child(1) { height: 8px; animation-delay: 0s; }
+.wave i:nth-child(2) { height: 16px; animation-delay: 0.12s; }
+.wave i:nth-child(3) { height: 11px; animation-delay: 0.24s; }
+.wave i:nth-child(4) { height: 19px; animation-delay: 0.36s; }
+.wave i:nth-child(5) { height: 7px; animation-delay: 0.48s; }
+@keyframes wave { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
+
+/* ---------- Ticker ---------- */
+.ticker {
+  margin: 30px auto 0; max-width: var(--page); padding: 0 24px;
+}
+.ticker__in {
+  display: flex; align-items: center; gap: 14px; height: 44px; padding: 0 6px 0 16px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--surface);
+  backdrop-filter: blur(16px); overflow: hidden;
+}
+.ticker__label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; color: var(--accent); text-transform: uppercase; white-space: nowrap; }
+.ticker__track { flex: 1; overflow: hidden; height: 44px; position: relative; }
+.ticker__item {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--text-dim); opacity: 0; transform: translateY(100%);
+  animation: tick 12s infinite;
+}
+.ticker__item b { color: var(--text); font-weight: 500; }
+.ticker__item:nth-child(1) { animation-delay: 0s; }
+.ticker__item:nth-child(2) { animation-delay: 4s; }
+.ticker__item:nth-child(3) { animation-delay: 8s; }
+@keyframes tick {
+  0%, 2% { opacity: 0; transform: translateY(100%); }
+  8%, 30% { opacity: 1; transform: translateY(0); }
+  36%, 100% { opacity: 0; transform: translateY(-100%); }
+}
+
+/* ---------- Search ---------- */
+.search { margin: 34px auto 0; max-width: var(--page); padding: 0 24px; }
+.search__in {
+  display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 20px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--surface);
+  backdrop-filter: blur(18px); transition: all 0.35s var(--ease);
+}
+.search__in:focus-within {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow);
+}
+.search__in input { flex: 1; font-size: 15px; padding: 12px 0; }
+.search__in input::placeholder { color: var(--text-mute); }
+.search__hint { font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; }
+
+/* ---------- Filter row ---------- */
+.filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 26px 0 20px; }
+.pill {
+  padding: 8px 17px; border-radius: 999px; font-size: 13px; color: var(--text-dim);
+  border: 1px solid var(--border); background: var(--surface); transition: all 0.3s var(--ease);
+}
+.pill:hover { color: var(--text); border-color: var(--border-strong); transform: translateY(-1px); }
+.pill.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.filters__sp { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); letter-spacing: 0.08em; }
+
+/* ---------- Feed ---------- */
+.feed { display: grid; gap: 14px; }
+.post { padding: 22px 24px; cursor: pointer; }
+.post__top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.av {
+  width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center;
+  font-size: 13px; font-weight: 700; color: #06121a; flex-shrink: 0;
+  background: linear-gradient(140deg, var(--accent), var(--violet));
+}
+.av--anon { background: var(--surface-2); color: var(--text-mute); border: 1px dashed var(--border-strong); }
+.who { display: flex; flex-direction: column; line-height: 1.25; }
+.who b { font-size: 13.5px; font-weight: 500; }
+.who span { font-size: 11.5px; color: var(--text-mute); font-family: var(--font-mono); }
+.tag {
+  margin-left: auto; font-size: 11px; padding: 4px 11px; border-radius: 999px;
+  color: var(--text-dim); border: 1px solid var(--border); background: var(--surface);
+  white-space: nowrap;
+}
+.tag--pin { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.post__body { font-size: 15.5px; line-height: 1.78; color: var(--text); letter-spacing: 0.005em; }
+.post__foot { display: flex; align-items: center; gap: 16px; margin-top: 16px; font-size: 12px; color: var(--text-mute); }
+.metric { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); }
+.post__acts { margin-left: auto; display: flex; gap: 6px; opacity: 0; transform: translateX(6px); transition: all 0.35s var(--ease); }
+.post:hover .post__acts { opacity: 1; transform: none; }
+.mini {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 12px;
+  border-radius: 999px; color: var(--text-dim); border: 1px solid var(--border); transition: all 0.28s var(--ease);
+}
+.mini:hover { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+
+.sentinel { text-align: center; padding: 30px; color: var(--text-mute); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em; }
+
+/* ============================================================
+   2. POST DETAIL
+   ============================================================ */
+.detail { padding: 40px 0 80px; }
+.back { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); padding: 8px 14px; border-radius: 999px; transition: all 0.28s var(--ease); }
+.back:hover { color: var(--text); background: var(--surface); }
+.detail__card { margin-top: 20px; padding: 34px 36px; border-radius: var(--r-xl); }
+.detail__body { font-size: 17px; line-height: 1.9; margin: 18px 0 26px; }
+.actbar { display: flex; gap: 8px; padding-top: 22px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.act {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 17px; border-radius: 999px;
+  font-size: 13px; color: var(--text-dim); border: 1px solid var(--border); transition: all 0.3s var(--ease);
+}
+.act:hover { color: var(--text); border-color: var(--border-strong); transform: translateY(-2px); }
+.act.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.act--danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+
+.sec-title { display: flex; align-items: baseline; gap: 12px; margin: 40px 0 18px; }
+.sec-title h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.sec-title span { font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); letter-spacing: 0.1em; }
+
+.composer { padding: 18px 20px; }
+.composer__in { width: 100%; min-height: 88px; font-size: 15px; line-height: 1.7; resize: vertical; }
+.composer__in::placeholder { color: var(--text-mute); }
+.composer__foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+.switch { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; color: var(--text-dim); cursor: pointer; }
+.switch i { width: 38px; height: 21px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); position: relative; transition: all 0.32s var(--ease); }
+.switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 999px; background: var(--text-mute); transition: all 0.32s var(--ease-spring); }
+.switch.on i { background: var(--accent-soft); border-color: var(--accent-line); }
+.switch.on i::after { left: 19px; background: var(--accent); }
+
+.cmt { display: flex; gap: 13px; padding: 18px 20px; }
+.cmt__body b { font-size: 13.5px; font-weight: 500; }
+.cmt__body p { font-size: 14.5px; line-height: 1.7; color: var(--text-dim); margin-top: 4px; }
+.cmt__foot { display: flex; align-items: center; gap: 14px; margin-top: 9px; font-size: 11.5px; color: var(--text-mute); font-family: var(--font-mono); }
+
+/* ============================================================
+   3. PUBLISH
+   ============================================================ */
+.compose { padding: 44px 0 80px; }
+.compose__head { text-align: center; margin-bottom: 30px; }
+.compose__head h2 { font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -0.03em; font-weight: 700; }
+.compose__head p { margin-top: 10px; font-family: var(--font-display); font-style: italic; font-size: 17px; color: var(--text-dim); }
+.editor { padding: 30px 32px; border-radius: var(--r-xl); }
+.field { margin-bottom: 24px; }
+.field > label { display: block; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-mute); font-family: var(--font-mono); margin-bottom: 10px; }
+.seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); }
+.seg button { padding: 8px 18px; border-radius: 999px; font-size: 13px; color: var(--text-dim); transition: all 0.3s var(--ease); }
+.seg button.on { background: var(--accent); color: #04140f; font-weight: 600; }
+html[data-theme="light"] .seg button.on { color: #fff; }
+.ta {
+  width: 100%; min-height: 220px; padding: 20px 22px; font-size: 16px; line-height: 1.85;
+  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface);
+  resize: vertical; transition: all 0.35s var(--ease);
+}
+.ta:focus { border-color: var(--accent-line); box-shadow: 0 0 0 4px var(--accent-soft); }
+.meter { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); }
+.meter__bar { flex: 1; height: 3px; border-radius: 3px; background: var(--surface-2); margin: 0 14px; overflow: hidden; }
+.meter__bar i { display: block; height: 100%; width: 34%; background: var(--accent); border-radius: 3px; transition: width 0.4s var(--ease); }
+.notice {
+  display: flex; gap: 12px; padding: 14px 17px; border-radius: var(--r-md);
+  background: var(--accent-soft); border: 1px solid var(--accent-line); font-size: 13.5px; color: var(--text-dim);
+}
+.notice b { color: var(--text); font-weight: 500; }
+.editor__acts { display: flex; justify-content: flex-end; gap: 12px; margin-top: 26px; }
+
+/* ============================================================
+   4. AUTH (split-screen)
+   ============================================================ */
+.auth { display: grid; grid-template-columns: 1.05fr 0.95fr; min-height: calc(100dvh - 58px); }
+.auth__art { position: relative; overflow: hidden; }
+.auth__art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.82; animation: kenburns 34s ease-in-out infinite alternate; }
+.auth__art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 40%, var(--bg) 100%); }
+.auth__quote { position: absolute; left: 56px; bottom: 68px; z-index: 2; max-width: 24ch; }
+.auth__quote p { font-family: var(--font-display); font-style: italic; font-size: 26px; line-height: 1.5; color: #fff; text-shadow: 0 2px 30px rgba(0, 0, 0, 0.6); }
+.auth__quote span { display: block; margin-top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.65); text-transform: uppercase; }
+.auth__panel { display: grid; place-items: center; padding: 60px 24px; }
+.auth__box { width: 100%; max-width: 372px; }
+.auth__box h2 { font-size: 30px; letter-spacing: -0.03em; font-weight: 700; }
+.auth__box > p { margin-top: 8px; color: var(--text-dim); font-size: 14px; }
+.inp { position: relative; margin-top: 18px; }
+.inp label { display: block; font-size: 12px; color: var(--text-mute); margin-bottom: 8px; font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.inp__w { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 50px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface); transition: all 0.32s var(--ease); }
+.inp__w:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 4px var(--accent-soft); }
+.inp__w input { flex: 1; font-size: 15px; }
+.inp__w input::placeholder { color: var(--text-mute); }
+.auth__meta { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 22px; font-size: 12.5px; color: var(--text-dim); }
+.auth__meta a:hover { color: var(--accent); }
+.divider { display: flex; align-items: center; gap: 14px; margin: 24px 0; color: var(--text-mute); font-size: 11px; font-family: var(--font-mono); letter-spacing: 0.14em; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.auth__foot { text-align: center; margin-top: 22px; font-size: 13.5px; color: var(--text-dim); }
+.auth__foot a { color: var(--accent); }
+.tiny { margin-top: 26px; text-align: center; font-size: 11.5px; color: var(--text-mute); line-height: 1.7; }
+
+/* ============================================================
+   5. NOTIFICATIONS
+   ============================================================ */
+.page-hd { padding: 48px 0 22px; }
+.page-hd h2 { font-size: clamp(26px, 3.4vw, 34px); letter-spacing: -0.03em; font-weight: 700; }
+.page-hd p { margin-top: 8px; color: var(--text-dim); font-size: 14px; }
+.tabs { display: flex; gap: 4px; padding: 5px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); width: fit-content; margin-top: 22px; backdrop-filter: blur(16px); }
+.tabs button { padding: 9px 20px; border-radius: 999px; font-size: 13.5px; color: var(--text-dim); transition: all 0.3s var(--ease); display: inline-flex; align-items: center; gap: 7px; }
+.tabs button.on { background: var(--surface-2); color: var(--text); font-weight: 500; }
+.tabs .cnt { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent); }
+.notes { display: grid; gap: 10px; margin-top: 22px; }
+.note { display: flex; gap: 14px; padding: 18px 20px; align-items: flex-start; }
+.note.unread { border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.note.unread::before { content: ""; position: absolute; left: -1px; top: 22px; width: 2px; height: 22px; border-radius: 2px; background: var(--accent); }
+.note__ico { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; border: 1px solid var(--border); color: var(--accent); background: var(--accent-soft); }
+.note__b { flex: 1; min-width: 0; }
+.note__b b { font-size: 14px; font-weight: 500; }
+.note__b p { font-size: 13.5px; color: var(--text-dim); margin-top: 3px; }
+.note__t { font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); white-space: nowrap; }
+
+/* ============================================================
+   6. PROFILE
+   ============================================================ */
+.prof { padding: 44px 0 70px; }
+.prof__head { display: flex; align-items: center; gap: 24px; padding: 30px 32px; border-radius: var(--r-xl); }
+.prof__av { width: 84px; height: 84px; border-radius: 26px; display: grid; place-items: center; font-size: 32px; font-weight: 700; color: #04140f; background: linear-gradient(140deg, var(--accent), var(--violet)); flex-shrink: 0; box-shadow: 0 16px 40px -16px color-mix(in srgb, var(--accent) 70%, transparent); }
+.prof__info { flex: 1; min-width: 0; }
+.prof__info h2 { font-size: 24px; letter-spacing: -0.02em; font-weight: 700; }
+.prof__info p { color: var(--text-dim); font-size: 13.5px; margin-top: 5px; }
+.prof__tags { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+/* .tag 在帖子头部靠 margin-left:auto 推到右侧，这里必须归零，否则标签会被撑开 */
+.prof__tags .tag { margin-left: 0; }
+.prof__stats { display: flex; gap: 30px; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--border); }
+.bento { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+
+/* ============================================================
+   7. DESIGN SPEC
+   ============================================================ */
+.spec { padding: 44px 0 90px; }
+.spec h3 { font-size: 15px; font-weight: 600; margin: 34px 0 16px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+.spec h3::before { content: ""; width: 14px; height: 2px; border-radius: 2px; background: var(--accent); }
+.grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.sw { padding: 16px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface); }
+.sw__c { height: 56px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); }
+.sw b { font-size: 12.5px; display: block; }
+.sw code { font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); }
+.type-row { display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.type-row span { font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); width: 168px; flex-shrink: 0; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.06em; }
+.note-list { display: grid; gap: 10px; }
+.note-list li { list-style: none; display: flex; gap: 12px; font-size: 14px; color: var(--text-dim); line-height: 1.7; }
+.note-list li b { color: var(--text); font-weight: 500; }
+.mark { color: var(--accent); font-family: var(--font-mono); font-size: 11px; padding-top: 3px; }
+
+/* ---------- Footer ---------- */
+.ftr { position: relative; z-index: 1; border-top: 1px solid var(--border); margin-top: 40px; padding: 34px 0; }
+.ftr__in { max-width: var(--page); margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-mute); }
+.ftr__links { display: flex; gap: 20px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 980px) {
+  .hero__grid { grid-template-columns: 1fr; gap: 34px; }
+  .auth { grid-template-columns: 1fr; min-height: auto; }
+  .auth__art { min-height: 260px; }
+  .auth__quote { left: 28px; bottom: 28px; }
+  .auth__quote p { font-size: 20px; }
+  .bento { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .nav { display: none; }
+  .hdr { top: 52px; }
+  .hero { padding: 56px 0 44px; }
+  .hero__stats { gap: 22px; }
+  .post { padding: 18px; }
+  .post__acts { opacity: 1; transform: none; }
+  .detail__card, .editor { padding: 22px; }
+  .prof__head { flex-direction: column; align-items: flex-start; }
+  .tabs { width: 100%; overflow-x: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  .reveal { opacity: 1; transform: none; }
+  #stars { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 背景层 ============ -->
+<div class="bg" aria-hidden="true">
+  <div class="bg__art"></div>
+  <div class="bg__veil"></div>
+  <div class="bg__grid"></div>
+  <div class="bg__grain"></div>
+  <canvas id="stars"></canvas>
+</div>
+
+<!-- ============ SVG 图标库（替代原 emoji） ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5fe0bd"/><stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <symbol id="i-tree" viewBox="0 0 32 32">
+      <path d="M16 3.5c-5 0-8.6 3.4-8.6 8 0 3 1.5 5 3 6.4-.8.6-1.6 1.6-1.6 3.1h14.4c0-1.5-.8-2.5-1.6-3.1 1.5-1.4 3-3.4 3-6.4 0-4.6-3.6-8-8.6-8Z" fill="none" stroke="url(#lg)" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M16 21v8M16 25.5l3.4-2.6M16 23.6l-3-2.3" fill="none" stroke="url(#lg)" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="12.6" cy="11" r="1" fill="#5fe0bd"/><circle cx="19.4" cy="14.4" r="1" fill="#a78bfa"/><circle cx="15" cy="16.6" r=".9" fill="#5fe0bd"/>
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/></symbol>
+    <symbol id="i-cog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 11.5 4a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 22 11a2 2 0 1 1 0 4Z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></symbol>
+    <symbol id="i-arrow-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m6-7-7 7 7 7"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+    <symbol id="i-like" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3 4.6 13a4.6 4.6 0 0 1 6.5-6.5l.9.9.9-.9A4.6 4.6 0 0 1 19.4 13Z"/></symbol>
+    <symbol id="i-comment" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.4A8 8 0 1 1 20 12Z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="m12 3.6 2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8Z"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4m0 0h11l-1.6 3.5L16 11H5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10" width="15" height="10.5" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4m0 10v4M3 12h4m10 0h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2m0 14.6v2.2M2.5 12h2.2m14.6 0h2.2M5.3 5.3l1.6 1.6m10.2 10.2 1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ 评审工具条 ============ -->
+<div class="bar">
+  <span class="bar__tag">Design Preview v2</span>
+  <div class="bar__tabs" id="tabs">
+    <button class="tab is-active" data-view="home">首页</button>
+    <button class="tab" data-view="detail">帖子详情</button>
+    <button class="tab" data-view="publish">发布</button>
+    <button class="tab" data-view="auth">登录</button>
+    <button class="tab" data-view="notify">消息中心</button>
+    <button class="tab" data-view="profile">个人主页</button>
+    <button class="tab" data-view="spec">设计规范</button>
+  </div>
+  <div class="bar__right">
+    <button class="icon-btn" id="themeBtn" title="切换明暗主题" aria-label="切换明暗主题">
+      <svg width="17" height="17" id="themeIcon"><use href="#i-sun"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="stage">
+
+<!-- ==================== 1. 首页 ==================== -->
+<section class="view is-active" id="v-home">
+  <div class="hdr">
+    <div class="hdr__inner">
+      <a class="brand" href="#">
+        <svg class="brand__mark"><use href="#i-tree"/></svg>
+        树洞 <em>deep hollow</em>
+      </a>
+      <nav class="nav">
+        <a class="on" href="#">广场</a>
+        <a href="#">分类</a>
+        <a href="#">发布</a>
+      </nav>
+      <div class="hdr__acts">
+        <button class="icon-btn" title="搜索"><svg width="17" height="17"><use href="#i-search"/></svg></button>
+        <button class="icon-btn pos-r" title="消息中心">
+          <svg width="17" height="17"><use href="#i-bell"/></svg><span class="badge">3</span>
+        </button>
+        <button class="icon-btn" title="设置"><svg width="17" height="17"><use href="#i-cog"/></svg></button>
+        <button class="chip-user"><span class="av">夜</span> 夜航船</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="wrap hero__grid">
+      <div>
+        <span class="eyebrow"><i class="dot"></i> 今夜 412 人在这里说心事</span>
+        <h1>把心事<br />种进<i>树洞</i>里</h1>
+        <p class="hero__sub">说给懂的人听，不必署名。</p>
+        <div class="hero__cta">
+          <button class="btn btn--primary btn--lg"><svg width="16" height="16"><use href="#i-spark"/></svg> 匿名写一条</button>
+          <button class="btn btn--ghost btn--lg">先逛逛广场</button>
+        </div>
+        <div class="hero__stats">
+          <div class="stat"><b>12,480</b><span>条心事</span></div>
+          <div class="stat"><b>86,203</b><span>次回响</span></div>
+          <div class="stat"><b>1,942</b><span>今夜在线</span></div>
+        </div>
+      </div>
+      <div class="card echo reveal">
+        <div class="echo__head"><svg width="14" height="14"><use href="#i-bell"/></svg> 今日回声</div>
+        <p>“你现在的样子，已经比昨天多撑住了一天。”</p>
+        <div class="echo__foot">
+          <span>来自 一个陌生人的回信</span>
+          <span class="wave"><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ticker">
+    <div class="ticker__in">
+      <span class="ticker__label">公告</span>
+      <div class="ticker__track">
+        <div class="ticker__item"><b>「树洞条例」</b> 更新：禁止人身攻击与隐私泄露</div>
+        <div class="ticker__item"><b>新功能上线</b> 匿名信箱已支持私密回信</div>
+        <div class="ticker__item"><b>今夜话题</b> 你最近一次觉得“值得”，是因为什么</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="search">
+    <label class="search__in">
+      <svg width="18" height="18" style="color:var(--text-mute)"><use href="#i-search"/></svg>
+      <input placeholder="搜索心事、关键词或某个人的昵称…" />
+      <span class="search__hint">ENTER</span>
+    </label>
+  </div>
+
+  <div class="wrap">
+    <div class="filters">
+      <button class="pill on">全部</button>
+      <button class="pill">深夜</button>
+      <button class="pill">情感</button>
+      <button class="pill">职场</button>
+      <button class="pill">学业</button>
+      <button class="pill">生活</button>
+      <span class="filters__sp">按最新排序 ▾</span>
+    </div>
+
+    <div class="feed">
+      <article class="card card--hover post reveal" style="--i:0">
+        <div class="post__top">
+          <span class="av av--anon"><svg width="15" height="15"><use href="#i-user"/></svg></span>
+          <span class="who"><b>匿名</b><span>3 分钟前</span></span>
+          <span class="tag tag--pin">置顶</span>
+          <span class="tag">深夜</span>
+        </div>
+        <p class="post__body">今天第三次面试挂了。走出写字楼的时候正好下雨，我没有带伞，就那样走了一段。突然觉得这半年像一场很长的梅雨季——但雨总会停的吧，总会的。</p>
+        <div class="post__foot">
+          <span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 1,204</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 386</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 74</span>
+          <span class="post__acts">
+            <button class="mini"><svg width="13" height="13"><use href="#i-like"/></svg> 抱抱</button>
+            <button class="mini"><svg width="13" height="13"><use href="#i-star"/></svg> 收藏</button>
+          </span>
+        </div>
+      </article>
+
+      <article class="card card--hover post reveal" style="--i:1">
+        <div class="post__top">
+          <span class="av">航</span>
+          <span class="who"><b>夜航船</b><span>22 分钟前</span></span>
+          <span class="tag">情感</span>
+        </div>
+        <p class="post__body">妈妈打电话问我最近吃得好不好，我说挺好的。挂掉电话，看着桌上那碗泡面，笑了一下，然后哭了。</p>
+        <div class="post__foot">
+          <span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 872</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 291</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 48</span>
+          <span class="post__acts">
+            <button class="mini"><svg width="13" height="13"><use href="#i-like"/></svg> 抱抱</button>
+            <button class="mini"><svg width="13" height="13"><use href="#i-star"/></svg> 收藏</button>
+          </span>
+        </div>
+      </article>
+
+      <article class="card card--hover post reveal" style="--i:2">
+        <div class="post__top">
+          <span class="av av--anon"><svg width="15" height="15"><use href="#i-user"/></svg></span>
+          <span class="who"><b>匿名</b><span>1 小时前</span></span>
+          <span class="tag">学业</span>
+        </div>
+        <p class="post__body">考研二战上岸了。没人知道这一年我在图书馆的角落哭过多少次，也没人知道我为什么还笑得出来。我只是不想再让爸妈说“没事，明年再来”。</p>
+        <div class="post__foot">
+          <span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 2,106</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 743</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 132</span>
+          <span class="post__acts">
+            <button class="mini"><svg width="13" height="13"><use href="#i-like"/></svg> 抱抱</button>
+            <button class="mini"><svg width="13" height="13"><use href="#i-star"/></svg> 收藏</button>
+          </span>
+        </div>
+      </article>
+
+      <article class="card card--hover post reveal" style="--i:3">
+        <div class="post__top">
+          <span class="av av--anon"><svg width="15" height="15"><use href="#i-user"/></svg></span>
+          <span class="who"><b>匿名</b><span>3 小时前</span></span>
+          <span class="tag">生活</span>
+        </div>
+        <p class="post__body">养了 6 年的猫今天走了。它最后是趴在我手边睡着的，很安静，像平时一样。我到现在也没舍得收走它的碗。</p>
+        <div class="post__foot">
+          <span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 3,458</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 1,209</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 268</span>
+          <span class="post__acts">
+            <button class="mini"><svg width="13" height="13"><use href="#i-like"/></svg> 抱抱</button>
+            <button class="mini"><svg width="13" height="13"><use href="#i-star"/></svg> 收藏</button>
+          </span>
+        </div>
+      </article>
+    </div>
+    <div class="sentinel">已加载 4 / 12,480 条 &nbsp;·&nbsp; 下拉或点击加载更多</div>
+  </div>
+</section>
+
+<!-- ==================== 2. 帖子详情 ==================== -->
+<section class="view" id="v-detail">
+  <div class="narrow detail">
+    <button class="back"><svg width="15" height="15"><use href="#i-arrow-l"/></svg> 返回广场</button>
+
+    <article class="card detail__card reveal">
+      <div class="post__top">
+        <span class="av">航</span>
+        <span class="who"><b>夜航船</b><span>2026-09-23 21:04</span></span>
+        <span class="tag">情感</span>
+      </div>
+      <p class="detail__body">妈妈打电话问我最近吃得好不好，我说挺好的。挂掉电话，看着桌上那碗泡面，笑了一下，然后哭了。<br /><br />其实也没有多难，只是突然很想她。</p>
+      <div class="actbar">
+        <button class="act on"><svg width="15" height="15"><use href="#i-like"/></svg> 已抱抱 · 291</button>
+        <button class="act"><svg width="15" height="15"><use href="#i-star"/></svg> 收藏</button>
+        <button class="act"><svg width="15" height="15"><use href="#i-eye"/></svg> 872 次浏览</button>
+        <button class="act act--danger" style="margin-left:auto"><svg width="15" height="15"><use href="#i-flag"/></svg> 举报</button>
+      </div>
+    </article>
+
+    <div class="sec-title"><h3>回响</h3><span>48 REPLIES</span></div>
+
+    <div class="card composer reveal">
+      <textarea class="composer__in" placeholder="写下你的回响…不必认识，也能懂。"></textarea>
+      <div class="composer__foot">
+        <span class="switch on"><i></i> 匿名回响</span>
+        <button class="btn btn--primary btn--sm">发送</button>
+      </div>
+    </div>
+
+    <div class="feed" style="margin-top:12px">
+      <div class="card cmt reveal" style="--i:0">
+        <span class="av av--anon"><svg width="15" height="15"><use href="#i-user"/></svg></span>
+        <div class="cmt__body">
+          <b>匿名</b>
+          <p>我妈也总问我吃得好不好，我每次都说挺好的。谢谢你把这句话写出来，让我知道不止我一个人这样。</p>
+          <div class="cmt__foot"><span>2 小时前</span><span>· 抱抱 96</span></div>
+        </div>
+      </div>
+      <div class="card cmt reveal" style="--i:1">
+        <span class="av">林</span>
+        <div class="cmt__body">
+          <b>林深见鹿</b>
+          <p>下次可以试着跟她说一句“我有点累”。她可能会心疼，但也会知道你在好好活着。</p>
+          <div class="cmt__foot"><span>1 小时前</span><span>· 抱抱 142</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 3. 发布 ==================== -->
+<section class="view" id="v-publish">
+  <div class="narrow compose">
+    <div class="compose__head">
+      <h2>写下此刻的心事</h2>
+      <p>这里没有熟人，只有愿意听的人。</p>
+    </div>
+
+    <div class="card editor reveal">
+      <div class="field">
+        <label>发布身份</label>
+        <div class="seg">
+          <button class="on">匿名发布</button>
+          <button>实名发布</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>心事分类</label>
+        <div class="filters" style="margin:0">
+          <button class="pill">深夜</button>
+          <button class="pill on">情感</button>
+          <button class="pill">职场</button>
+          <button class="pill">学业</button>
+          <button class="pill">生活</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>正文</label>
+        <textarea class="ta" placeholder="写下你想说的话…它可以很长，也可以只有一句。"></textarea>
+        <div class="meter">
+          <span>128 / 5000</span>
+          <span class="meter__bar"><i></i></span>
+          <span>匿名 · 仅展示回响数</span>
+        </div>
+      </div>
+
+      <div class="notice">
+        <svg width="18" height="18" style="flex-shrink:0;color:var(--accent)"><use href="#i-spark"/></svg>
+        <span>发布后需经<b> 审核 </b>才会出现在广场；含敏感词的内容会被直接拦下，请避免留下联系方式与真实姓名。</span>
+      </div>
+
+      <div class="editor__acts">
+        <button class="btn btn--quiet">存草稿</button>
+        <button class="btn btn--primary btn--lg"><svg width="16" height="16"><use href="#i-spark"/></svg> 匿名发布</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 4. 登录 ==================== -->
+<section class="view" id="v-auth">
+  <div class="auth">
+    <div class="auth__art">
+      <img src="assets/auth-aurora-tree.jpg" alt="极光与树" />
+      <div class="auth__quote">
+        <p>“愿你被这世界温柔以待，也愿你成为别人的光。”</p>
+        <span>Deep Hollow · 树洞</span>
+      </div>
+    </div>
+    <div class="auth__panel">
+      <div class="auth__box">
+        <svg class="brand__mark" style="width:38px;height:38px;margin-bottom:18px"><use href="#i-tree"/></svg>
+        <h2>登录树洞</h2>
+        <p>登录后即可匿名发布与回响</p>
+
+        <div class="inp">
+          <label>用户名</label>
+          <div class="inp__w">
+            <svg width="17" height="17" style="color:var(--text-mute)"><use href="#i-user"/></svg>
+            <input placeholder="请输入用户名" />
+          </div>
+        </div>
+
+        <div class="inp">
+          <label>密码</label>
+          <div class="inp__w">
+            <svg width="17" height="17" style="color:var(--text-mute)"><use href="#i-lock"/></svg>
+            <input type="password" placeholder="请输入密码" value="········" />
+          </div>
+        </div>
+
+        <div class="auth__meta">
+          <span class="switch on"><i></i> 记住我</span>
+          <a href="#">忘记密码？</a>
+        </div>
+
+        <button class="btn btn--primary btn--block btn--lg">登 录</button>
+
+        <div class="divider">OR</div>
+
+        <div class="auth__foot">还没有账号？<a href="#">立即注册</a></div>
+        <p class="tiny">继续即表示同意《树洞公约》与《隐私政策》<br />我们不会记录你的真实身份</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 5. 消息中心 ==================== -->
+<section class="view" id="v-notify">
+  <div class="narrow" style="padding-bottom:80px">
+    <div class="page-hd">
+      <h2>消息中心</h2>
+      <p>有人回应了你的心事。</p>
+      <div class="tabs">
+        <button class="on">全部 <span class="cnt">3</span></button>
+        <button>回响 <span class="cnt">2</span></button>
+        <button>抱抱 <span class="cnt">1</span></button>
+        <button>系统</button>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="card note unread pos-r reveal" style="--i:0">
+        <span class="note__ico"><svg width="18" height="18"><use href="#i-comment"/></svg></span>
+        <div class="note__b">
+          <b>有人回响了你《妈妈打电话问我最近吃得好不好》</b>
+          <p>“我妈也总问我吃得好不好，我每次都说挺好的……”</p>
+        </div>
+        <span class="note__t">2 小时前</span>
+      </div>
+
+      <div class="card note unread pos-r reveal" style="--i:1">
+        <span class="note__ico"><svg width="18" height="18"><use href="#i-like"/></svg></span>
+        <div class="note__b">
+          <b>你的心事收到了 128 次抱抱</b>
+          <p>来自 128 位陌生的、愿意听你说的人。</p>
+        </div>
+        <span class="note__t">5 小时前</span>
+      </div>
+
+      <div class="card note unread pos-r reveal" style="--i:2">
+        <span class="note__ico"><svg width="18" height="18"><use href="#i-spark"/></svg></span>
+        <div class="note__b">
+          <b>系统通知</b>
+          <p>你的帖子已通过审核，现已出现在广场。</p>
+        </div>
+        <span class="note__t">昨天</span>
+      </div>
+
+      <div class="card note reveal" style="--i:3">
+        <span class="note__ico" style="color:var(--text-mute);background:var(--surface)"><svg width="18" height="18"><use href="#i-bell"/></svg></span>
+        <div class="note__b">
+          <b>你的心事被收藏了</b>
+          <p>有 12 人把这条心事放进了自己的收藏。</p>
+        </div>
+        <span class="note__t">3 天前</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:28px">
+      <button class="btn btn--ghost">全部标为已读</button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 6. 个人主页 ==================== -->
+<section class="view" id="v-profile">
+  <div class="wrap prof">
+    <div class="card prof__head reveal">
+      <div class="prof__av">夜</div>
+      <div class="prof__info">
+        <h2>夜航船</h2>
+        <p>在第 3 个城市漂着 · 注册 214 天</p>
+        <div class="prof__tags">
+          <span class="tag">深夜常客</span>
+          <span class="tag">写下 37 条心事</span>
+          <span class="tag tag--pin">被抱抱 2,481 次</span>
+        </div>
+      </div>
+      <button class="btn btn--ghost">编辑资料</button>
+    </div>
+
+    <div class="bento">
+      <div class="card card--hover reveal" style="--i:0;padding:20px">
+        <div class="stat"><b>37</b><span>发布的心事</span></div>
+      </div>
+      <div class="card card--hover reveal" style="--i:1;padding:20px">
+        <div class="stat"><b>2,481</b><span>收到的抱抱</span></div>
+      </div>
+      <div class="card card--hover reveal" style="--i:2;padding:20px">
+        <div class="stat"><b>164</b><span>写下的回响</span></div>
+      </div>
+      <div class="card card--hover reveal" style="--i:3;padding:20px">
+        <div class="stat"><b>29</b><span>收藏的心事</span></div>
+      </div>
+    </div>
+
+    <div class="tabs" style="margin-top:26px">
+      <button class="on">我的心事</button>
+      <button>谁回响了我</button>
+      <button>我的回响</button>
+      <button>我的收藏</button>
+    </div>
+
+    <div class="feed" style="margin-top:20px">
+      <article class="card card--hover post reveal" style="--i:0">
+        <div class="post__top">
+          <span class="av">航</span>
+          <span class="who"><b>夜航船</b><span>22 分钟前</span></span>
+          <span class="tag">情感</span>
+        </div>
+        <p class="post__body">妈妈打电话问我最近吃得好不好，我说挺好的。挂掉电话，看着桌上那碗泡面，笑了一下，然后哭了。</p>
+        <div class="post__foot">
+          <span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 872</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 291</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 48</span>
+          <span class="post__acts">
+            <button class="mini"><svg width="13" height="13"><use href="#i-cog"/></svg> 编辑</button>
+            <button class="mini" style="color:var(--danger)"><svg width="13" height="13"><use href="#i-trash"/></svg> 删除</button>
+          </span>
+        </div>
+      </article>
+
+      <article class="card card--hover post reveal" style="--i:1">
+        <div class="post__top">
+          <span class="av av--anon"><svg width="15" height="15"><use href="#i-user"/></svg></span>
+          <span class="who"><b>匿名</b><span>6 天前</span></span>
+          <span class="tag">职场</span>
+        </div>
+        <p class="post__body">提离职那天，leader 说“再考虑考虑”。我说好，然后在电梯里按下了 1 楼。</p>
+        <div class="post__foot">
+          <span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 1,530</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 604</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 77</span>
+          <span class="post__acts">
+            <button class="mini"><svg width="13" height="13"><use href="#i-cog"/></svg> 编辑</button>
+            <button class="mini" style="color:var(--danger)"><svg width="13" height="13"><use href="#i-trash"/></svg> 删除</button>
+          </span>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 7. 设计规范 ==================== -->
+<section class="view" id="v-spec">
+  <div class="wrap spec">
+    <div class="page-hd">
+      <h2>设计规范 · Deep Hollow</h2>
+      <p>统一的设计语言，供评审与后续开发对照。</p>
+    </div>
+
+    <h3>色彩（科技感来自「深空底色 + 单一发光强调色」）</h3>
+    <div class="grid-auto">
+      <div class="sw"><div class="sw__c" style="background:#06060d"></div><b>深空底</b><code>#06060D</code></div>
+      <div class="sw"><div class="sw__c" style="background:#12121f"></div><b>面板</b><code>#12121F</code></div>
+      <div class="sw"><div class="sw__c" style="background:#5fe0bd"></div><b>极光青（主强调）</b><code>#5FE0BD</code></div>
+      <div class="sw"><div class="sw__c" style="background:#a78bfa"></div><b>星云紫（仅背景）</b><code>#A78BFA</code></div>
+      <div class="sw"><div class="sw__c" style="background:#eceef7"></div><b>正文</b><code>#ECEEF7</code></div>
+      <div class="sw"><div class="sw__c" style="background:#6a708c"></div><b>弱化文本</b><code>#6A708C</code></div>
+      <div class="sw"><div class="sw__c" style="background:#ff6b7f"></div><b>警示</b><code>#FF6B7F</code></div>
+      <div class="sw"><div class="sw__c" style="background:#f7f7f4"></div><b>亮色模式底</b><code>#F7F7F4</code></div>
+    </div>
+
+    <h3>字体</h3>
+    <div class="card" style="padding:8px 22px">
+      <div class="type-row"><span>Headline / 56</span><b style="font-size:34px;letter-spacing:-0.035em">把心事种进树洞</b></div>
+      <div class="type-row"><span>Display Italic / 20</span><i style="font-family:var(--font-display);font-style:italic;font-size:20px;color:var(--text-dim)">说给懂的人听，不必署名</i></div>
+      <div class="type-row"><span>Body / 15.5</span><span style="font-size:15.5px;color:var(--text-dim)">今天第三次面试挂了，走出写字楼时正好下雨。</span></div>
+      <div class="type-row"><span>Mono / 11</span><span style="font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;color:var(--accent)">DEEP HOLLOW · 12,480</span></div>
+    </div>
+    <p style="margin-top:12px;color:var(--text-mute);font-size:13px">正文 Noto Sans SC｜标题同族加粗收紧字距｜诗意短句用 Fraunces 斜体｜数据/标签用等宽 JetBrains Mono（科技感来自等宽数字与微型大写标签）。</p>
+
+    <h3>动效语言</h3>
+    <ul class="note-list card" style="padding:20px 22px">
+      <li><span class="mark">01</span><span><b>入场：</b>卡片进入视口时 26px 上浮 + 淡入，逐条延迟 70ms（stagger）。</span></li>
+      <li><span class="mark">02</span><span><b>悬浮：</b>卡片上浮 4px、边框透出极光青、一道柔光从左掠过。</span></li>
+      <li><span class="mark">03</span><span><b>背景：</b>极光树缓慢推移（40s ken-burns）+ 星点微闪 + 24s 呼吸。</span></li>
+      <li><span class="mark">04</span><span><b>触感：</b>按钮按下 scale(0.975)，弹簧缓动 <code>cubic-bezier(.34,1.4,.64,1)</code>。</span></li>
+      <li><span class="mark">05</span><span><b>无障碍：</b>全站尊重 <code>prefers-reduced-motion</code>，关闭动效与星点。</span></li>
+    </ul>
+
+    <h3>本次改造要点（相对旧版）</h3>
+    <ul class="note-list card" style="padding:20px 22px">
+      <li><span class="mark">A</span><span><b>去掉 emoji 图标</b>，全部换成统一线性 SVG 图标（原 🌳🔔⚙️👤 观感廉价）。</span></li>
+      <li><span class="mark">B</span><span><b>深色沉浸式主题</b>替代原来的浅蓝渐变卡片，配极光树背景图，建立记忆点。</span></li>
+      <li><span class="mark">C</span><span><b>玻璃拟态 + 单一强调色</b>，信息层级靠留白与透明度，而非堆边框阴影。</span></li>
+      <li><span class="mark">D</span><span><b>登录页改为左右分屏</b>，左图为情绪画面，右为表单，提升首访质感。</span></li>
+      <li><span class="mark">E</span><span><b>微交互</b>：悬浮露出操作、加载扫码感、数字用等宽字体跳动。</span></li>
+    </ul>
+
+    <div class="notice" style="margin-top:26px">
+      <svg width="18" height="18" style="flex-shrink:0;color:var(--accent)"><use href="#i-spark"/></svg>
+      <span><b>技术落地方式：</b>以上均为纯 CSS + 少量 JS（IntersectionObserver / 星点 canvas），不引入 Three.js 等重库，<b>不增加构建负担</b>；背景图为单张 ~230KB JPG，可随路由懒加载。确认方案后再逐页迁移到 Vue 组件。</span>
+    </div>
+  </div>
+</section>
+
+</div><!-- /stage -->
+
+<footer class="ftr">
+  <div class="ftr__in">
+    <span>© 2026 树洞 · Deep Hollow — 设计预览稿，非最终实现</span>
+    <span class="ftr__links"><a href="#">设计规范</a><a href="#">关于</a><a href="#">树洞公约</a></span>
+  </div>
+</footer>
+
+<script>
+/* ---------- 视图切换 ---------- */
+const tabs = document.getElementById('tabs');
+tabs.addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  tabs.querySelectorAll('.tab').forEach(b => b.classList.toggle('is-active', b === btn));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('is-active'));
+  const view = document.getElementById('v-' + btn.dataset.view);
+  if (view) {
+    view.classList.add('is-active');
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    requestAnimationFrame(observeReveals);
+  }
+});
+
+/* ---------- 明暗主题 ---------- */
+const themeBtn = document.getElementById('themeBtn');
+const themeIcon = document.getElementById('themeIcon');
+function syncThemeIcon() {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  themeIcon.innerHTML = '<use href="' + (dark ? '#i-sun' : '#i-moon') + '"/>';
+}
+themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  syncThemeIcon();
+});
+syncThemeIcon();
+
+/* ---------- 滚动入场 ---------- */
+let io;
+function observeReveals() {
+  if (!io) {
+    io = new IntersectionObserver((entries) => {
+      entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { rootMargin: '-40px 0px -60px' });
+  }
+  document.querySelectorAll('.view.is-active .reveal:not(.in)').forEach(el => io.observe(el));
+}
+observeReveals();
+
+/* ---------- 星点背景（轻量 canvas，桌面 160 / 移动 60） ---------- */
+(function stars() {
+  const c = document.getElementById('stars');
+  if (!c) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const ctx = c.getContext('2d');
+  let w, h, dpr, pts = [];
+  const COUNT = window.innerWidth < 720 ? 60 : 160;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = c.width = innerWidth * dpr;
+    h = c.height = innerHeight * dpr;
+    c.style.width = innerWidth + 'px';
+    c.style.height = innerHeight + 'px';
+  }
+  function init() {
+    pts = Array.from({ length: COUNT }, () => ({
+      x: Math.random() * w, y: Math.random() * h,
+      r: (Math.random() * 1.1 + 0.3) * dpr,
+      a: Math.random() * Math.PI * 2,
+      s: Math.random() * 0.0016 + 0.0004,
+      v: (Math.random() * 0.06 + 0.02) * dpr
+    }));
+  }
+  let raf;
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    for (const p of pts) {
+      p.a += p.s * 12;
+      p.y -= p.v;
+      if (p.y < -4) { p.y = h + 4; p.x = Math.random() * w; }
+      const alpha = 0.28 + Math.sin(p.a) * 0.26;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(190, 240, 226,' + Math.max(alpha, 0.04).toFixed(3) + ')';
+      ctx.fill();
+    }
+    raf = requestAnimationFrame(draw);
+  }
+  resize(); init(); draw();
+  addEventListener('resize', () => { cancelAnimationFrame(raf); resize(); init(); draw(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelAnimationFrame(raf);
+    else { cancelAnimationFrame(raf); draw(); }
+  });
+})();
+
+/* ---------- 开关 / 分段 / 胶囊：预览用交互反馈 ---------- */
+document.addEventListener('click', (e) => {
+  const sw = e.target.closest('.switch'); if (sw) sw.classList.toggle('on');
+  const seg = e.target.closest('.seg button');
+  if (seg) seg.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === seg));
+  const pill = e.target.closest('.filters .pill');
+  if (pill && pill.parentElement.classList.contains('filters')) {
+    pill.parentElement.querySelectorAll('.pill').forEach(b => b.classList.toggle('on', b === pill));
+  }
+  const tabBtn = e.target.closest('.tabs button');
+  if (tabBtn) tabBtn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === tabBtn));
+  const act = e.target.closest('.act');
+  if (act && !act.classList.contains('act--danger')) act.classList.toggle('on');
+  const mini = e.target.closest('.mini');
+  if (mini && mini.parentElement) { /* 预览：不改变列表状态 */ }
+});
+</script>
+</body>
+</html>

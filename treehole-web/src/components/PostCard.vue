@@ -1,44 +1,46 @@
 <template>
-  <article class="post-card" @click="goDetail">
-    <header class="post-head">
-      <button
-        v-if="!post.isAnonymous"
-        class="author"
-        type="button"
-        @click.stop="goAuthor"
-      >{{ post.authorName || '未知用户' }}</button>
-      <span v-else class="author anonymous">匿名用户</span>
+  <article class="dh-card dh-card--hover post" @click="goDetail">
+    <header class="post__top">
+      <span v-if="post.isAnonymous === 1" class="dh-av dh-av--anon">
+        <AppIcon name="user" :size="15" />
+      </span>
+      <button v-else class="dh-av" type="button" :title="post.authorName || '用户'" @click.stop="goAuthor">
+        {{ initial }}
+      </button>
 
-      <span v-if="post.categoryName" class="category">{{ post.categoryName }}</span>
-      <span v-if="post.isTop === 1" class="top-flag">置顶</span>
-    </header>
-
-    <p class="post-content">{{ preview }}</p>
-
-    <footer class="post-foot">
-      <span class="meta">{{ formatDate(post.createTime) }}</span>
-      <span class="stats">
-        <span class="stat">浏览 {{ post.viewCount || 0 }}</span>
-        <span class="stat">点赞 {{ post.likeCount || 0 }}</span>
-        <span class="stat">评论 {{ post.commentCount || 0 }}</span>
+      <span class="who">
+        <button v-if="post.isAnonymous !== 1" class="who__name" type="button" @click.stop="goAuthor">
+          {{ post.authorName || '未知用户' }}
+        </button>
+        <b v-else class="who__name who__name--anon">匿名</b>
+        <span>{{ formatDate(post.createTime) }}</span>
       </span>
 
-      <span class="actions">
+      <span v-if="post.isTop === 1" class="dh-tag dh-tag--pin">置顶</span>
+      <span v-if="post.categoryName" class="dh-tag">{{ post.categoryName }}</span>
+    </header>
+
+    <p class="post__body">{{ preview }}</p>
+
+    <footer class="post__foot">
+      <span class="dh-metric"><AppIcon name="eye" :size="13" /> {{ post.viewCount || 0 }}</span>
+      <span class="dh-metric"><AppIcon name="like" :size="13" /> {{ post.likeCount || 0 }}</span>
+      <span class="dh-metric"><AppIcon name="comment" :size="13" /> {{ post.commentCount || 0 }}</span>
+
+      <span class="post__acts">
         <button
           v-if="showCollect"
-          class="act-btn"
-          :class="{ active: collected }"
+          class="mini"
+          :class="{ on: collected }"
           type="button"
-          :title="collected ? '取消收藏' : '收藏'"
           @click.stop="$emit('collect', post)"
-        >{{ collected ? '★ 已收藏' : '☆ 收藏' }}</button>
-        <button
-          v-if="showDelete"
-          class="act-btn danger"
-          type="button"
-          title="删除"
-          @click.stop="$emit('delete', post)"
-        >删除</button>
+        >
+          <AppIcon :name="collected ? 'star-fill' : 'star'" :size="13" />
+          {{ collected ? '已收藏' : '收藏' }}
+        </button>
+        <button v-if="showDelete" class="mini mini--danger" type="button" @click.stop="$emit('delete', post)">
+          <AppIcon name="trash" :size="13" /> 删除
+        </button>
       </span>
     </footer>
   </article>
@@ -47,18 +49,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import AppIcon from './AppIcon.vue'
 import type { Post } from '../api/treehole'
 
-const props = withDefaults(defineProps<{
-  post: Post
-  showDelete?: boolean
-  showCollect?: boolean
-  collected?: boolean
-}>(), {
-  showDelete: false,
-  showCollect: false,
-  collected: false
-})
+const props = withDefaults(
+  defineProps<{
+    post: Post
+    showDelete?: boolean
+    showCollect?: boolean
+    collected?: boolean
+  }>(),
+  { showDelete: false, showCollect: false, collected: false }
+)
 
 defineEmits<{
   (e: 'delete', post: Post): void
@@ -67,9 +69,11 @@ defineEmits<{
 
 const router = useRouter()
 
+const initial = computed(() => (props.post.authorName || '?').trim().charAt(0).toUpperCase() || '?')
+
 const preview = computed(() => {
   const text = props.post.content || ''
-  return text.length > 120 ? text.slice(0, 120) + '…' : text
+  return text.length > 120 ? `${text.slice(0, 120)}…` : text
 })
 
 function goDetail() {
@@ -97,46 +101,32 @@ function formatDate(value?: string) {
 </script>
 
 <style scoped>
-.post-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 18px 20px;
-  margin-bottom: 14px;
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+.post { padding: 22px 24px; }
+.post__top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.post__top .dh-tag:first-of-type { margin-left: auto; }
+
+.who { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.who__name { font-size: 13.5px; font-weight: 500; color: var(--text); text-align: left; }
+button.who__name:hover { color: var(--accent); }
+.who__name--anon { color: var(--text-mute); font-weight: 400; }
+.who span { font-size: 11.5px; color: var(--text-mute); font-family: var(--font-mono); }
+
+.post__body { font-size: 15.5px; line-height: 1.78; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+
+.post__foot { display: flex; align-items: center; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+.post__acts { margin-left: auto; display: flex; gap: 6px; opacity: 0; transform: translateX(6px); transition: all 0.35s var(--ease); }
+.post:hover .post__acts, .post:focus-within .post__acts { opacity: 1; transform: none; }
+
+.mini {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 12px;
+  border-radius: 999px; color: var(--text-dim); border: 1px solid var(--border); transition: all 0.28s var(--ease);
 }
-.post-card:hover {
-  border-color: #bfdbfe;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.10);
-  transform: translateY(-1px);
-}
-.post-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.author {
-  background: none; border: none; padding: 0; cursor: pointer;
-  color: #3b82f6; font-size: 14px; font-weight: 600;
-}
-.author:hover { text-decoration: underline; }
-.author.anonymous { color: #94a3b8; cursor: default; font-weight: 500; }
-.category {
-  font-size: 12px; color: #64748b; background: #f1f5f9;
-  padding: 2px 8px; border-radius: 10px;
-}
-.top-flag { font-size: 12px; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 10px; }
-.post-content { margin: 0 0 12px; color: #1e293b; font-size: 15px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
-.post-foot { display: flex; align-items: center; gap: 14px; font-size: 12px; color: #94a3b8; flex-wrap: wrap; }
-.stats { display: flex; gap: 10px; }
-.actions { margin-left: auto; display: flex; gap: 8px; }
-.act-btn {
-  background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b;
-  font-size: 12px; padding: 3px 10px; border-radius: 6px; cursor: pointer;
-  transition: all 0.2s;
-}
-.act-btn:hover { border-color: #93c5fd; color: #3b82f6; background: #eff6ff; }
-.act-btn.active { color: #b45309; border-color: #fcd34d; background: #fffbeb; }
-.act-btn.danger:hover { color: #ef4444; border-color: #fca5a5; background: #fef2f2; }
-@media (max-width: 640px) {
-  .post-card { padding: 14px 15px; }
-  .actions { margin-left: 0; width: 100%; }
+.mini:hover { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.mini.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.mini--danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+
+@media (max-width: 720px) {
+  .post { padding: 18px; }
+  .post__acts { opacity: 1; transform: none; margin-left: 0; width: 100%; }
 }
 </style>

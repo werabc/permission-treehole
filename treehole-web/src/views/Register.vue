@@ -1,79 +1,87 @@
 <template>
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="auth-header">
-        <span class="auth-icon">🌳</span>
-        <h2>注册树洞</h2>
-        <p>创建账号，开始分享你的故事</p>
-      </div>
+  <AuthLayout>
+    <AppIcon name="tree" :size="38" />
+    <h2>注册树洞</h2>
+    <p class="sub">创建一个只属于你的匿名身份</p>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="3-20个字符" prefix-icon="User" />
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" type="password" placeholder="至少6位" prefix-icon="Lock" show-password />
-        </el-form-item>
-        <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input v-model="form.confirmPassword" type="password" placeholder="再次输入密码" prefix-icon="Lock" show-password />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="loading" @click="handleRegister" style="width:100%">
-            注 册
-          </el-button>
-        </el-form-item>
-      </el-form>
-
-      <div class="auth-footer">
-        已有账号？<router-link to="/login">立即登录</router-link>
+    <div class="field">
+      <label class="dh-label">用户名</label>
+      <div class="dh-input">
+        <AppIcon name="user" :size="17" class="ico" />
+        <input v-model.trim="form.username" placeholder="3-20 个字符" autocomplete="username" />
       </div>
+      <p v-if="errors.username" class="dh-error">{{ errors.username }}</p>
     </div>
-  </div>
+
+    <div class="field">
+      <label class="dh-label">密码</label>
+      <div class="dh-input">
+        <AppIcon name="lock" :size="17" class="ico" />
+        <input v-model="form.password" :type="showPwd ? 'text' : 'password'" placeholder="至少 6 位" autocomplete="new-password" />
+        <button type="button" class="pwd-toggle" :aria-label="showPwd ? '隐藏密码' : '显示密码'" @click="showPwd = !showPwd">
+          <AppIcon :name="showPwd ? 'eye-off' : 'eye'" :size="16" />
+        </button>
+      </div>
+      <p v-if="errors.password" class="dh-error">{{ errors.password }}</p>
+    </div>
+
+    <div class="field">
+      <label class="dh-label">确认密码</label>
+      <div class="dh-input">
+        <AppIcon name="shield" :size="17" class="ico" />
+        <input v-model="form.confirmPassword" :type="showPwd ? 'text' : 'password'" placeholder="再次输入密码" autocomplete="new-password" @keyup.enter="handleRegister" />
+      </div>
+      <p v-if="errors.confirmPassword" class="dh-error">{{ errors.confirmPassword }}</p>
+    </div>
+
+    <button class="dh-btn dh-btn--primary dh-btn--block dh-btn--lg" type="button" :disabled="loading" @click="handleRegister">
+      {{ loading ? '注册中…' : '注 册' }}
+    </button>
+
+    <div class="divider">OR</div>
+
+    <div class="foot">已有账号？<router-link to="/login">立即登录</router-link></div>
+  </AuthLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElForm, ElFormItem, ElInput, ElButton, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import AuthLayout from '../components/AuthLayout.vue'
+import AppIcon from '../components/AppIcon.vue'
 import { register } from '../api/auth'
 
 const router = useRouter()
-const formRef = ref<FormInstance>()
 const loading = ref(false)
-
+const showPwd = ref(false)
 const form = reactive({ username: '', password: '', confirmPassword: '' })
+const errors = reactive({ username: '', password: '', confirmPassword: '' })
 
-const validateConfirm = (_rule: any, value: string, callback: any) => {
-  if (value !== form.password) callback(new Error('两次密码不一致'))
-  else callback()
-}
-
-const rules: FormRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度3-20位', trigger: 'blur' },
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' },
-  ],
-  confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
-    { validator: validateConfirm, trigger: 'blur' },
-  ],
+function validate() {
+  errors.username = !form.username
+    ? '请输入用户名'
+    : form.username.length < 3 || form.username.length > 20
+      ? '用户名长度 3-20 位'
+      : ''
+  errors.password = !form.password ? '请输入密码' : form.password.length < 6 ? '密码至少 6 位' : ''
+  errors.confirmPassword = !form.confirmPassword
+    ? '请确认密码'
+    : form.confirmPassword !== form.password
+      ? '两次密码不一致'
+      : ''
+  return !errors.username && !errors.password && !errors.confirmPassword
 }
 
 async function handleRegister() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-
+  if (!validate()) return
   loading.value = true
   try {
     await register({ username: form.username, password: form.password })
     ElMessage.success('注册成功，请登录')
     router.push('/login')
   } catch (e: any) {
-    ElMessage.error(e.message || '注册失败')
+    ElMessage.error(e?.response?.data?.message || e.message || '注册失败')
   } finally {
     loading.value = false
   }
@@ -81,22 +89,17 @@ async function handleRegister() {
 </script>
 
 <style scoped>
-.auth-page {
-  min-height: 80vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+h2 { font-size: 30px; letter-spacing: -0.03em; font-weight: 700; margin-top: 20px; }
+.sub { margin-top: 8px; color: var(--text-dim); font-size: 14px; margin-bottom: 26px; }
+.field { margin-bottom: 18px; }
+.ico { color: var(--text-mute); }
+.pwd-toggle { color: var(--text-mute); display: grid; place-items: center; transition: color 0.28s var(--ease); }
+.pwd-toggle:hover { color: var(--text); }
+.divider {
+  display: flex; align-items: center; gap: 14px; margin: 24px 0;
+  color: var(--text-mute); font-size: 11px; font-family: var(--font-mono); letter-spacing: 0.14em;
 }
-.auth-card {
-  width: 400px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 40px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
-.auth-header { text-align: center; margin-bottom: 30px; }
-.auth-icon { font-size: 48px; }
-.auth-header h2 { margin: 10px 0 5px; color: #1e293b; }
-.auth-header p { color: #94a3b8; font-size: 14px; }
-.auth-footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.foot { text-align: center; font-size: 13.5px; color: var(--text-dim); }
+.foot a { color: var(--accent); }
 </style>

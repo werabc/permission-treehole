@@ -1,63 +1,138 @@
 <template>
   <div class="app">
-    <Welcome />
-    <header class="header">
-      <div class="header-inner">
-        <router-link to="/" class="logo">
-          <span class="logo-icon">🌳</span>
-          <span class="logo-text">树洞</span>
-        </router-link>
-        <nav class="nav">
-          <router-link to="/">首页</router-link>
-          <router-link to="/search" class="icon-link" title="搜索" aria-label="搜索">🔍</router-link>
-          <!-- Alibaba-Java: 使用 computed 属性确保响应式 -->
-          <template v-if="isLoggedIn">
-            <router-link to="/publish">发布</router-link>
-            <router-link to="/notifications" class="icon-link" title="消息中心" aria-label="消息中心">
-              🔔<span v-if="unreadCount > 0" class="nav-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+    <IconSprite />
+    <BackdropFx />
+
+    <header v-if="!hideChrome" class="dh-hdr">
+      <div class="dh-wrap">
+        <div class="dh-hdr__inner">
+          <router-link to="/" class="dh-brand">
+            <AppIcon name="tree" :size="28" />
+            <span>树洞</span>
+            <em>deep hollow</em>
+          </router-link>
+
+          <nav class="dh-nav">
+            <router-link to="/">广场</router-link>
+            <router-link v-if="isLoggedIn" to="/publish">发布</router-link>
+          </nav>
+
+          <div class="dh-hdr__acts">
+            <router-link to="/search" class="dh-icon-btn" title="搜索" aria-label="搜索">
+              <AppIcon name="search" :size="17" />
             </router-link>
-            <router-link to="/settings" class="icon-link" title="账号设置" aria-label="账号设置">⚙️</router-link>
-            <router-link to="/profile" class="profile-link">👤 {{ displayName }}</router-link>
-            <a @click="handleLogout" class="logout-btn">退出</a>
-          </template>
-          <template v-else>
-            <router-link to="/login">登录</router-link>
-            <router-link to="/register">注册</router-link>
-          </template>
-        </nav>
+
+            <button
+              class="dh-icon-btn dh-hide-mobile"
+              type="button"
+              :title="theme === 'dark' ? '切换到浅色' : '切换到深色'"
+              aria-label="切换主题"
+              @click="toggleTheme"
+            >
+              <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="17" />
+            </button>
+
+            <template v-if="isLoggedIn">
+              <router-link to="/notifications" class="dh-icon-btn" title="消息中心" aria-label="消息中心">
+                <AppIcon name="bell" :size="17" />
+                <span v-if="unreadCount > 0" class="dh-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+              </router-link>
+              <router-link to="/settings" class="dh-icon-btn dh-hide-mobile" title="账号设置" aria-label="账号设置">
+                <AppIcon name="cog" :size="17" />
+              </router-link>
+              <router-link to="/profile" class="dh-user-chip" title="我的主页">
+                <span class="dh-av">{{ displayName.charAt(0) }}</span>
+                <b>{{ displayName }}</b>
+              </router-link>
+              <button
+                class="dh-icon-btn dh-hide-mobile"
+                type="button"
+                title="退出登录"
+                aria-label="退出登录"
+                @click="handleLogout"
+              >
+                <AppIcon name="exit" :size="17" />
+              </button>
+            </template>
+
+            <template v-else>
+              <router-link to="/login" class="dh-btn dh-btn--ghost dh-btn--sm">登录</router-link>
+              <router-link to="/register" class="dh-btn dh-btn--primary dh-btn--sm">注册</router-link>
+            </template>
+
+            <!-- 窄屏收起的入口 -->
+            <button
+              class="dh-icon-btn dh-only-mobile"
+              type="button"
+              title="更多"
+              aria-label="更多"
+              :aria-expanded="menuOpen"
+              @click="menuOpen = !menuOpen"
+            >
+              <AppIcon :name="menuOpen ? 'close' : 'more'" :size="17" />
+            </button>
+
+            <div v-if="menuOpen" class="dh-menu" role="menu">
+              <button type="button" role="menuitem" @click="onMenuTheme">
+                <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="16" />
+                {{ theme === 'dark' ? '切换到浅色' : '切换到深色' }}
+              </button>
+              <router-link v-if="isLoggedIn" to="/settings" role="menuitem">
+                <AppIcon name="cog" :size="16" /> 账号设置
+              </router-link>
+              <button v-if="isLoggedIn" class="dh-menu__danger" type="button" role="menuitem" @click="onMenuLogout">
+                <AppIcon name="exit" :size="16" /> 退出登录
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
-    <main class="main">
+    <main class="dh-main">
       <router-view />
     </main>
 
-    <footer class="footer">
-      <p>© 2026 树洞 - 匿名分享你的故事</p>
+    <footer v-if="!hideChrome" class="dh-ftr">
+      <div class="dh-wrap dh-ftr__in">
+        <span>© 2026 树洞 · Deep Hollow — 说给懂的人听，不必署名</span>
+        <span class="dh-ftr__links">
+          <router-link to="/notifications">消息</router-link>
+          <router-link to="/settings">设置</router-link>
+        </span>
+      </div>
     </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { logout as doLogout } from './api/auth'
 import { getUnreadCount } from './api/treehole'
-import Welcome from './views/Welcome.vue'
+import { useTheme } from './composables/useTheme'
+import AppIcon from './components/AppIcon.vue'
+import IconSprite from './components/IconSprite.vue'
+import BackdropFx from './components/BackdropFx.vue'
 
+const route = useRoute()
 const router = useRouter()
+const { theme, toggleTheme } = useTheme()
+
+// 登录/注册页为整屏分屏布局，不显示顶栏与页脚
+const hideChrome = computed(() => route.meta.guest === true)
+
 const unreadCount = ref(0)
 const nickname = ref(localStorage.getItem('th_nickname') || '')
 const tokenRef = ref(localStorage.getItem('th_token') || '')
+const menuOpen = ref(false)
 
-// 使用 ref 追踪登录状态，确保响应式更新
 const isLoggedIn = computed(() => {
   const token = tokenRef.value
   if (!token) return false
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
-    const exp = payload.exp * 1000
-    return Date.now() < exp
+    return Date.now() < payload.exp * 1000
   } catch {
     return false
   }
@@ -78,42 +153,45 @@ async function loadUnreadCount() {
   try {
     const res = await getUnreadCount()
     unreadCount.value = res.data
-  } catch (e) { /* ignore */ }
+  } catch {
+    /* 未登录或网络异常时静默 */
+  }
 }
 
-// 响应登录状态变化
 function onStorageChange() {
   tokenRef.value = localStorage.getItem('th_token') || ''
   nickname.value = localStorage.getItem('th_nickname') || ''
   loadUnreadCount()
 }
 
-window.addEventListener('storage', onStorageChange)
+function onMenuTheme() {
+  toggleTheme()
+  menuOpen.value = false
+}
+
+function onMenuLogout() {
+  menuOpen.value = false
+  handleLogout()
+}
+
+function onDocClick(e: MouseEvent) {
+  if (!menuOpen.value) return
+  const target = e.target as HTMLElement | null
+  if (target?.closest('.dh-hdr__acts')) return
+  menuOpen.value = false
+}
+
+// 路由切换后收起移动端菜单
+watch(() => route.fullPath, () => { menuOpen.value = false })
 
 onMounted(() => {
+  window.addEventListener('storage', onStorageChange)
+  document.addEventListener('click', onDocClick)
   loadUnreadCount()
 })
 
-// Alibaba-Java: 清理事件监听器，防止内存泄漏
 onUnmounted(() => {
   window.removeEventListener('storage', onStorageChange)
+  document.removeEventListener('click', onDocClick)
 })
 </script>
-
-<style scoped>
-.app { min-height: 100vh; display: flex; flex-direction: column; }
-.header { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.08); position: sticky; top: 0; z-index: 100; }
-.header-inner { max-width: 800px; margin: 0 auto; padding: 0 20px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
-.logo { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; color: #1e293b; text-decoration: none; }
-.logo:hover { text-decoration: none; }
-.logo-icon { font-size: 28px; }
-.nav { display: flex; gap: 20px; align-items: center; }
-.nav a { color: #64748b; font-size: 15px; font-weight: 500; text-decoration: none; padding: 6px 12px; border-radius: 6px; transition: all 0.2s; }
-.nav a:hover, .nav a.router-link-active { color: #3b82f6; background: #eff6ff; text-decoration: none; }
-.profile-link { position: relative; }
-.icon-link { position: relative; padding: 6px 8px !important; font-size: 16px; }
-.nav-badge { position: absolute; top: -4px; right: -6px; background: #ef4444; color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 10px; min-width: 16px; text-align: center; }
-.logout-btn { color: #ef4444; cursor: pointer; margin-left: 8px; }
-.main { flex: 1; padding: 24px 20px; }
-.footer { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; }
-</style>

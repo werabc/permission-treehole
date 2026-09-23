@@ -1,57 +1,66 @@
 <template>
-  <div class="publish">
-    <div class="publish-card">
-      <h2 class="title">发布树洞</h2>
-      <p class="subtitle">匿名分享你的故事，安全保密</p>
+  <div class="dh-narrow compose">
+    <div class="compose__head" v-reveal>
+      <h2>写下此刻的心事</h2>
+      <p>这里没有熟人，只有愿意听的人。</p>
+    </div>
 
-      <div class="form-group">
-        <label>分类</label>
-        <select v-model="form.categoryId" class="select">
-          <option :value="undefined">选择分类</option>
-          <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-            {{ cat.icon }} {{ cat.name }}
-          </option>
-        </select>
+    <div class="dh-card editor" v-reveal>
+      <div class="field">
+        <label class="dh-label">发布身份</label>
+        <div class="dh-seg">
+          <button type="button" :class="{ 'is-on': form.isAnonymous === 1 }" @click="form.isAnonymous = 1">匿名发布</button>
+          <button type="button" :class="{ 'is-on': form.isAnonymous === 0 }" @click="form.isAnonymous = 0">实名发布</button>
+        </div>
+        <p class="hint">
+          {{ form.isAnonymous === 1 ? '不显示你的昵称与头像，也不会暴露你的身份' : '将以你的昵称与头像显示' }}
+        </p>
       </div>
 
-      <div class="form-group">
-        <label>内容</label>
+      <div class="field">
+        <label class="dh-label">心事分类</label>
+        <div class="pills">
+          <button
+            v-for="cat in categories"
+            :key="cat.id"
+            type="button"
+            :class="['dh-pill', { 'is-on': form.categoryId === cat.id }]"
+            @click="form.categoryId = form.categoryId === cat.id ? undefined : cat.id"
+          >
+            {{ cat.name }}
+          </button>
+          <span v-if="categories.length === 0" class="hint">暂无可选分类（可不选直接发布）</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="dh-label">正文</label>
         <textarea
           v-model="form.content"
-          class="textarea"
-          placeholder="写下你想说的话..."
+          class="ta"
+          placeholder="写下你想说的话…它可以很长，也可以只有一句。"
           maxlength="5000"
-          rows="8"
-        ></textarea>
-        <span class="char-count">{{ form.content.length }}/5000</span>
-      </div>
-
-      <div class="form-group">
-        <label>发布方式</label>
-        <div class="radio-group">
-          <label class="radio-label">
-            <input type="radio" v-model="form.isAnonymous" :value="0" />
-            <span>实名发布（显示昵称）</span>
-          </label>
-          <label class="radio-label">
-            <input type="radio" v-model="form.isAnonymous" :value="1" />
-            <span>匿名发布（不显示身份）</span>
-          </label>
+        />
+        <div class="meter">
+          <span>{{ form.content.length }} / 5000</span>
+          <span class="meter__bar"><i :style="{ width: meterWidth }" /></span>
+          <span>{{ form.isAnonymous === 1 ? '匿名' : '实名' }} · {{ form.categoryId ? '已选分类' : '未选分类' }}</span>
         </div>
       </div>
 
       <div class="notice">
-        <el-alert type="info" :closable="false" show-icon>
-          <template #title>
-            发布的内容需要审核通过后才会显示在列表中
-          </template>
-        </el-alert>
+        <AppIcon name="spark" :size="18" class="notice__ico" />
+        <span>
+          发布后需经<b> 审核 </b>才会出现在广场；含敏感词的内容会被直接拦下，
+          请避免留下联系方式与真实姓名。
+        </span>
       </div>
 
-      <div class="actions">
-        <button class="th-btn th-btn-ghost" @click="$router.back()">取消</button>
-        <button class="th-btn th-btn-primary" :loading="submitting" @click="handleSubmit">
-          {{ submitting ? '发布中...' : '发布' }}
+      <div class="editor__acts">
+        <button class="dh-btn dh-btn--quiet" type="button" @click="router.back()">取消</button>
+        <button class="dh-btn dh-btn--primary dh-btn--lg" type="button" :disabled="submitting" @click="handleSubmit">
+          <AppIcon name="spark" :size="16" />
+          {{ submitting ? '发布中…' : form.isAnonymous === 1 ? '匿名发布' : '实名发布' }}
         </button>
       </div>
     </div>
@@ -59,9 +68,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElAlert } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import AppIcon from '../components/AppIcon.vue'
 import { createPost, getCategoryList } from '../api/treehole'
 import type { Category } from '../api/treehole'
 
@@ -72,15 +82,17 @@ const submitting = ref(false)
 const form = reactive({
   content: '',
   categoryId: undefined as number | undefined,
-  isAnonymous: 1, // 默认匿名
+  isAnonymous: 1,
 })
+
+const meterWidth = computed(() => `${Math.min((form.content.length / 5000) * 100, 100)}%`)
 
 async function loadCategories() {
   try {
     const res = await getCategoryList()
-    categories.value = res.data
-  } catch (e) {
-    console.error('加载分类失败:', e)
+    categories.value = res.data || []
+  } catch {
+    /* 分类加载失败不阻塞发布 */
   }
 }
 
@@ -96,10 +108,10 @@ async function handleSubmit() {
       categoryId: form.categoryId,
       isAnonymous: form.isAnonymous,
     })
-    ElMessage.success('发布成功！')
+    ElMessage.success('发布成功')
     router.push(`/post/${res.data}`)
   } catch (e: any) {
-    ElMessage.error(e.message || '发布失败')
+    ElMessage.error(e?.response?.data?.message || e.message || '发布失败')
   } finally {
     submitting.value = false
   }
@@ -109,103 +121,41 @@ onMounted(loadCategories)
 </script>
 
 <style scoped>
-.publish {
-  max-width: 600px;
-  margin: 0 auto;
-}
+.compose { padding: 40px 0 80px; }
+.compose__head { text-align: center; margin-bottom: 30px; }
+.compose__head h2 { font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -0.03em; font-weight: 700; }
+.compose__head p { margin-top: 10px; font-family: var(--font-display); font-style: italic; font-size: 17px; color: var(--text-dim); }
 
-.publish-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
+.editor { padding: 30px 32px; border-radius: var(--r-xl); }
+.field { margin-bottom: 24px; }
+.hint { margin-top: 9px; font-size: 12px; color: var(--text-mute); }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 4px;
+.ta {
+  width: 100%; min-height: 220px; padding: 20px 22px; font-size: 16px; line-height: 1.85;
+  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface);
+  resize: vertical; transition: border-color 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
+.ta:focus { border-color: var(--accent-line); box-shadow: 0 0 0 4px var(--accent-soft); }
+.ta::placeholder { color: var(--text-mute); }
 
-.subtitle {
-  font-size: 14px;
-  color: #94a3b8;
-  margin-bottom: 24px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #334155;
-  margin-bottom: 6px;
-}
-
-.select {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  background: #fff;
-}
-
-.textarea {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 15px;
-  line-height: 1.6;
-  resize: vertical;
-  transition: border-color 0.2s;
-  font-family: inherit;
-}
-
-.textarea:focus {
-  border-color: #3b82f6;
-  outline: none;
-}
-
-.char-count {
-  display: block;
-  text-align: right;
-  font-size: 12px;
-  color: #94a3b8;
-  margin-top: 4px;
-}
-
-.radio-group {
-  display: flex;
-  gap: 24px;
-}
-
-.radio-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: #334155;
-  cursor: pointer;
-}
-
-.radio-label input[type="radio"] {
-  accent-color: #3b82f6;
-}
+.meter { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); gap: 14px; }
+.meter__bar { flex: 1; height: 3px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.meter__bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s var(--ease); }
 
 .notice {
-  margin: 16px 0;
+  display: flex; gap: 12px; padding: 14px 17px; border-radius: var(--r-md);
+  background: var(--accent-soft); border: 1px solid var(--accent-line);
+  font-size: 13.5px; color: var(--text-dim);
 }
+.notice b { color: var(--text); font-weight: 500; }
+.notice__ico { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
 
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
+.editor__acts { display: flex; justify-content: flex-end; gap: 12px; margin-top: 26px; }
+
+@media (max-width: 720px) {
+  .editor { padding: 22px; }
+  .editor__acts { flex-direction: column-reverse; }
+  .editor__acts .dh-btn { width: 100%; }
 }
 </style>

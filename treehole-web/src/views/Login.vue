@@ -1,63 +1,79 @@
 <template>
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="auth-header">
-        <span class="auth-icon">🌳</span>
-        <h2>登录树洞</h2>
-        <p>登录后可以发布帖子和评论</p>
-      </div>
+  <AuthLayout>
+    <AppIcon name="tree" :size="38" />
+    <h2>登录树洞</h2>
+    <p class="sub">登录后即可匿名发布与回响</p>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="请输入用户名" prefix-icon="User" />
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码" prefix-icon="Lock" show-password />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="loading" @click="handleLogin" style="width:100%">
-            登 录
-          </el-button>
-        </el-form-item>
-      </el-form>
-
-      <div class="auth-footer">
-        还没有账号？<router-link to="/register">立即注册</router-link>
+    <div class="field">
+      <label class="dh-label">用户名</label>
+      <div class="dh-input">
+        <AppIcon name="user" :size="17" class="ico" />
+        <input v-model.trim="form.username" placeholder="请输入用户名" autocomplete="username" @keyup.enter="handleLogin" />
       </div>
+      <p v-if="errors.username" class="dh-error">{{ errors.username }}</p>
     </div>
-  </div>
+
+    <div class="field">
+      <label class="dh-label">密码</label>
+      <div class="dh-input">
+        <AppIcon name="lock" :size="17" class="ico" />
+        <input
+          v-model="form.password"
+          :type="showPwd ? 'text' : 'password'"
+          placeholder="请输入密码"
+          autocomplete="current-password"
+          @keyup.enter="handleLogin"
+        />
+        <button type="button" class="pwd-toggle" :aria-label="showPwd ? '隐藏密码' : '显示密码'" @click="showPwd = !showPwd">
+          <AppIcon :name="showPwd ? 'eye-off' : 'eye'" :size="16" />
+        </button>
+      </div>
+      <p v-if="errors.password" class="dh-error">{{ errors.password }}</p>
+    </div>
+
+    <button class="dh-btn dh-btn--primary dh-btn--block dh-btn--lg" type="button" :disabled="loading" @click="handleLogin">
+      {{ loading ? '登录中…' : '登 录' }}
+    </button>
+
+    <div class="divider">OR</div>
+
+    <div class="foot">还没有账号？<router-link to="/register">立即注册</router-link></div>
+    <p class="tiny">我们不会记录你的真实身份<br />请勿在帖子里留下真实姓名与联系方式</p>
+  </AuthLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElForm, ElFormItem, ElInput, ElButton, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import AuthLayout from '../components/AuthLayout.vue'
+import AppIcon from '../components/AppIcon.vue'
 import { login } from '../api/auth'
 
 const router = useRouter()
-const formRef = ref<FormInstance>()
 const loading = ref(false)
-
+const showPwd = ref(false)
 const form = reactive({ username: '', password: '' })
+const errors = reactive({ username: '', password: '' })
 
-const rules: FormRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+function validate() {
+  errors.username = form.username ? '' : '请输入用户名'
+  errors.password = form.password ? '' : '请输入密码'
+  return !errors.username && !errors.password
 }
 
 async function handleLogin() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-
+  if (!validate()) return
   loading.value = true
   try {
-    const res = await login(form)
+    const res = await login({ username: form.username, password: form.password })
     localStorage.setItem('th_token', res.data.token)
-    localStorage.setItem('th_nickname', res.data.nickname)
-    ElMessage.success('登录成功')
+    localStorage.setItem('th_nickname', res.data.nickname || form.username)
+    window.dispatchEvent(new Event('storage'))
+    ElMessage.success('欢迎回来')
     router.push('/')
   } catch (e: any) {
-    ElMessage.error(e.message || '登录失败')
+    ElMessage.error(e?.response?.data?.message || e.message || '登录失败')
   } finally {
     loading.value = false
   }
@@ -65,30 +81,18 @@ async function handleLogin() {
 </script>
 
 <style scoped>
-.auth-page {
-  min-height: 80vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+h2 { font-size: 30px; letter-spacing: -0.03em; font-weight: 700; margin-top: 20px; }
+.sub { margin-top: 8px; color: var(--text-dim); font-size: 14px; margin-bottom: 26px; }
+.field { margin-bottom: 18px; }
+.ico { color: var(--text-mute); }
+.pwd-toggle { color: var(--text-mute); display: grid; place-items: center; transition: color 0.28s var(--ease); }
+.pwd-toggle:hover { color: var(--text); }
+.divider {
+  display: flex; align-items: center; gap: 14px; margin: 24px 0;
+  color: var(--text-mute); font-size: 11px; font-family: var(--font-mono); letter-spacing: 0.14em;
 }
-.auth-card {
-  width: 400px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 40px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
-.auth-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-.auth-icon { font-size: 48px; }
-.auth-header h2 { margin: 10px 0 5px; color: #1e293b; }
-.auth-header p { color: #94a3b8; font-size: 14px; }
-.auth-footer {
-  text-align: center;
-  margin-top: 20px;
-  color: #64748b;
-  font-size: 14px;
-}
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.foot { text-align: center; font-size: 13.5px; color: var(--text-dim); }
+.foot a { color: var(--accent); }
+.tiny { margin-top: 24px; text-align: center; font-size: 11.5px; color: var(--text-mute); line-height: 1.7; }
 </style>

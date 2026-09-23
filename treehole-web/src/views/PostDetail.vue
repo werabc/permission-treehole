@@ -1,99 +1,121 @@
 <template>
-  <div class="detail" v-if="post">
-    <div class="post-card">
-      <div class="post-header">
-        <div class="post-author">
-          <span class="author-avatar">{{ post.authorName?.charAt(0) || '?' }}</span>
-          <div>
-            <span class="author-name">{{ post.authorName || '匿名用户' }}</span>
-            <span class="post-time">{{ formatTime(post.createTime) }}</span>
-          </div>
-        </div>
-        <span class="th-tag th-tag-blue">{{ post.categoryName || '树洞' }}</span>
+  <div v-if="post" class="dh-narrow detail">
+    <button class="back" type="button" @click="router.back()">
+      <AppIcon name="arrow-left" :size="15" /> 返回广场
+    </button>
+
+    <!-- ============ 帖子 ============ -->
+    <article class="dh-card detail__card" v-reveal>
+      <div class="post__top">
+        <span v-if="post.isAnonymous === 1" class="dh-av dh-av--anon"><AppIcon name="user" :size="15" /></span>
+        <span v-else class="dh-av">{{ initial }}</span>
+        <span class="who">
+          <b>{{ post.isAnonymous === 1 ? '匿名' : post.authorName || '未知用户' }}</b>
+          <span>{{ formatTime(post.createTime) }}</span>
+        </span>
+        <span v-if="post.categoryName" class="dh-tag">{{ post.categoryName }}</span>
       </div>
 
-      <p class="post-content">{{ post.content }}</p>
+      <p class="detail__body">{{ post.content }}</p>
 
-      <!-- 图片展示 -->
       <div v-if="post.images && post.images.length > 0" class="post-images">
         <img
           v-for="(img, idx) in post.images"
           :key="idx"
           :src="img"
           class="post-image"
-          @click="previewImage(img)"
           alt="帖子图片"
+          @click="previewImage(img)"
         />
       </div>
 
-      <div class="post-actions">
-        <button :class="['action-btn', { liked }]" @click="handleLike">
-          👍 {{ post.likeCount }}
+      <div class="actbar">
+        <button type="button" :class="['act', { on: liked }]" @click="handleLike">
+          <AppIcon name="like" :size="15" /> {{ liked ? '已抱抱' : '抱抱' }} · {{ post.likeCount }}
         </button>
-        <button :class="['action-btn', { collected }]" @click="handleCollect" :disabled="!isLoggedIn()">
-          {{ collected ? '★ 已收藏' : '☆ 收藏' }}
+        <button type="button" :class="['act', { on: collected }]" @click="handleCollect">
+          <AppIcon :name="collected ? 'star-fill' : 'star'" :size="15" /> {{ collected ? '已收藏' : '收藏' }}
         </button>
-        <span class="action">👁 {{ post.viewCount }}</span>
-        <button
-          v-if="isOwner"
-          class="action-btn danger-btn"
-          @click="handleDeletePost"
-        >删除</button>
-        <button class="action-btn report-btn" @click="openReportDialog">
-          🚩 举报
+        <span class="act act--static"><AppIcon name="eye" :size="15" /> {{ post.viewCount }} 次浏览</span>
+        <button v-if="isOwner" class="act act--danger" type="button" @click="handleDeletePost">
+          <AppIcon name="trash" :size="15" /> 删除
+        </button>
+        <button class="act act--danger act--end" type="button" @click="openReportDialog">
+          <AppIcon name="flag" :size="15" /> 举报
+        </button>
+      </div>
+    </article>
+
+    <!-- ============ 回响 ============ -->
+    <div class="dh-section-title">
+      <h3>回响</h3>
+      <span>{{ commentTotal }} REPLIES</span>
+    </div>
+
+    <div class="dh-card composer" v-reveal>
+      <textarea
+        v-model="commentContent"
+        class="composer__in"
+        :placeholder="replyTo ? `回复 ${replyToName}…` : '写下你的回响…不必认识，也能懂。'"
+      />
+      <div class="composer__foot">
+        <div class="composer__left">
+          <button type="button" :class="['dh-switch', { 'is-on': commentAnonymous }]" @click="commentAnonymous = !commentAnonymous">
+            <i /> 匿名回响
+          </button>
+          <button v-if="replyTo" class="dh-btn dh-btn--quiet dh-btn--sm" type="button" @click="cancelReply">
+            取消回复
+          </button>
+        </div>
+        <button class="dh-btn dh-btn--primary dh-btn--sm" type="button" @click="handleComment">
+          <AppIcon name="send" :size="14" /> 发送
         </button>
       </div>
     </div>
 
-    <!-- 评论区域 -->
-    <div class="comment-section">
-      <h3>评论 ({{ commentTotal }})</h3>
-
-      <div class="comment-input">
-        <textarea v-model="commentContent" :placeholder="replyTo ? `回复 ${replyToName}...` : '写下你的评论...'" rows="3"></textarea>
-        <div class="comment-input-actions">
-          <label class="anonymous-check">
-            <input type="checkbox" v-model="commentAnonymous" /> 匿名
-          </label>
-          <div>
-            <button v-if="replyTo" class="th-btn th-btn-ghost btn-sm" @click="cancelReply">取消回复</button>
-            <button class="th-btn th-btn-primary btn-sm" @click="handleComment">发表评论</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="comment-list">
-        <div v-for="comment in comments" :key="comment.id" class="comment-item">
-          <div class="comment-header">
-            <span class="comment-avatar">{{ comment.authorName?.charAt(0) || '?' }}</span>
-            <span class="comment-author">{{ comment.authorName || '匿名用户' }}</span>
-            <span v-if="comment.replyUserName" class="reply-arrow">
-              → {{ comment.replyUserName }}
-            </span>
-            <span class="comment-time">{{ formatTime(comment.createTime) }}</span>
-          </div>
-          <p class="comment-content">{{ comment.content }}</p>
-          <div class="comment-footer">
-            <button class="comment-like-btn" @click="handleCommentLike(comment)">
-              👍 {{ comment.likeCount }}
+    <div class="feed">
+      <div
+        v-for="(comment, i) in comments"
+        :key="comment.id"
+        class="dh-card cmt"
+        v-reveal="Math.min(i, 6) * 60"
+      >
+        <span v-if="comment.isAnonymous === 1" class="dh-av dh-av--anon"><AppIcon name="user" :size="15" /></span>
+        <span v-else class="dh-av">{{ (comment.authorName || '?').charAt(0).toUpperCase() }}</span>
+        <div class="cmt__body">
+          <b>{{ comment.isAnonymous === 1 ? '匿名' : comment.authorName || '未知用户' }}</b>
+          <span v-if="comment.replyUserName" class="cmt__reply">→ {{ comment.replyUserName }}</span>
+          <p>{{ comment.content }}</p>
+          <div class="cmt__foot">
+            <span>{{ formatTime(comment.createTime) }}</span>
+            <button type="button" class="cmt__act" @click="handleCommentLike(comment)">
+              <AppIcon name="like" :size="12" /> {{ comment.likeCount || 0 }}
             </button>
-            <button class="comment-reply-btn" @click="setReplyTarget(comment)">
-              💬 回复
+            <button type="button" class="cmt__act" @click="setReplyTarget(comment)">
+              <AppIcon name="comment" :size="12" /> 回复
             </button>
           </div>
         </div>
       </div>
+    </div>
 
-      <div v-if="comments.length === 0 && !loading" class="empty">暂无评论，来抢沙发吧！</div>
+    <div v-if="comments.length === 0 && !loading" class="dh-state">
+      <p>还没有人回响</p>
+      <p style="font-size: 13px; margin-top: 6px">来做第一个懂 TA 的人</p>
     </div>
   </div>
-  <div v-else class="loading">加载中...</div>
 
-  <!-- 举报对话框 -->
-  <el-dialog v-model="reportDialogVisible" title="举报" width="450px" :close-on-click-modal="false">
+  <div v-else-if="loading" class="dh-narrow" style="padding-top: 40px">
+    <div class="dh-skeleton" style="height: 260px" />
+  </div>
+
+  <div v-else class="dh-state">帖子不存在或已被删除</div>
+
+  <!-- ============ 举报弹窗 ============ -->
+  <el-dialog v-model="reportDialogVisible" title="举报" width="440px" :close-on-click-modal="false">
     <el-form label-width="80px">
       <el-form-item label="举报原因">
-        <el-select v-model="reportForm.reason" placeholder="请选择举报原因">
+        <el-select v-model="reportForm.reason" placeholder="请选择举报原因" style="width: 100%">
           <el-option label="色情低俗" value="色情低俗" />
           <el-option label="政治敏感" value="政治敏感" />
           <el-option label="人身攻击" value="人身攻击" />
@@ -104,7 +126,7 @@
         </el-select>
       </el-form-item>
       <el-form-item label="描述">
-        <el-input v-model="reportForm.description" type="textarea" rows="3" placeholder="请描述具体情况..." />
+        <el-input v-model="reportForm.description" type="textarea" :rows="3" placeholder="请描述具体情况…" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -115,10 +137,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElDialog, ElForm, ElFormItem, ElSelect, ElOption, ElInput, ElButton } from 'element-plus'
-import { getPostDetail, likePost, unlikePost, getCommentPage, createComment, likeComment, submitReport as submitReportApi, toggleCollect, isCollected, deletePost as removePost } from '../api/treehole'
+import AppIcon from '../components/AppIcon.vue'
+import {
+  getPostDetail, likePost, unlikePost, getCommentPage, createComment, likeComment,
+  submitReport as submitReportApi, toggleCollect, isCollected, deletePost as removePost,
+} from '../api/treehole'
 import { isLoggedIn, getUserIdFromToken } from '../api/auth'
 import type { Post, Comment } from '../api/treehole'
 
@@ -128,12 +154,20 @@ const post = ref<Post | null>(null)
 const comments = ref<Comment[]>([])
 const commentTotal = ref(0)
 const commentContent = ref('')
-const commentAnonymous = ref(false)
+const commentAnonymous = ref(true)
 const liked = ref(false)
 const collected = ref(false)
 const loading = ref(false)
 
-// 是否为当前登录用户发布的帖子（匿名帖作者也不显示删除入口，避免去匿名化）
+const initial = computed(() => (post.value?.authorName || '?').trim().charAt(0).toUpperCase() || '?')
+
+// 路由参数可能是非数字（手输地址 / 半截跳转），直接透传会打成 /api/th/post/NaN 触发 500
+const postId = computed(() => {
+  const n = Number(route.params.id)
+  return Number.isInteger(n) && n > 0 ? n : null
+})
+
+// 匿名帖不暴露删除入口，避免去匿名化
 const isOwner = computed(() => {
   if (!post.value) return false
   if (post.value.isAnonymous === 1) return false
@@ -141,12 +175,75 @@ const isOwner = computed(() => {
   return !!myId && !!post.value.userId && myId === post.value.userId
 })
 
+// Reply state
+const replyTo = ref<number | null>(null)
+const replyToName = ref('')
+const replyUserId = ref<number | null>(null)
+
+// Report dialog
+const reportDialogVisible = ref(false)
+const reportSubmitting = ref(false)
+const reportForm = ref({ reason: '', description: '' })
+
+async function fetchPost() {
+  if (postId.value === null) {
+    post.value = null
+    loading.value = false
+    return
+  }
+  loading.value = true
+  try {
+    const res = await getPostDetail(postId.value)
+    post.value = res.data
+  } catch {
+    post.value = null
+  } finally {
+    loading.value = false
+  }
+}
+
+async function fetchComments() {
+  if (postId.value === null) return
+  try {
+    const res = await getCommentPage({ pageNum: 1, pageSize: 50, postId: postId.value })
+    comments.value = res.data.records || []
+    commentTotal.value = res.data.total || 0
+  } catch {
+    /* ignore */
+  }
+}
+
 async function fetchCollected() {
   if (!isLoggedIn() || !post.value) return
   try {
     const res = await isCollected(post.value.id)
     collected.value = res.data
-  } catch (e) { /* 未登录或失败时不展示收藏态 */ }
+  } catch {
+    /* 未登录或失败时不展示收藏态 */
+  }
+}
+
+async function handleLike() {
+  if (!post.value) return
+  // 未登录时先引导登录：否则会打到接口拿 401，被拦截器登出并弹回登录页
+  if (!isLoggedIn()) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  try {
+    if (liked.value) {
+      await unlikePost(post.value.id)
+      post.value.likeCount--
+      liked.value = false
+    } else {
+      await likePost(post.value.id)
+      post.value.likeCount++
+      liked.value = true
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || e.message || '操作失败')
+  }
 }
 
 async function handleCollect() {
@@ -171,7 +268,7 @@ async function handleDeletePost() {
     await ElMessageBox.confirm('删除后帖子及其评论、点赞、收藏都会被清除，确定删除？', '删除帖子', {
       type: 'warning',
       confirmButtonText: '删除',
-      cancelButtonText: '取消'
+      cancelButtonText: '取消',
     })
   } catch {
     return
@@ -185,64 +282,17 @@ async function handleDeletePost() {
   }
 }
 
-// Reply state
-const replyTo = ref<number | null>(null)
-const replyToName = ref('')
-const replyUserId = ref<number | null>(null)
-
-// Report dialog
-const reportDialogVisible = ref(false)
-const reportSubmitting = ref(false)
-const reportForm = ref({ reason: '', description: '' })
-
-async function fetchPost() {
-  loading.value = true
-  try {
-    const id = Number(route.params.id)
-    const res = await getPostDetail(id)
-    post.value = res.data
-    if (post.value?.authorName) {
-      post.value.authorName = post.value.authorName
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-async function fetchComments() {
-  const id = Number(route.params.id)
-  try {
-    const res = await getCommentPage({ pageNum: 1, pageSize: 50, postId: id })
-    comments.value = res.data.records
-    commentTotal.value = res.data.total
-  } catch (e) {
-    console.error('加载评论失败:', e)
-  }
-}
-
-async function handleLike() {
-  if (!post.value) return
-  try {
-    if (liked.value) {
-      await unlikePost(post.value.id)
-      post.value.likeCount--
-      liked.value = false
-    } else {
-      await likePost(post.value.id)
-      post.value.likeCount++
-      liked.value = true
-    }
-  } catch (e: any) {
-    ElMessage.error(e.message || '操作失败')
-  }
-}
-
 async function handleCommentLike(comment: Comment) {
+  if (!isLoggedIn()) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
   try {
     await likeComment(comment.id)
-    comment.likeCount++
+    comment.likeCount = (comment.likeCount || 0) + 1
   } catch (e: any) {
-    ElMessage.error(e.message || '操作失败')
+    ElMessage.error(e?.response?.data?.message || '操作失败')
   }
 }
 
@@ -260,6 +310,11 @@ function cancelReply() {
 
 async function handleComment() {
   if (!commentContent.value.trim() || !post.value) return
+  if (!isLoggedIn()) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
   try {
     await createComment({
       postId: post.value.id,
@@ -270,15 +325,14 @@ async function handleComment() {
     })
     commentContent.value = ''
     cancelReply()
-    ElMessage.success('评论成功')
+    ElMessage.success('已发送回响')
     fetchComments()
   } catch (e: any) {
-    ElMessage.error(e.message || '评论失败')
+    ElMessage.error(e?.response?.data?.message || e.message || '评论失败')
   }
 }
 
 function openReportDialog() {
-  if (!post.value) return
   reportForm.value = { reason: '', description: '' }
   reportDialogVisible.value = true
 }
@@ -296,10 +350,10 @@ async function submitReport() {
       reason: reportForm.value.reason,
       description: reportForm.value.description,
     })
-    ElMessage.success('举报提交成功')
+    ElMessage.success('举报已提交，我们会尽快处理')
     reportDialogVisible.value = false
   } catch (e: any) {
-    ElMessage.error(e.message || '举报失败')
+    ElMessage.error(e?.response?.data?.message || '举报失败')
   } finally {
     reportSubmitting.value = false
   }
@@ -311,13 +365,12 @@ function previewImage(src: string) {
 
 function formatTime(time: string) {
   const date = new Date(time)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
+  const diff = Date.now() - date.getTime()
   if (diff < 60000) return '刚刚'
   if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
   if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
-  return date.toLocaleDateString()
+  return date.toLocaleString('zh-CN', { hour12: false })
 }
 
 onMounted(() => {
@@ -327,278 +380,57 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.detail {
-  max-width: 700px;
-  margin: 0 auto;
+.detail { padding: 32px 0 80px; }
+.back {
+  display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim);
+  padding: 8px 14px; border-radius: 999px; transition: all 0.28s var(--ease);
 }
+.back:hover { color: var(--text); background: var(--surface); }
 
-.post-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  margin-bottom: 24px;
+.detail__card { margin-top: 18px; padding: 32px 34px; border-radius: var(--r-xl); }
+.post__top { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.post__top .dh-tag { margin-left: auto; }
+.who { display: flex; flex-direction: column; line-height: 1.25; }
+.who b { font-size: 14px; font-weight: 500; }
+.who span { font-size: 11.5px; color: var(--text-mute); font-family: var(--font-mono); }
+
+.detail__body { font-size: 17px; line-height: 1.9; white-space: pre-wrap; word-break: break-word; }
+
+.post-images { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 20px; }
+.post-image { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-sm); cursor: pointer; transition: transform 0.32s var(--ease); }
+.post-image:hover { transform: scale(1.02); }
+
+.actbar { display: flex; gap: 8px; margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.act {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 17px; border-radius: 999px;
+  font-size: 13px; color: var(--text-dim); border: 1px solid var(--border); transition: all 0.3s var(--ease);
 }
+.act:hover { color: var(--text); border-color: var(--border-strong); transform: translateY(-2px); }
+.act.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.act--static { border-color: transparent; }
+.act--static:hover { transform: none; border-color: transparent; color: var(--text-dim); }
+.act--danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.act--end { margin-left: auto; }
 
-.post-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
+.feed { display: grid; gap: 12px; }
 
-.post-author {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.composer { margin-bottom: 18px; padding: 18px 20px; }
+.composer__in { width: 100%; min-height: 86px; font-size: 15px; line-height: 1.75; resize: vertical; }
+.composer__in::placeholder { color: var(--text-mute); }
+.composer__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.composer__left { display: flex; align-items: center; gap: 12px; }
 
-.author-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
-}
+.cmt { display: flex; gap: 13px; padding: 18px 20px; }
+.cmt__body { min-width: 0; flex: 1; }
+.cmt__body b { font-size: 13.5px; font-weight: 500; }
+.cmt__reply { font-size: 12px; color: var(--text-mute); margin-left: 6px; }
+.cmt__body p { font-size: 14.5px; line-height: 1.72; color: var(--text-dim); margin-top: 5px; white-space: pre-wrap; word-break: break-word; }
+.cmt__foot { display: flex; align-items: center; gap: 14px; margin-top: 10px; font-size: 11.5px; color: var(--text-mute); font-family: var(--font-mono); }
+.cmt__act { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-mute); transition: color 0.28s var(--ease); font-family: inherit; }
+.cmt__act:hover { color: var(--accent); }
 
-.author-name {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #1e293b;
-}
-
-.post-time {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-left: 8px;
-}
-
-.post-content {
-  font-size: 16px;
-  color: #1e293b;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin-bottom: 16px;
-}
-
-.post-images {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.post-image {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.post-image:hover {
-  transform: scale(1.02);
-}
-
-.post-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-
-.action-btn:hover {
-  background: #e2e8f0;
-}
-
-.action-btn.liked {
-  background: #dbeafe;
-  color: #3b82f6;
-}
-
-.action-btn.collected {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.danger-btn {
-  color: #ef4444;
-  background: #fef2f2;
-}
-
-.danger-btn:hover {
-  background: #fee2e2;
-}
-
-.report-btn {
-  margin-left: auto;
-  color: #ef4444;
-  background: #fef2f2;
-}
-
-.report-btn:hover {
-  background: #fee2e2;
-}
-
-.action {
-  font-size: 13px;
-  color: #64748b;
-}
-
-.comment-section {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
-.comment-section h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-.comment-input textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 8px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.comment-input textarea:focus {
-  border-color: #3b82f6;
-  outline: none;
-}
-
-.comment-input-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.anonymous-check {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: #64748b;
-}
-
-.comment-list {
-  margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.comment-item {
-  padding: 12px 14px;
-  background: #f8fafc;
-  border-radius: 10px;
-}
-
-.comment-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.comment-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.comment-author {
-  font-size: 13px;
-  font-weight: 500;
-  color: #334155;
-}
-
-.reply-arrow {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.comment-time {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-left: auto;
-}
-
-.comment-content {
-  font-size: 14px;
-  color: #334155;
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin-bottom: 8px;
-}
-
-.comment-footer {
-  display: flex;
-  gap: 12px;
-}
-
-.comment-like-btn,
-.comment-reply-btn {
-  font-size: 12px;
-  color: #94a3b8;
-  background: none;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.comment-like-btn:hover,
-.comment-reply-btn:hover {
-  color: #3b82f6;
-}
-
-.empty {
-  text-align: center;
-  padding: 30px;
-  color: #94a3b8;
-  font-size: 14px;
-}
-
-.loading {
-  text-align: center;
-  padding: 60px;
-  color: #94a3b8;
-}
-
-.btn-sm {
-  padding: 6px 14px;
-  font-size: 13px;
+@media (max-width: 720px) {
+  .detail__card, .composer { padding: 20px; }
+  .act--end { margin-left: 0; }
 }
 </style>

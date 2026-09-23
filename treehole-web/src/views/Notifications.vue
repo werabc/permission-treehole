@@ -1,64 +1,69 @@
 <template>
-  <div class="notify-page">
-    <div class="page-head">
-      <h2>消息中心</h2>
-      <button
-        class="mark-all"
-        type="button"
-        :disabled="unread === 0 || loading"
-        @click="markAllRead"
-      >全部已读{{ unread > 0 ? `（${unread}）` : '' }}</button>
+  <div class="dh-narrow notify">
+    <div class="page-hd" v-reveal>
+      <h2 class="dh-page-title">消息中心</h2>
+      <p class="dh-page-sub">有人回应了你的心事。</p>
+
+      <div class="dh-tabs head-tabs">
+        <button
+          v-for="tab in tabs"
+          :key="tab.value"
+          type="button"
+          :class="{ 'is-on': activeTab === tab.value }"
+          @click="switchTab(tab.value)"
+        >
+          {{ tab.label }}
+          <span v-if="tab.value === 'all' && unread > 0" class="cnt">{{ unread }}</span>
+        </button>
+      </div>
     </div>
 
-    <div class="tabs">
-      <button
-        v-for="tab in tabs"
-        :key="tab.value"
-        class="tab-btn"
-        :class="{ active: activeTab === tab.value }"
-        type="button"
-        @click="switchTab(tab.value)"
-      >{{ tab.label }}</button>
-    </div>
+    <div v-if="loading && items.length === 0" class="dh-skeleton" style="height: 78px" />
 
-    <div v-if="loading" class="state">加载中…</div>
-    <div v-else-if="items.length === 0" class="state">暂时没有消息</div>
+    <div v-else-if="items.length === 0" class="dh-state">暂时没有消息</div>
 
-    <ul v-else class="notify-list">
+    <ul v-else class="notes">
       <li
-        v-for="item in items"
+        v-for="(item, i) in items"
         :key="item.id"
-        class="notify-item"
-        :class="{ unread: item.isRead === 0 }"
+        :class="['dh-card', 'note', { unread: item.isRead === 0 }]"
+        v-reveal="Math.min(i, 8) * 50"
         @click="openNotification(item)"
       >
-        <span class="type-dot" :style="{ background: typeColor(item.type) }"></span>
-        <div class="notify-body">
-          <p class="content">{{ item.content }}</p>
-          <span class="time">{{ formatTime(item.createTime) }}</span>
+        <span class="note__ico"><AppIcon :name="typeIcon(item.type)" :size="18" /></span>
+        <div class="note__b">
+          <b>{{ item.content }}</b>
+          <p>{{ typeHint(item.type) }}</p>
         </div>
-        <span v-if="item.isRead === 0" class="unread-flag">未读</span>
+        <span class="note__t">{{ formatTime(item.createTime) }}</span>
       </li>
     </ul>
 
     <div v-if="!loading && total > items.length" class="load-more">
-      <button type="button" @click="loadMore">加载更多</button>
+      <button class="dh-btn dh-btn--ghost" type="button" @click="loadMore">加载更多</button>
+    </div>
+
+    <div v-if="!loading && items.length > 0" class="mark-all">
+      <button class="dh-btn dh-btn--ghost" type="button" :disabled="unread === 0" @click="markAllRead">
+        <AppIcon name="check" :size="15" /> 全部标为已读
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import AppIcon from '../components/AppIcon.vue'
 import { getNotifications, markNotificationsRead, type NotificationItem } from '../api/treehole'
 
 const router = useRouter()
 
 const tabs = [
   { label: '全部', value: 'all' },
-  { label: '点赞', value: 'LIKE' },
-  { label: '评论', value: 'COMMENT' },
-  { label: '系统', value: 'REPORT_RESULT' }
+  { label: '回响', value: 'COMMENT' },
+  { label: '抱抱', value: 'LIKE' },
+  { label: '系统', value: 'REPORT_RESULT' },
 ]
 
 const items = ref<NotificationItem[]>([])
@@ -77,27 +82,19 @@ async function load(reset = false) {
       pageNum.value = 1
       items.value = []
     }
-    const res = await getNotifications({
-      pageNum: pageNum.value,
-      pageSize,
-      unreadOnly: activeTab.value === 'unread'
-    })
+    const res = await getNotifications({ pageNum: pageNum.value, pageSize })
     let records = res.data.records || []
-    if (isTypeTab()) {
-      records = records.filter((n: NotificationItem) => n.type === activeTab.value)
+    if (activeTab.value !== 'all') {
+      records = records.filter((n) => n.type === activeTab.value)
     }
     items.value = reset ? records : items.value.concat(records)
     total.value = res.data.total || 0
     unread.value = items.value.filter((n) => n.isRead === 0).length
-  } catch (e) {
-    console.error('加载通知失败', e)
+  } catch {
+    /* ignore */
   } finally {
     loading.value = false
   }
-}
-
-function isTypeTab() {
-  return activeTab.value !== 'all' && activeTab.value !== 'unread'
 }
 
 function switchTab(value: string) {
@@ -118,8 +115,8 @@ async function markAllRead() {
     items.value.forEach((n) => { n.isRead = 1 })
     unread.value = 0
     window.dispatchEvent(new Event('storage'))
-  } catch (e) {
-    console.error('标记已读失败', e)
+  } catch {
+    /* ignore */
   }
 }
 
@@ -130,24 +127,38 @@ async function openNotification(item: NotificationItem) {
       item.isRead = 1
       unread.value = Math.max(unread.value - 1, 0)
       window.dispatchEvent(new Event('storage'))
-    } catch (e) { /* 忽略标记失败，不阻塞跳转 */ }
+    } catch {
+      /* 标记失败不阻塞跳转 */
+    }
   }
   if (item.targetType === 'POST' && item.targetId) {
     router.push(`/post/${item.targetId}`)
   }
 }
 
-function typeColor(type: string) {
-  if (type === 'LIKE') return '#f59e0b'
-  if (type === 'COMMENT') return '#3b82f6'
-  if (type === 'REPORT_RESULT') return '#10b981'
-  return '#94a3b8'
+function typeIcon(type: string) {
+  if (type === 'LIKE') return 'like'
+  if (type === 'COMMENT') return 'comment'
+  if (type === 'REPORT_RESULT') return 'shield'
+  return 'bell'
+}
+
+function typeHint(type: string) {
+  if (type === 'LIKE') return '点开看看是谁抱了抱你'
+  if (type === 'COMMENT') return '点开查看完整回响'
+  if (type === 'REPORT_RESULT') return '举报处理结果通知'
+  return '系统消息'
 }
 
 function formatTime(value?: string) {
   if (!value) return ''
   const date = new Date(value.replace(' ', 'T'))
   if (Number.isNaN(date.getTime())) return value
+  const diff = Date.now() - date.getTime()
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)} 天前`
   return date.toLocaleString('zh-CN', { hour12: false })
 }
 
@@ -155,40 +166,38 @@ onMounted(() => load(true))
 </script>
 
 <style scoped>
-.notify-page { max-width: 720px; margin: 0 auto; }
-.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.page-head h2 { font-size: 20px; color: #1e293b; margin: 0; }
-.mark-all {
-  background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe;
-  font-size: 13px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+.notify { padding-bottom: 80px; }
+.page-hd { padding: 44px 0 8px; }
+.head-tabs { margin-top: 22px; }
+.cnt { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent); }
+
+.notes { display: grid; gap: 10px; margin-top: 22px; }
+.note {
+  position: relative; display: flex; gap: 14px; padding: 18px 20px; align-items: flex-start;
+  cursor: pointer; transition: transform 0.35s var(--ease), border-color 0.35s var(--ease);
 }
-.mark-all:disabled { opacity: 0.5; cursor: not-allowed; }
-.tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-.tab-btn {
-  background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b;
-  font-size: 13px; padding: 6px 14px; border-radius: 20px; cursor: pointer;
-  transition: all 0.2s;
+.note:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 34%, transparent); }
+.note.unread {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
 }
-.tab-btn:hover { border-color: #93c5fd; color: #3b82f6; }
-.tab-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
-.notify-list { list-style: none; padding: 0; margin: 0; }
-.notify-item {
-  display: flex; align-items: flex-start; gap: 12px;
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
-  padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+.note.unread::before {
+  content: ""; position: absolute; left: -1px; top: 22px; width: 2px; height: 22px; border-radius: 2px; background: var(--accent);
 }
-.notify-item:hover { border-color: #bfdbfe; background: #f8fbff; }
-.notify-item.unread { border-left: 3px solid #3b82f6; }
-.type-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; flex: 0 0 auto; }
-.notify-body { flex: 1; min-width: 0; }
-.content { margin: 0 0 4px; color: #1e293b; font-size: 14px; line-height: 1.6; word-break: break-word; }
-.time { color: #94a3b8; font-size: 12px; }
-.unread-flag { color: #3b82f6; font-size: 12px; flex: 0 0 auto; }
-.state { text-align: center; color: #94a3b8; padding: 48px 0; font-size: 14px; }
-.load-more { text-align: center; margin: 16px 0 8px; }
-.load-more button {
-  background: #fff; border: 1px solid #e2e8f0; color: #64748b;
-  padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 13px;
+.note__ico {
+  width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0;
+  border: 1px solid var(--border); color: var(--accent); background: var(--accent-soft);
+}
+.note__b { flex: 1; min-width: 0; }
+.note__b b { font-size: 14px; font-weight: 500; line-height: 1.6; display: block; }
+.note__b p { font-size: 12.5px; color: var(--text-mute); margin-top: 4px; }
+.note__t { font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); white-space: nowrap; flex-shrink: 0; }
+
+.load-more, .mark-all { text-align: center; margin-top: 24px; }
+
+@media (max-width: 720px) {
+  .page-hd { padding-top: 32px; }
+  .note { padding: 15px 16px; }
+  .note__t { font-size: 10px; }
 }
 </style>
