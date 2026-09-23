@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>树洞 · 布局方案选型（4 选 1）+ 按钮动效</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,300..700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   复用 v3 的视觉语言（浅色晨曦 / 深色星空），只换布局与按钮动效
+   ============================================================ */
+:root {
+  --font-sans: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, "Songti SC", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 10px; --r-md: 16px; --r-lg: 22px; --r-xl: 30px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+html[data-theme="dark"] {
+  --bg: #05050c; --surface: rgba(255,255,255,.04); --surface-2: rgba(255,255,255,.072); --surface-solid: #101019;
+  --border: rgba(255,255,255,.09); --border-strong: rgba(255,255,255,.17);
+  --text: #edeff8; --text-dim: #a6abc2; --text-mute: #6b7190;
+  --accent: #5fe0bd; --accent-soft: rgba(95,224,189,.14); --accent-line: rgba(95,224,189,.42);
+  --violet: #a78bfa; --danger: #ff6b7f;
+  --shadow: 0 24px 60px -22px rgba(0,0,0,.8); --shadow-hi: 0 0 0 1px rgba(95,224,189,.12), 0 24px 60px -22px rgba(0,0,0,.8);
+  --art-opacity: .72; --art-blend: screen; --grain-opacity: .05;
+  --hero-veil: linear-gradient(180deg, rgba(5,5,12,.45) 0%, var(--bg) 80%);
+  --vig: color-mix(in srgb, var(--bg) 62%, transparent);
+  --btn-spot: rgba(255,255,255,.5);
+}
+html[data-theme="light"] {
+  --bg: #f7f6f2; --surface: rgba(255,255,255,.76); --surface-2: rgba(255,255,255,.95); --surface-solid: #fff;
+  --border: rgba(30,27,22,.075); --border-strong: rgba(30,27,22,.16);
+  --text: #1a1916; --text-dim: #56534c; --text-mute: #8b877d;
+  --accent: #0e8f70; --accent-soft: rgba(14,143,112,.09); --accent-line: rgba(14,143,112,.32);
+  --violet: #8b7ac9; --danger: #d9455c;
+  --shadow: 0 1px 2px rgba(30,27,22,.04), 0 12px 32px -14px rgba(30,27,22,.16);
+  --shadow-hi: 0 0 0 1px rgba(14,143,112,.18), 0 18px 40px -16px rgba(14,143,112,.26);
+  --art-opacity: .34; --art-blend: soft-light; --grain-opacity: .035;
+  --hero-veil: linear-gradient(180deg, rgba(247,246,242,.18) 0%, var(--bg) 88%);
+  --vig: color-mix(in srgb, var(--bg) 42%, transparent);
+  --btn-spot: rgba(255,255,255,.62);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-sans); background: var(--bg); color: var(--text); line-height: 1.65;
+  -webkit-font-smoothing: antialiased; min-height: 100dvh; overflow-x: hidden;
+  transition: background .55s var(--ease), color .4s var(--ease);
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; background: none; border: none; outline: none; }
+svg { display: block; }
+ul, ol { list-style: none; }
+
+/* ---------- 背景 ---------- */
+.bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.bg__art { position: absolute; inset: -8% -8% auto auto; width: 108%; height: 105%; background: url("assets/hero-aurora-tree.jpg") center right / cover no-repeat;
+  opacity: var(--art-opacity); mix-blend-mode: var(--art-blend); animation: kb 46s ease-in-out infinite alternate;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 92%); mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 92%); }
+@keyframes kb { from { transform: scale(1); } to { transform: scale(1.1) translate3d(-1.6%,-1.2%,0); } }
+.nebula { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; }
+html[data-theme="dark"] .nebula { mix-blend-mode: screen; }
+html[data-theme="light"] .nebula { mix-blend-mode: multiply; opacity: .88; }
+.n1 { width: 46vw; height: 46vw; left: -10vw; top: -8vw; animation: d1 34s ease-in-out infinite alternate; }
+.n2 { width: 40vw; height: 40vw; right: -6vw; top: 6vh; animation: d2 42s ease-in-out infinite alternate; }
+.n3 { width: 52vw; height: 34vw; left: 14vw; top: 52vh; animation: d3 50s ease-in-out infinite alternate; }
+html[data-theme="dark"] .n1 { background: radial-gradient(circle, rgba(95,224,189,.30), transparent 68%); }
+html[data-theme="dark"] .n2 { background: radial-gradient(circle, rgba(167,139,250,.32), transparent 68%); }
+html[data-theme="dark"] .n3 { background: radial-gradient(circle, rgba(80,140,255,.20), transparent 70%); }
+html[data-theme="light"] .n1 { background: radial-gradient(circle, rgba(66,188,158,.52), transparent 66%); }
+html[data-theme="light"] .n2 { background: radial-gradient(circle, rgba(146,118,232,.48), transparent 66%); }
+html[data-theme="light"] .n3 { background: radial-gradient(circle, rgba(246,168,108,.50), transparent 68%); }
+@keyframes d1 { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(5vw,3vh,0) scale(1.12); } }
+@keyframes d2 { from { transform: translate3d(0,0,0) scale(1.06); } to { transform: translate3d(-4vw,4vh,0) scale(1); } }
+@keyframes d3 { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(3vw,-4vh,0) scale(1.1); } }
+.bg__band { position: absolute; inset: -30% -20%; opacity: .5; mix-blend-mode: screen; transform: rotate(-14deg);
+  background: linear-gradient(102deg, transparent 28%, rgba(120,190,255,.10) 45%, rgba(186,156,252,.13) 52%, transparent 70%);
+  animation: band 60s ease-in-out infinite alternate; }
+html[data-theme="light"] .bg__band { display: none; }
+@keyframes band { from { transform: rotate(-14deg) translateX(-3%); } to { transform: rotate(-11deg) translateX(3%); } }
+.bg__ribbon { display: none; }
+html[data-theme="light"] .bg__ribbon { display: block; position: absolute; inset: -26% -14% auto auto; width: 86%; height: 74%;
+  background: conic-gradient(from 205deg at 76% 0%, rgba(96,196,168,.30), rgba(168,146,232,.26), rgba(244,186,142,.24), rgba(120,200,255,.18), rgba(96,196,168,.30));
+  filter: blur(78px); opacity: .75; animation: ribbon 40s ease-in-out infinite alternate; }
+@keyframes ribbon { from { transform: translate3d(0,0,0) rotate(0deg) scale(1); } to { transform: translate3d(-2%,2%,0) rotate(6deg) scale(1.08); } }
+.bg__veil { position: absolute; inset: 0; background: radial-gradient(120% 82% at 76% 6%, transparent 0%, var(--bg) 66%), var(--hero-veil); }
+.bg__grain { position: absolute; inset: 0; opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.bg__vig { position: absolute; inset: 0; background: radial-gradient(120% 100% at 50% 40%, transparent 38%, var(--vig) 100%); }
+#stars { position: absolute; inset: 0; width: 100%; height: 100%; }
+html[data-theme="light"] #stars { display: none; }
+
+/* ---------- 控制条 ---------- */
+.ctl { position: sticky; top: 0; z-index: 90; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 18px; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(18px) saturate(160%); border-bottom: 1px solid var(--border); }
+.ctl__tag { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; color: var(--accent); border: 1px solid var(--accent-line); padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.ctl__g { display: flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+.ctl__g > span { font-family: var(--font-mono); font-size: 10px; color: var(--text-mute); padding: 0 6px 0 8px; letter-spacing: .1em; }
+.ctl__b { font-size: 12.5px; color: var(--text-dim); padding: 5px 12px; border-radius: 999px; transition: all .26s var(--ease); position: relative; overflow: hidden; }
+.ctl__b:hover { color: var(--text); background: var(--surface-2); }
+.ctl__b.on { background: var(--accent); color: #04140f; font-weight: 600; }
+html[data-theme="light"] .ctl__b.on { color: #fff; }
+.ctl__sp { margin-left: auto; font-size: 12px; color: var(--text-mute); font-family: var(--font-mono); }
+
+/* ============================================================
+   通用件
+   ============================================================ */
+.card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: var(--shadow), inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent);
+  transition: transform .42s var(--ease), border-color .42s var(--ease), box-shadow .42s var(--ease); }
+.card--hover { cursor: pointer; }
+.card--hover:hover { transform: translateY(-4px); border-color: var(--accent-line); box-shadow: var(--shadow-hi); }
+.card--rail::before { content: ""; position: absolute; left: 20px; right: 20px; top: 0; height: 1.5px;
+  background: linear-gradient(90deg, transparent, var(--accent-line), transparent); }
+.tag { font-size: 11px; padding: 4px 11px; border-radius: 999px; color: var(--text-dim); border: 1px solid var(--border); background: var(--surface); white-space: nowrap; }
+.tag--pin { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.mono { font-family: var(--font-mono); }
+.av { width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #06121a; flex-shrink: 0; background: linear-gradient(140deg, var(--accent), var(--violet)); }
+html[data-theme="light"] .av { color: #fff; }
+.av--anon { background: linear-gradient(140deg, color-mix(in srgb, var(--text) 9%, transparent), color-mix(in srgb, var(--text) 3%, transparent)); color: var(--text-dim); border: 1px solid var(--border); }
+.reveal { opacity: 0; transform: translateY(22px); }
+.reveal.in { opacity: 1; transform: none; transition: opacity .8s var(--ease), transform .8s var(--ease); transition-delay: calc(var(--i,0) * 60ms); }
+
+/* ============================================================
+   ★ 按钮动效（磁吸 + 聚光跟随 + 涟漪 + 箭头位移 + 按下回弹）
+   ============================================================ */
+.btn {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 22px; border-radius: 999px; font-size: 14px; font-weight: 500;
+  border: 1px solid transparent; white-space: nowrap;
+  transform: translate3d(var(--tx, 0), var(--ty, 0), 0) scale(var(--ps, 1));
+  transition: transform .34s var(--ease-spring), box-shadow .34s var(--ease), background .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease);
+  will-change: transform;
+}
+.btn__lb { display: inline-flex; align-items: center; gap: 8px; position: relative; z-index: 2;
+  transform: translate3d(var(--lx, 0), var(--ly, 0), 0); transition: transform .34s var(--ease-spring); }
+/* 聚光跟随 */
+.btn::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: 1; pointer-events: none;
+  background: radial-gradient(120px circle at var(--mx, 50%) var(--my, 50%), var(--btn-spot), transparent 64%);
+  opacity: 0; transition: opacity .32s var(--ease);
+}
+.btn:hover::before { opacity: .85; }
+/* 悬浮扫光 */
+.btn::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 42%; left: -60%; z-index: 1; pointer-events: none;
+  background: linear-gradient(100deg, transparent, color-mix(in srgb, #fff 34%, transparent), transparent);
+  transform: skewX(-18deg); transition: left .62s var(--ease);
+}
+.btn:hover::after { left: 118%; }
+/* 涟漪 */
+.rip { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; z-index: 1;
+  background: currentColor; opacity: .3; pointer-events: none; animation: rip .66s var(--ease) forwards; }
+@keyframes rip { from { transform: scale(0); opacity: .34; } to { transform: scale(26); opacity: 0; } }
+/* 箭头位移 */
+.btn .arw { transition: transform .34s var(--ease-spring); }
+.btn:hover .arw { transform: translateX(4px); }
+
+.btn--primary { background: var(--accent); color: #04140f; font-weight: 600; box-shadow: 0 10px 26px -12px color-mix(in srgb, var(--accent) 70%, transparent); }
+html[data-theme="light"] .btn--primary { color: #fff; }
+.btn--primary:hover { box-shadow: 0 20px 44px -14px color-mix(in srgb, var(--accent) 78%, transparent); }
+.btn--ghost { border-color: var(--border-strong); background: var(--surface); }
+.btn--ghost:hover { background: var(--surface-2); border-color: var(--accent-line); box-shadow: var(--shadow-hi); }
+.btn--quiet { color: var(--text-dim); }
+.btn--quiet:hover { color: var(--text); background: var(--surface); }
+.btn--sm { padding: 7px 15px; font-size: 13px; }
+.btn--lg { padding: 14px 30px; font-size: 15px; }
+.btn--icon { padding: 11px 16px; }
+.btn:active { --ps: .955; }
+/* 关掉动效时 */
+body.fx-off .btn { transform: none; }
+body.fx-off .btn::before, body.fx-off .btn::after { display: none; }
+body.fx-off .rip { display: none; }
+
+/* ---------- 图标按钮（顶栏用，也带磁吸） ---------- */
+.iconbtn { position: relative; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--border);
+  color: var(--text-dim); transition: all .28s var(--ease); transform: translate3d(var(--tx,0), var(--ty,0), 0) scale(var(--ps,1)); }
+.iconbtn:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }
+.iconbtn:active { --ps: .92; }
+.badge { position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 600; display: grid; place-items: center; font-family: var(--font-mono); line-height: 1; }
+
+/* ============================================================
+   骨架
+   ============================================================ */
+.shell { position: relative; z-index: 1; display: block; }
+.shell__main { min-width: 0; }
+.page { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; display: grid; gap: 22px; }
+.hdr { padding: 14px 0 4px; }
+.hdr__in { display: flex; align-items: center; gap: 18px; padding: 10px 12px 10px 18px; border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-solid) 68%, transparent); border: 1px solid var(--border);
+  backdrop-filter: blur(22px) saturate(170%); box-shadow: var(--shadow), inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.02em; font-size: 17px; }
+.brand em { font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 12px; color: var(--text-mute); }
+.nav { display: flex; gap: 2px; }
+.nav a { font-size: 14px; color: var(--text-dim); padding: 7px 14px; border-radius: 999px; transition: all .28s var(--ease); }
+.nav a:hover { color: var(--text); background: var(--surface); }
+.nav a.on { color: var(--text); background: var(--surface-2); }
+.acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.userchip { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; border: 1px solid var(--border); font-size: 13px; color: var(--text-dim); transition: all .28s var(--ease); }
+.userchip .av { width: 26px; height: 26px; font-size: 12px; }
+.userchip:hover { border-color: var(--border-strong); color: var(--text); }
+
+/* 侧边导航（仅 L3 显示） */
+.sidenav { display: none; }
+.sidenav__in { position: sticky; top: 60px; display: grid; gap: 6px; padding: 14px 12px; border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--surface-solid) 50%, transparent); border: 1px solid var(--border); backdrop-filter: blur(20px); }
+.sidenav__lk { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: var(--r-sm); font-size: 14px; color: var(--text-dim); transition: all .28s var(--ease); }
+.sidenav__lk:hover { color: var(--text); background: var(--surface-2); }
+.sidenav__lk.on { color: var(--accent); background: var(--accent-soft); }
+.sidenav__hr { height: 1px; background: var(--border); margin: 8px 4px; }
+.sidenav__h { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: var(--text-mute); padding: 6px 12px 2px; text-transform: uppercase; }
+.sidenav__cat { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--r-sm); font-size: 13.5px; color: var(--text-dim); transition: all .28s var(--ease); }
+.sidenav__cat:hover { color: var(--text); background: var(--surface-2); }
+.sidenav__cat b { margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--text-mute); }
+
+/* ---------- Hero ---------- */
+.hero { padding: 56px 0 6px; }
+.hero h1 { font-size: clamp(36px, 4.8vw, 58px); line-height: 1.06; letter-spacing: -.038em; font-weight: 700; }
+.hero h1 i { font-style: normal; color: var(--accent); position: relative; }
+.hero h1 i::after { content: ""; position: absolute; left: 0; right: -2px; bottom: .06em; height: .16em; border-radius: 4px; background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.eyebrow { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--text-dim); border: 1px solid var(--border); border-radius: 999px; padding: 5px 13px; background: var(--surface); backdrop-filter: blur(12px); margin-bottom: 20px; }
+.dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); animation: pulse 2.6s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); } 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+.hero__sub { margin-top: 18px; font-family: var(--font-display); font-style: italic; font-size: clamp(16px, 1.8vw, 20px); color: var(--text-dim); max-width: 28ch; }
+.search { margin-top: 26px; max-width: 470px; }
+.search__in { display: flex; align-items: center; gap: 11px; padding: 6px 6px 6px 18px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); backdrop-filter: blur(18px); transition: border-color .35s var(--ease), box-shadow .35s var(--ease); }
+.search__in:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow); }
+.search__in input { flex: 1; font-size: 14.5px; padding: 10px 0; min-width: 0; }
+.search__in input::placeholder { color: var(--text-mute); }
+.kbd { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-mute); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; }
+.hero__cta { margin-top: 22px; display: flex; gap: 12px; flex-wrap: wrap; }
+.hero__stats { margin-top: 34px; display: flex; gap: 34px; flex-wrap: wrap; }
+.stat b { display: block; font-family: var(--font-mono); font-size: 24px; font-weight: 500; letter-spacing: -.02em; }
+.stat span { font-size: 12px; color: var(--text-mute); letter-spacing: .05em; }
+
+/* ---------- 信息模块 ---------- */
+.zone { display: grid; gap: 14px; }
+.mod { padding: 20px; }
+.mod__h { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.mod__h .ic { color: var(--accent); }
+.mod__h span { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-mute); letter-spacing: .1em; }
+.ann__t { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 10px; border-radius: var(--r-md); text-align: left; transition: background .3s var(--ease); }
+.ann__t:hover { background: var(--surface-2); }
+.ann.on .ann__t { background: var(--accent-soft); }
+.ann__mk { width: 6px; height: 6px; border-radius: 999px; background: var(--text-mute); margin-top: 8px; flex-shrink: 0; }
+.ann.on .ann__mk { background: var(--accent); }
+.ann__tx { font-size: 13.5px; line-height: 1.55; font-weight: 500; }
+.ann__bd { display: none; padding: 2px 10px 10px 26px; font-size: 12.8px; line-height: 1.72; color: var(--text-dim); }
+.ann.on .ann__bd { display: block; animation: fin .34s var(--ease); }
+@keyframes fin { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.echo p { font-family: var(--font-display); font-style: italic; font-size: 17px; line-height: 1.62; color: var(--text-dim); }
+.echo__f { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; font-size: 11.5px; color: var(--text-mute); }
+.smod { display: flex; gap: 22px; }
+.smod b { display: block; font-family: var(--font-mono); font-size: 20px; font-weight: 500; }
+.smod span { font-size: 11px; color: var(--text-mute); }
+.pact { display: grid; gap: 9px; }
+.pact li { display: flex; gap: 10px; font-size: 12.8px; line-height: 1.6; color: var(--text-dim); }
+.pact b { color: var(--text); font-weight: 500; }
+.pact .no { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent); padding-top: 3px; }
+
+/* ---------- 精选 / 筛选 / 列表 ---------- */
+.spot { padding: 24px 26px; border-radius: var(--r-xl); cursor: pointer; }
+html[data-theme="light"] .spot { background: linear-gradient(150deg, rgba(14,143,112,.055), var(--surface) 55%); }
+html[data-theme="dark"] .spot { background: linear-gradient(150deg, rgba(95,224,189,.075), var(--surface) 55%); }
+.spot__h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.spot__b { font-size: 16.5px; line-height: 1.82; }
+.spot__f { display: flex; gap: 16px; margin-top: 16px; font-size: 12px; color: var(--text-mute); flex-wrap: wrap; align-items: center; }
+.filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 999px; font-size: 13px; color: var(--text-dim); border: 1px solid var(--border); background: var(--surface); transition: all .3s var(--ease); }
+.pill:hover { color: var(--text); border-color: var(--border-strong); transform: translateY(-1px); }
+.pill.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.pill i { font-style: normal; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-mute); }
+.pill.on i { color: var(--accent); }
+.filters__sp { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); }
+.feed { display: grid; gap: 14px; margin-top: 18px; }
+.post { padding: 22px 24px; }
+.post__t { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+.who { display: flex; flex-direction: column; line-height: 1.24; min-width: 0; }
+.who b { font-size: 13.5px; font-weight: 500; }
+.who span { font-size: 11.5px; color: var(--text-mute); font-family: var(--font-mono); }
+.post__t .tag { margin-left: auto; }
+.post__b { font-size: 15.5px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+.post__f { display: flex; align-items: center; gap: 16px; margin-top: 15px; font-size: 12px; color: var(--text-mute); }
+.metric { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); }
+.post__acts { margin-left: auto; display: flex; gap: 6px; opacity: 0; transform: translateX(6px); transition: all .35s var(--ease); }
+.post:hover .post__acts { opacity: 1; transform: none; }
+.loadmore { display: flex; justify-content: center; margin-top: 24px; }
+
+/* ============================================================
+   ★ 4 套布局
+   ============================================================ */
+.shell { padding-bottom: 70px; }
+
+/* --- L1 剧院式：一条窄中栏，极致沉浸 --- */
+body[data-l="1"] .page { max-width: 830px; }
+body[data-l="1"] .hero { text-align: center; padding-top: 62px; }
+body[data-l="1"] .hero__sub { margin-left: auto; margin-right: auto; }
+body[data-l="1"] .search { margin-left: auto; margin-right: auto; }
+body[data-l="1"] .hero__cta, body[data-l="1"] .hero__stats { justify-content: center; }
+body[data-l="1"] .zone { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body[data-l="1"] .feed { grid-template-columns: minmax(0, 1fr); }
+
+/* --- L2 瀑布式：满宽 + 双列瀑布 --- */
+body[data-l="2"] .page { grid-template-columns: minmax(0, 1fr) 372px; align-items: start; }
+body[data-l="2"] .hero { grid-column: 1; grid-row: 1; }
+body[data-l="2"] .spot { grid-column: 2; grid-row: 1; }
+body[data-l="2"] .zone { grid-column: 1 / -1; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr); }
+body[data-l="2"] .mod--pact { grid-column: 1 / -1; }
+body[data-l="2"] .mod--pact .pact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+body[data-l="2"] .content { grid-column: 1 / -1; }
+body[data-l="2"] .feed { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+
+/* --- L3 App 式：左导航 + 内容 + 右栏 --- */
+body[data-l="3"] .shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 26px; max-width: 1500px; margin: 0 auto; padding: 0 24px 70px; }
+body[data-l="3"] .sidenav { display: block; padding-top: 14px; }
+body[data-l="3"] .page { grid-template-columns: minmax(0, 1fr) 330px; align-items: start; padding: 0; }
+body[data-l="3"] .hero { grid-column: 1 / -1; grid-row: 1; padding-top: 40px; }
+body[data-l="3"] .hero h1 { font-size: clamp(32px, 3.6vw, 46px); }
+body[data-l="3"] .spot { grid-column: 1; grid-row: 2; }
+body[data-l="3"] .zone { grid-column: 2; grid-row: 2 / span 2; }
+body[data-l="3"] .content { grid-column: 1; grid-row: 3; }
+body[data-l="3"] .feed { grid-template-columns: minmax(0, 1fr); }
+
+/* --- L4 Bento 头版：模块宫格 + 居中窄栏正文 --- */
+body[data-l="4"] .page { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+body[data-l="4"] .hero { grid-column: 1 / 4; grid-row: 1; }
+body[data-l="4"] .hero h1 { font-size: clamp(32px, 3.8vw, 48px); }
+body[data-l="4"] .spot { grid-column: 4; grid-row: 1; }
+body[data-l="4"] .zone { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(146px, auto); }
+body[data-l="4"] .mod--ann { grid-column: span 2; grid-row: span 2; }
+body[data-l="4"] .mod--pact { grid-column: span 2; }
+body[data-l="4"] .content { grid-column: 1 / -1; width: 100%; max-width: 840px; margin: 0 auto; }
+body[data-l="4"] .feed { grid-template-columns: minmax(0, 1fr); }
+
+/* ============================================================
+   按钮动效展示页
+   ============================================================ */
+.view { display: none; }
+.view.on { display: block; animation: vin .5s var(--ease) both; }
+@keyframes vin { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.fxwrap { max-width: 900px; margin: 0 auto; padding: 46px 24px 80px; }
+.fxwrap h2 { font-size: clamp(26px, 3.4vw, 34px); letter-spacing: -.03em; font-weight: 700; }
+.fxwrap > p { margin-top: 8px; color: var(--text-dim); font-size: 14px; }
+.fxrow { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; padding: 26px 24px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); margin-top: 16px; }
+.fxrow__t { width: 100%; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-mute); margin-bottom: 4px; }
+.fxnote { margin-top: 10px; font-size: 13px; color: var(--text-dim); line-height: 1.75; }
+.hintcard { display: flex; gap: 12px; padding: 14px 17px; border-radius: var(--r-md); background: var(--accent-soft); border: 1px solid var(--accent-line); font-size: 13.5px; color: var(--text-dim); line-height: 1.7; margin-top: 18px; }
+
+/* ---------- 对比说明 ---------- */
+.cmp { max-width: 1080px; margin: 0 auto; padding: 46px 24px 90px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 16px; }
+.tbl th, .tbl td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.tbl th { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-mute); font-family: var(--font-mono); font-weight: 400; }
+.tbl .y { color: var(--accent); }
+.tbl .n { color: var(--text-mute); }
+.cmp h3 { font-size: 15px; font-weight: 600; margin: 30px 0 12px; display: flex; align-items: center; gap: 10px; }
+.cmp h3::before { content: ""; width: 14px; height: 2px; border-radius: 2px; background: var(--accent); }
+
+.ftr { border-top: 1px solid var(--border); padding: 28px 0; position: relative; z-index: 1; }
+.ftr__in { max-width: 1180px; margin: 0 auto; padding: 0 24px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-mute); }
+
+@media (max-width: 1080px) {
+  body[data-l="3"] .shell { grid-template-columns: minmax(0, 1fr); }
+  body[data-l="3"] .sidenav { display: none; }
+  body[data-l="3"] .page { grid-template-columns: minmax(0, 1fr); }
+  body[data-l="3"] .hero, body[data-l="3"] .spot, body[data-l="3"] .zone, body[data-l="3"] .content { grid-column: 1; grid-row: auto; }
+  body[data-l="3"] .zone { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body[data-l="2"] .page { grid-template-columns: minmax(0, 1fr); }
+  body[data-l="2"] .hero, body[data-l="2"] .spot { grid-column: 1; grid-row: auto; }
+  body[data-l="2"] .feed { grid-template-columns: minmax(0, 1fr); }
+  body[data-l="4"] .page { grid-template-columns: minmax(0, 1fr); }
+  body[data-l="4"] .hero, body[data-l="4"] .spot { grid-column: 1; grid-row: auto; }
+  body[data-l="4"] .zone { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body[data-l="4"] .mod--ann, body[data-l="4"] .mod--pact { grid-column: span 1; grid-row: auto; }
+}
+@media (max-width: 720px) {
+  .page { padding: 0 16px; }
+  .nav { display: none; }
+  .brand em { display: none; }
+  .brand { font-size: 15px; }
+  .hide-m { display: none !important; }
+  .userchip { padding: 5px; }
+  .uname { display: none; }
+  .hero { padding: 34px 0 4px; }
+  body[data-l="1"] .zone, body[data-l="3"] .zone, body[data-l="4"] .zone, body[data-l="2"] .zone { grid-template-columns: minmax(0, 1fr); }
+  .post { padding: 18px; }
+  .post__acts { opacity: 1; transform: none; }
+  .ctl { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 8px 12px; }
+  .ctl::-webkit-scrollbar { display: none; }
+  .ctl > * { flex-shrink: 0; }
+  .ctl__sp { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  .reveal { opacity: 1; transform: none; }
+  #stars { display: none; }
+}
+</style>
+</head>
+<body data-l="1" data-theme="dark">
+
+<div class="bg" aria-hidden="true">
+  <div class="bg__art"></div>
+  <div class="bg__veil"></div>
+  <div class="nebula n1"></div><div class="nebula n2"></div><div class="nebula n3"></div>
+  <div class="bg__band"></div><div class="bg__ribbon"></div><div class="bg__vig"></div><div class="bg__grain"></div>
+  <canvas id="stars"></canvas>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#5fe0bd"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient>
+    <symbol id="i-tree" viewBox="0 0 24 24" fill="none" stroke="url(#lg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6c-3.7 0-6.4 2.5-6.4 6 0 2.2 1.1 3.7 2.2 4.7-.6.5-1.2 1.2-1.2 2.3h10.8c0-1.1-.6-1.8-1.2-2.3 1.1-1 2.2-2.5 2.2-4.7 0-3.5-2.7-6-6.4-6Z"/><path d="M12 15.6V21M12 18.6l2.6-2M12 17.2l-2.3-1.8"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/></symbol>
+    <symbol id="i-cog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 11.5 4a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 22 11a2 2 0 1 1 0 4Z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+    <symbol id="i-like" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3 4.6 13a4.6 4.6 0 0 1 6.5-6.5l.9.9.9-.9A4.6 4.6 0 0 1 19.4 13Z"/></symbol>
+    <symbol id="i-comment" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.4A8 8 0 1 1 20 12Z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="m12 3.6 2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8Z"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4m0 10v4M3 12h4m10 0h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></symbol>
+    <symbol id="i-mega" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4a1 1 0 0 0 1 1h2l7 4V5L7 9H5a1 1 0 0 0-1 1Z"/><path d="M17.5 9a4 4 0 0 1 0 6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-3.2 7-9V5.6L12 3 5 5.6V12c0 5.8 7 9 7 9Z"/><path d="m9.2 12 2 2 3.6-4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2m0 14.6v2.2M2.5 12h2.2m14.6 0h2.2M5.3 5.3l1.6 1.6m10.2 10.2 1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></symbol>
+    <symbol id="i-cell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M9 9h6v6H9z"/></symbol>
+  </defs>
+</svg>
+
+<!-- ===== 控制条 ===== -->
+<div class="ctl">
+  <span class="ctl__tag">LAYOUT PICKER</span>
+  <div class="ctl__g" id="gLayout">
+    <span>布局</span>
+    <button class="ctl__b on" data-l="1">1 剧院式</button>
+    <button class="ctl__b" data-l="2">2 瀑布式</button>
+    <button class="ctl__b" data-l="3">3 App 式</button>
+    <button class="ctl__b" data-l="4">4 Bento</button>
+    <button class="ctl__b" data-l="fx">按钮动效</button>
+    <button class="ctl__b" data-l="cmp">对比</button>
+  </div>
+  <div class="ctl__g" id="gTheme">
+    <span>主题</span>
+    <button class="ctl__b on" data-theme="dark">深夜</button>
+    <button class="ctl__b" data-theme="light">白天</button>
+  </div>
+  <div class="ctl__g">
+    <span>动效</span>
+    <button class="ctl__b on" data-fx="on">开</button>
+    <button class="ctl__b" data-fx="off">关</button>
+  </div>
+  <span class="ctl__sp" id="hint">布局 1 剧院式 · 点顶部「对比」看四套的取舍</span>
+</div>
+
+<!-- ============================================================
+     首页（4 套布局共用这一份 DOM，靠 body[data-L] 切换排布）
+     ============================================================ -->
+<div class="view on" id="v-home">
+<div class="shell">
+  <!-- 左侧导航：仅 L3 显示 -->
+  <aside class="sidenav">
+    <div class="sidenav__in">
+      <a class="sidenav__lk on" href="#"><svg width="17" height="17"><use href="#i-home"/></svg> 广场</a>
+      <a class="sidenav__lk" href="#"><svg width="17" height="17"><use href="#i-plus"/></svg> 写一条心事</a>
+      <a class="sidenav__lk" href="#"><svg width="17" height="17"><use href="#i-mail"/></svg> 消息 <b style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--accent)">3</b></a>
+      <a class="sidenav__lk" href="#"><svg width="17" height="17"><use href="#i-cell"/></svg> 我的主页</a>
+      <div class="sidenav__hr"></div>
+      <div class="sidenav__h">分类</div>
+      <a class="sidenav__cat" href="#">全部 <b>11</b></a>
+      <a class="sidenav__cat" href="#">情感树洞 <b>2</b></a>
+      <a class="sidenav__cat" href="#">生活随笔 <b>1</b></a>
+      <a class="sidenav__cat" href="#">匿名吐槽 <b>1</b></a>
+      <a class="sidenav__cat" href="#">求助问答 <b>2</b></a>
+      <a class="sidenav__cat" href="#">趣味分享 <b>1</b></a>
+      <div class="sidenav__hr"></div>
+      <button class="btn btn--primary btn--sm" data-magnetic style="width:100%;margin-top:6px">
+        <span class="btn__lb"><svg width="15" height="15"><use href="#i-spark"/></svg> 匿名写一条</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="shell__main">
+    <header class="hdr">
+      <div class="hdr__in">
+        <a class="brand" href="#"><svg style="width:28px;height:28px"><use href="#i-tree"/></svg> 树洞 <em>deep hollow</em></a>
+        <nav class="nav"><a class="on" href="#">广场</a><a href="#">发布</a><a href="#">我的</a></nav>
+        <div class="acts">
+          <button class="iconbtn" title="搜索" data-magnetic data-strength=".12"><svg width="17" height="17"><use href="#i-search"/></svg></button>
+          <button class="iconbtn" title="主题" data-magnetic data-strength=".12"><svg width="17" height="17"><use href="#i-moon"/></svg></button>
+          <button class="iconbtn" title="消息" data-magnetic data-strength=".12"><svg width="17" height="17"><use href="#i-bell"/></svg><span class="badge">3</span></button>
+          <button class="iconbtn hide-m" title="设置" data-magnetic data-strength=".12"><svg width="17" height="17"><use href="#i-cog"/></svg></button>
+          <button class="userchip"><span class="av">夜</span><span class="uname">夜航船</span></button>
+        </div>
+      </div>
+    </header>
+
+    <div class="page">
+      <!-- Hero -->
+      <section class="hero">
+        <span class="eyebrow"><i class="dot"></i> 匿名 · 安全 · 被听见</span>
+        <h1>把心事<br />种进<i>树洞</i>里</h1>
+        <p class="hero__sub">说给懂的人听，不必署名。</p>
+        <label class="search__in">
+          <svg width="17" height="17" style="color:var(--text-mute)"><use href="#i-search"/></svg>
+          <input placeholder="搜索心事、关键词或某个人的昵称…" />
+          <span class="kbd">/</span>
+        </label>
+        <div class="hero__cta">
+          <button class="btn btn--primary btn--lg" data-magnetic data-ripple>
+            <span class="btn__lb"><svg width="16" height="16"><use href="#i-spark"/></svg> 匿名写一条</span>
+          </button>
+          <button class="btn btn--ghost btn--lg" data-magnetic data-ripple>
+            <span class="btn__lb">看看今晚的心事 <svg class="arw" width="15" height="15"><use href="#i-arrow"/></svg></span>
+          </button>
+        </div>
+        <div class="hero__stats">
+          <div class="stat"><b>11</b><span>条心事</span></div>
+          <div class="stat"><b>5</b><span>个分类</span></div>
+        </div>
+      </section>
+
+      <!-- 精选（置顶） -->
+      <article class="card card--hover spot">
+        <div class="spot__h">
+          <span class="tag tag--pin">置顶 · 精选</span>
+          <span class="mono" style="font-size:11.5px;color:var(--text-mute)">3 分钟前</span>
+          <span class="tag" style="margin-left:auto">匿名吐槽</span>
+        </div>
+        <p class="spot__b">今天第三次面试挂了。走出写字楼的时候正好下雨，我没有带伞，就那样走了一段。突然觉得这半年像一场很长的梅雨季——但雨总会停的吧，总会的。</p>
+        <div class="spot__f">
+          <span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 1,204</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 386</span>
+          <span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 74</span>
+          <span style="margin-left:auto;color:var(--accent);font-size:12.5px;display:inline-flex;align-items:center;gap:4px">读全文 <svg width="12" height="12"><use href="#i-chev"/></svg></span>
+        </div>
+      </article>
+
+      <!-- 信息模块 -->
+      <div class="zone">
+        <div class="card card--rail mod mod--ann">
+          <div class="mod__h"><svg class="ic" width="15" height="15"><use href="#i-mega"/></svg> 树洞公告 <span>1 条</span></div>
+          <div class="ann on" data-ann>
+            <button class="ann__t"><i class="ann__mk"></i><span class="ann__tx">欢迎来到树洞！</span></button>
+            <div class="ann__bd">这是一个匿名分享的平台，请遵守社区规范，文明发言。禁止人身攻击、泄露他人隐私、发布广告与联系方式。</div>
+          </div>
+          <div class="ann" data-ann>
+            <button class="ann__t"><i class="ann__mk"></i><span class="ann__tx">今夜话题：你最近一次觉得“值得”，是因为什么？</span></button>
+            <div class="ann__bd">在广场写下你的答案，带上「趣味分享」分类，会更容易被看见。</div>
+          </div>
+        </div>
+
+        <div class="card mod echo">
+          <div class="mod__h"><svg class="ic" width="15" height="15"><use href="#i-bell"/></svg> 今日回声</div>
+          <p>“今天第三次面试挂了。走出写字楼的时候正好下雨，我没有带伞，就那样走了一段。”</p>
+          <div class="echo__f"><span>来自 一个匿名的人</span><span style="color:var(--accent)">去看看 →</span></div>
+        </div>
+
+        <div class="card mod">
+          <div class="mod__h"><svg class="ic" width="15" height="15"><use href="#i-cell"/></svg> 树洞数据</div>
+          <div class="smod">
+            <div><b>11</b><span>条心事</span></div>
+            <div><b>5</b><span>个分类</span></div>
+          </div>
+        </div>
+
+        <div class="card mod mod--pact">
+          <div class="mod__h"><svg class="ic" width="15" height="15"><use href="#i-shield"/></svg> 树洞公约</div>
+          <ul class="pact">
+            <li><span class="no">01</span><span><b>匿名是保护，不是武器。</b>不攻击、不人肉、不泄露隐私。</span></li>
+            <li><span class="no">02</span><span><b>不做广告与引流。</b>联系方式、二维码、外链都会被拦下。</span></li>
+            <li><span class="no">03</span><span><b>你可以只写一句。</b>不必完整，不必正确，写下来就够。</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 内容 -->
+      <div class="content">
+        <div class="filters">
+          <button class="pill on">全部 <i>11</i></button>
+          <button class="pill">情感树洞 <i>2</i></button>
+          <button class="pill">生活随笔 <i>1</i></button>
+          <button class="pill">匿名吐槽 <i>1</i></button>
+          <button class="pill">求助问答 <i>2</i></button>
+          <button class="pill">趣味分享 <i>1</i></button>
+          <span class="filters__sp">共 11 条</span>
+        </div>
+        <div class="feed">
+          <article class="card card--hover post reveal" style="--i:0">
+            <div class="post__t"><span class="av">林</span><span class="who"><b>林深见鹿</b><span>22 分钟前</span></span><span class="tag">情感树洞</span></div>
+            <p class="post__b">妈妈打电话问我最近吃得好不好，我说挺好的。挂掉电话，看着桌上那碗泡面，笑了一下，然后哭了。</p>
+            <div class="post__f"><span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 872</span><span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 291</span><span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 48</span><span class="post__acts"><button class="btn btn--ghost btn--sm" data-magnetic data-strength=".1">抱抱</button><button class="btn btn--ghost btn--sm" data-magnetic data-strength=".1">收藏</button></span></div>
+          </article>
+          <article class="card card--hover post reveal" style="--i:1">
+            <div class="post__t"><span class="av av--anon"><svg width="15" height="15"><use href="#i-user"/></svg></span><span class="who"><b>匿名</b><span>1 小时前</span></span><span class="tag">求助问答</span></div>
+            <p class="post__b">考研二战上岸了。没人知道这一年我在图书馆的角落哭过多少次，也没人知道我为什么还笑得出来。</p>
+            <div class="post__f"><span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 2,106</span><span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 743</span><span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 132</span><span class="post__acts"><button class="btn btn--ghost btn--sm" data-magnetic data-strength=".1">抱抱</button><button class="btn btn--ghost btn--sm" data-magnetic data-strength=".1">收藏</button></span></div>
+          </article>
+          <article class="card card--hover post reveal" style="--i:2">
+            <div class="post__t"><span class="av av--anon"><svg width="15" height="15"><use href="#i-user"/></svg></span><span class="who"><b>匿名</b><span>3 小时前</span></span><span class="tag">生活随笔</span></div>
+            <p class="post__b">养了 6 年的猫今天走了。它最后是趴在我手边睡着的，很安静，像平时一样。我到现在也没舍得收走它的碗。</p>
+            <div class="post__f"><span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 3,458</span><span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 1,209</span><span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 268</span><span class="post__acts"><button class="btn btn--ghost btn--sm" data-magnetic data-strength=".1">抱抱</button><button class="btn btn--ghost btn--sm" data-magnetic data-strength=".1">收藏</button></span></div>
+          </article>
+          <article class="card card--hover post reveal" style="--i:3">
+            <div class="post__t"><span class="av av--anon"><svg width="15" height="15"><use href="#i-user"/></svg></span><span class="who"><b>匿名</b><span>8 小时前</span></span><span class="tag">情感树洞</span></div>
+            <p class="post__b">暗恋了三年的人今天发了婚礼邀请。我点了“我会去”，然后哭了一整晚。第二天还是挑了一件最好看的裙子。</p>
+            <div class="post__f"><span class="metric"><svg width="13" height="13"><use href="#i-eye"/></svg> 1,893</span><span class="metric"><svg width="13" height="13"><use href="#i-like"/></svg> 612</span><span class="metric"><svg width="13" height="13"><use href="#i-comment"/></svg> 91</span><span class="post__acts"><button class="btn btn--ghost btn--sm" data-magnetic data-strength=".1">抱抱</button><button class="btn btn--ghost btn--sm" data-magnetic data-strength=".1">收藏</button></span></div>
+          </article>
+        </div>
+        <div class="loadmore">
+          <button class="btn btn--ghost" data-magnetic data-ripple><span class="btn__lb">加载更多</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============================================================
+     按钮动效
+     ============================================================ -->
+<section class="view" id="v-fx">
+  <div class="fxwrap">
+    <h2>按钮动效 · 5 个叠加的小动作</h2>
+    <p>把鼠标移到按钮上、按住不放，感受这几层。右上角「动效 关」可以对比静态版。</p>
+
+    <div class="fxrow">
+      <div class="fxrow__t">① 磁吸 Magnetic —— 按钮被光标"吸"过去，文字跟得更慢一点，形成层次</div>
+      <button class="btn btn--primary btn--lg" data-magnetic data-ripple><span class="btn__lb">匿名写一条</span></button>
+      <button class="btn btn--ghost btn--lg" data-magnetic data-ripple><span class="btn__lb">看看今晚的心事</span></button>
+      <button class="btn btn--quiet" data-magnetic data-ripple><span class="btn__lb">次要操作</span></button>
+      <div class="fxnote">位移系数 0.2（按钮）/ 0.08（文字）；移出时用 <code>cubic-bezier(.34,1.56,.64,1)</code> 回弹，带一点过冲。</div>
+    </div>
+
+    <div class="fxrow">
+      <div class="fxrow__t">② 聚光跟随 Spotlight —— 一团柔光跟着光标在按钮表面移动</div>
+      <button class="btn btn--primary btn--lg" data-magnetic><span class="btn__lb">主按钮</span></button>
+      <button class="btn btn--ghost btn--lg" data-magnetic><span class="btn__lb">次按钮</span></button>
+      <div class="fxnote">用 <code>radial-gradient</code> + CSS 变量 <code>--mx/--my</code>，只在 hover 时显现，不额外增加 DOM。</div>
+    </div>
+
+    <div class="fxrow">
+      <div class="fxrow__t">③ 涟漪 Ripple —— 从按下那一点荡开一圈（点一下试试）</div>
+      <button class="btn btn--primary btn--lg" data-ripple><span class="btn__lb">点我试试</span></button>
+      <button class="btn btn--ghost btn--lg" data-ripple><span class="btn__lb">也可以点这里</span></button>
+      <div class="fxnote">按下时创建一个 span，660ms 后自动移除；不堆积节点。</div>
+    </div>
+
+    <div class="fxrow">
+      <div class="fxrow__t">④ 悬浮扫光 Sweep + 箭头位移</div>
+      <button class="btn btn--ghost btn--lg" data-magnetic><span class="btn__lb">了解树洞公约 <svg class="arw" width="15" height="15"><use href="#i-arrow"/></svg></span></button>
+      <button class="btn btn--primary btn--lg" data-magnetic><span class="btn__lb">去发布 <span class="arw" style="display:inline-flex"><svg width="15" height="15"><use href="#i-arrow"/></svg></span></span></button>
+      <div class="fxnote">一道斜向高光 0.62s 掠过按钮；箭头再向右推 4px。</div>
+    </div>
+
+    <div class="fxrow">
+      <div class="fxrow__t">⑤ 按下回弹 Press —— 按住时缩到 0.955，松开弹回</div>
+      <button class="btn btn--primary btn--lg" data-magnetic data-ripple><span class="btn__lb">按住不放试试</span></button>
+      <button class="btn btn--ghost btn--lg" data-magnetic data-ripple><span class="btn__lb">这个也一样</span></button>
+      <div class="fxnote">缩放走 <code>--ps</code> 变量，和磁吸的位移合成同一个 transform，不打架。</div>
+    </div>
+
+    <div class="hintcard">
+      <svg width="18" height="18" style="flex-shrink:0;color:var(--accent)"><use href="#i-spark"/></svg>
+      <span><b>性能与可访问性：</b>全部只改 <code>transform / opacity</code>（GPU 合成，不触发重排），60fps 无压力；
+      触摸设备不启用磁吸（没有 hover 概念）；<code>prefers-reduced-motion</code> 下自动全部关闭。</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     对比说明
+     ============================================================ -->
+<section class="view" id="v-cmp">
+  <div class="cmp">
+    <h2 style="font-size:clamp(26px,3.4vw,34px);letter-spacing:-.03em;font-weight:700">四套布局怎么选</h2>
+    <p style="margin-top:8px;color:var(--text-dim);font-size:14px">同一份内容、同一套视觉，只换排布。顶部切换可以来回对比。</p>
+
+    <table class="tbl">
+      <tr>
+        <th style="width:112px">布局</th><th>排布</th><th>适合</th><th>代价</th>
+      </tr>
+      <tr>
+        <td><b>1 剧院式</b><br /><span class="mono" style="font-size:11px;color:var(--text-mute)">CENTERED</span></td>
+        <td>830px 窄中栏一路到底，无侧栏，Hero 居中</td>
+        <td>最像"树洞"——安静、私密、专注，适合只看内容不找功能</td>
+        <td>桌面两侧留白大；公告/分类只能压在正文上方，弱化</td>
+      </tr>
+      <tr>
+        <td><b>2 瀑布式</b><br /><span class="mono" style="font-size:11px;color:var(--text-mute)">MASONRY</span></td>
+        <td>满宽；Hero 左 + 精选右；公告/回声/数据三栏条；帖子双列</td>
+        <td>浏览效率最高，一屏能看到最多的心事，像豆瓣/小红书</td>
+        <td>双列会打断"一条条往下读"的节奏；短帖旁边留空</td>
+      </tr>
+      <tr>
+        <td><b>3 App 式</b><br /><span class="mono" style="font-size:11px;color:var(--text-mute)">SHELL</span></td>
+        <td>左侧固定导航（广场/发布/消息/我的 + 分类）+ 中栏单列 + 右栏模块</td>
+        <td>功能长起来之后最好用；有"产品感"，分类随手可切</td>
+        <td>三栏在 1366 以下会挤；左侧导航对纯浏览用户是多余的一层</td>
+      </tr>
+      <tr>
+        <td><b>4 Bento</b><br /><span class="mono" style="font-size:11px;color:var(--text-mute)">MAGAZINE</span></td>
+        <td>Hero 左 + 精选右；下方 4 格宫格（公告 2×2 / 回声 / 数据 / 公约）；正文回到 840 居中</td>
+        <td>最好看、最有"设计感"；信息主次一眼分明，适合做首屏展示</td>
+        <td>宫格占屏高，首屏看不到帖子（要滑一下）；维护成本略高</td>
+      </tr>
+    </table>
+
+    <h3>我的建议</h3>
+    <p style="color:var(--text-dim);font-size:13.5px;line-height:1.85">
+      想要"一眼就记住"的观感 → <b>4 Bento</b>；想要"最好读、最像树洞" → <b>1 剧院式</b>；
+      想要"能看很多、以后还要加功能" → <b>3 App 式</b>；想要"效率优先、一眼扫完" → <b>2 瀑布式</b>。<br />
+      如果让我只推一个：<b>1 剧院式 + 把公告做成正文上方的一条细横幅</b>——最贴题、最不容易出错，移动端也和现在完全一致（本来就是单列）。
+    </p>
+
+    <h3>按钮动效</h3>
+    <p style="color:var(--text-dim);font-size:13.5px;line-height:1.85">
+      5 个动作会作为全局基础件落到 <code>main.css</code>（磁吸 / 聚光跟随 / 涟漪 / 扫光+箭头 / 按下回弹），
+      任何 <code>.dh-btn</code> 加 <code>data-magnetic</code> 就生效，不用逐页写。
+    </p>
+  </div>
+</section>
+
+<footer class="ftr">
+  <div class="ftr__in">
+    <span>© 2026 树洞 · 布局选型稿 — 未改动正式代码，选定后再落地</span>
+    <span class="mono">LAYOUT 1–4 × THEME × FX 可自由组合对比</span>
+  </div>
+</footer>
+
+<script>
+/* ---------- 视图与开关 ---------- */
+const hint = document.getElementById('hint')
+const NAMES = { 1: '布局 1 剧院式（830 窄中栏，最沉浸）', 2: '布局 2 瀑布式（满宽 + 双列）', 3: '布局 3 App 式（左导航 + 右栏）', 4: '布局 4 Bento 头版（宫格 + 居中正文）' }
+
+document.querySelector('.ctl').addEventListener('click', (e) => {
+  const b = e.target.closest('.ctl__b')
+  if (!b) return
+  b.parentElement.querySelectorAll('.ctl__b').forEach((x) => x.classList.toggle('on', x === b))
+
+  // 注意：必须用 dataset.l / setAttribute('data-l')。
+  // HTML 属性名会被统一小写，写 dataset.L 实际会生成 data--l，CSS 永远匹配不上。
+  const L = b.getAttribute('data-l')
+  if (L) {
+    const isLayout = ['1', '2', '3', '4'].includes(L)
+    document.getElementById('v-home').classList.toggle('on', isLayout)
+    document.getElementById('v-fx').classList.toggle('on', L === 'fx')
+    document.getElementById('v-cmp').classList.toggle('on', L === 'cmp')
+    if (isLayout) { document.body.setAttribute('data-l', L); hint.textContent = NAMES[L] }
+    else hint.textContent = L === 'fx' ? '按钮动效：把鼠标放到按钮上 / 按住不放' : '对比：四套布局的取舍与建议'
+    window.scrollTo({ top: 0, behavior: 'auto' })
+    requestAnimationFrame(observeReveals)
+  }
+  const th = b.getAttribute('data-theme')
+  if (th) {
+    document.documentElement.setAttribute('data-theme', th)
+    hint.textContent = th === 'dark' ? '深夜：三层星 + 流星 + 星云' : '白天：晨光色彩带 + 柔光雾团（已去掉网格）'
+  }
+  const fx = b.getAttribute('data-fx')
+  if (fx) {
+    document.body.classList.toggle('fx-off', fx === 'off')
+    hint.textContent = fx === 'off' ? '动效已关闭，方便对比静态版' : '动效已开启'
+  }
+})
+
+/* ---------- 滚动入场 ---------- */
+let io
+function observeReveals() {
+  if (!io) {
+    io = new IntersectionObserver((es) => {
+      es.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target) } })
+    }, { rootMargin: '-40px 0px -60px' })
+  }
+  document.querySelectorAll('.view.on .reveal:not(.in)').forEach((el) => io.observe(el))
+}
+observeReveals()
+
+/* ---------- 公告手风琴 ---------- */
+document.querySelectorAll('[data-ann] .ann__t').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const item = btn.parentElement
+    const wasOn = item.classList.contains('on')
+    item.parentElement.querySelectorAll('[data-ann]').forEach((x) => x.classList.remove('on'))
+    if (!wasOn) item.classList.add('on')
+  })
+})
+
+/* ============================================================
+   ★ 按钮动效：磁吸 / 聚光跟随 / 涟漪 / 按下回弹
+   ============================================================ */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches
+const TOUCH = matchMedia('(hover: none)').matches
+
+document.querySelectorAll('[data-magnetic]').forEach((el) => {
+  const strength = parseFloat(el.dataset.strength || '0.2')
+  const label = el.querySelector('.btn__lb')
+
+  el.addEventListener('pointermove', (e) => {
+    if (TOUCH || REDUCED) return
+    const r = el.getBoundingClientRect()
+    const dx = e.clientX - (r.left + r.width / 2)
+    const dy = e.clientY - (r.top + r.height / 2)
+    el.style.setProperty('--mx', (((e.clientX - r.left) / r.width) * 100).toFixed(1) + '%')
+    el.style.setProperty('--my', (((e.clientY - r.top) / r.height) * 100).toFixed(1) + '%')
+    el.style.setProperty('--tx', (dx * strength).toFixed(1) + 'px')
+    el.style.setProperty('--ty', (dy * strength).toFixed(1) + 'px')
+    if (label) {
+      label.style.setProperty('--lx', (dx * strength * 0.4).toFixed(1) + 'px')
+      label.style.setProperty('--ly', (dy * strength * 0.4).toFixed(1) + 'px')
+    }
+  })
+
+  el.addEventListener('pointerleave', () => {
+    el.style.setProperty('--tx', '0px'); el.style.setProperty('--ty', '0px')
+    el.style.setProperty('--mx', '50%'); el.style.setProperty('--my', '50%')
+    if (label) { label.style.setProperty('--lx', '0px'); label.style.setProperty('--ly', '0px') }
+  })
+})
+
+document.querySelectorAll('[data-ripple]').forEach((el) => {
+  el.addEventListener('pointerdown', (e) => {
+    if (REDUCED) return
+    const r = el.getBoundingClientRect()
+    const s = document.createElement('span')
+    s.className = 'rip'
+    s.style.left = (e.clientX - r.left) + 'px'
+    s.style.top = (e.clientY - r.top) + 'px'
+    el.appendChild(s)
+    setTimeout(() => s.remove(), 700)
+  })
+})
+
+/* ============================================================
+   星空（与 v3 同款：三层 + 流星）
+   ============================================================ */
+;(function stars() {
+  const c = document.getElementById('stars')
+  if (!c || REDUCED) return
+  const ctx = c.getContext('2d')
+  let w, h, dpr, raf = 0
+  const mobile = innerWidth < 720
+  const LAYERS = [
+    { n: mobile ? 100 : 210, rMin: .25, rMax: .72, aMin: .12, aMax: .42, v: .014, tw: .5, depth: .02 },
+    { n: mobile ? 48 : 96, rMin: .7, rMax: 1.35, aMin: .28, aMax: .68, v: .030, tw: 1, depth: .05 },
+    { n: mobile ? 16 : 30, rMin: 1.4, rMax: 2.3, aMin: .55, aMax: 1, v: .05, tw: 1.7, depth: .09, glow: true },
+  ]
+  let pts = [], shoots = [], nextShoot = 3000
+  function resize() {
+    dpr = Math.min(devicePixelRatio || 1, 2)
+    w = c.width = innerWidth * dpr; h = c.height = innerHeight * dpr
+    c.style.width = innerWidth + 'px'; c.style.height = innerHeight + 'px'
+  }
+  function init() {
+    pts = []
+    LAYERS.forEach((L, li) => {
+      for (let i = 0; i < L.n; i++) pts.push({ li, x: Math.random() * w, y: Math.random() * h,
+        r: (L.rMin + Math.random() * (L.rMax - L.rMin)) * dpr, a: L.aMin + Math.random() * (L.aMax - L.aMin),
+        ph: Math.random() * Math.PI * 2, sp: .0004 + Math.random() * .0012, v: L.v * dpr })
+    })
+  }
+  let last = performance.now()
+  function frame(t) {
+    const dt = Math.min(t - last, 60); last = t
+    ctx.clearRect(0, 0, w, h)
+    const scroll = scrollY * dpr
+    for (const p of pts) {
+      const L = LAYERS[p.li]
+      p.ph += p.sp * dt; p.y -= p.v * (dt / 16)
+      if (p.y < -6) { p.y = h + 6; p.x = Math.random() * w }
+      const y = p.y - scroll * L.depth
+      const yy = ((y % (h + 20)) + h + 20) % (h + 20) - 10
+      const alpha = Math.min(Math.max(p.a * (0.72 + Math.sin(p.ph) * 0.28 * L.tw), 0.02), 1)
+      ctx.beginPath(); ctx.arc(p.x, yy, p.r, 0, Math.PI * 2)
+      if (L.glow) { ctx.shadowBlur = 7 * dpr; ctx.shadowColor = 'rgba(190,240,226,.85)' }
+      ctx.fillStyle = 'rgba(214,244,236,' + alpha.toFixed(3) + ')'
+      ctx.fill(); ctx.shadowBlur = 0
+    }
+    nextShoot -= dt
+    if (nextShoot <= 0 && shoots.length < 2) {
+      nextShoot = 5200 + Math.random() * 8000
+      const fromLeft = Math.random() > .45
+      const sp = (.55 + Math.random() * .5) * dpr
+      shoots.push({ x: fromLeft ? Math.random() * w * .5 : w * (.5 + Math.random() * .5), y: Math.random() * h * .55,
+        vx: (fromLeft ? 1 : -1) * sp, vy: sp * .62, len: (90 + Math.random() * 90) * dpr, life: 1 })
+    }
+    for (let i = shoots.length - 1; i >= 0; i--) {
+      const s = shoots[i]
+      s.x += s.vx * (dt / 16); s.y += s.vy * (dt / 16); s.life -= dt / 1300
+      if (s.life <= 0) { shoots.splice(i, 1); continue }
+      const m = Math.hypot(s.vx, s.vy)
+      const tx = s.x - (s.vx / m) * s.len, ty = s.y - (s.vy / m) * s.len
+      const g = ctx.createLinearGradient(s.x, s.y, tx, ty)
+      g.addColorStop(0, 'rgba(226,252,246,' + (.8 * s.life).toFixed(3) + ')')
+      g.addColorStop(.35, 'rgba(160,235,215,' + (.35 * s.life).toFixed(3) + ')')
+      g.addColorStop(1, 'rgba(160,235,215,0)')
+      ctx.strokeStyle = g; ctx.lineWidth = 1.6 * dpr; ctx.lineCap = 'round'
+      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(tx, ty); ctx.stroke()
+      ctx.beginPath(); ctx.arc(s.x, s.y, 1.5 * dpr, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(240,255,251,' + (.9 * s.life).toFixed(3) + ')'; ctx.fill()
+    }
+    raf = requestAnimationFrame(frame)
+  }
+  function onResize() { cancelAnimationFrame(raf); resize(); init(); last = performance.now(); raf = requestAnimationFrame(frame) }
+  function onVis() { if (document.hidden) cancelAnimationFrame(raf); else { cancelAnimationFrame(raf); last = performance.now(); raf = requestAnimationFrame(frame) } }
+  resize(); init(); raf = requestAnimationFrame(frame)
+  addEventListener('resize', onResize)
+  document.addEventListener('visibilitychange', onVis)
+})()
+</script>
+</body>
+</html>
