@@ -29,8 +29,12 @@ function check(name, ok, extra = '') {
   else { fail++; console.log(`  [FAIL] ${name}${extra ? ' :: ' + extra : ''}`) }
 }
 
+/**
+ * 截图直接存 JPEG：PNG 全屏图单张 1MB+，十几张就是十几 MB 的仓库噪音，
+ * 而且之前是 PNG 存完再手工压成 JPG，两份文件都留在目录里（实测 14MB）。
+ */
 async function shot(page, name, full = false) {
-  await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: full })
+  await page.screenshot({ path: `${OUT}/${name}.jpg`, type: 'jpeg', quality: 80, fullPage: full })
 }
 
 /** 清掉上一页残留的 ElMessage，避免断言读到旧提示 */

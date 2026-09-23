@@ -88,6 +88,17 @@ debug-*.png
 # ===== Claude =====
 .claude/
 
+# ===== WorkBuddy / IDE 本地配置 =====
+.codebuddy/
+
+# ===== 待重写的浏览器 E2E（选择器基于改版前 UI，先留本地不纳入版本管理）=====
+# 其中覆盖管理端的部分仍是唯一资产，等按新 UI 修好再入库
+scripts/browser_e2e.cjs
+docs/browser-e2e/
+
+# ===== 生成物：截图统一存 jpg，不再提交 png 全屏图 =====
+docs/ui-shots/*.png
+
 # ===== Deploy secrets =====
 deploy/permission-admin/sql/
 deploy/*.pem

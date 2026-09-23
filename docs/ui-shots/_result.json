@@ -1,5 +1,5 @@
 {
-  "pass": 66,
+  "pass": 69,
   "fail": 0,
   "errors": [],
   "badResponses": [],
@@ -163,6 +163,21 @@
       "name": "登录页为分屏布局",
       "ok": true,
       "extra": ""
+    },
+    {
+      "name": "登录页整屏铺满（不被外壳网格挤成窄列）",
+      "ok": true,
+      "extra": "auth=1440px 视口=1440px"
+    },
+    {
+      "name": "左侧插画占住分屏一半（未被压成 0 宽）",
+      "ok": true,
+      "extra": "art=756px"
+    },
+    {
+      "name": "表单位于右半屏",
+      "ok": true,
+      "extra": "box.x=912px"
     },
     {
       "name": "空用户名被前端拦截",
