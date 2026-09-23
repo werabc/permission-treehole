@@ -100,11 +100,35 @@ async function msgText(page, timeout = 8000) {
     /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(document.body.innerText))
   check('页面文本不再含 emoji 图标', !emojiLeft)
 
+  // 滚动入场：首页首屏被 Hero/精选占满，帖子在下面，必须先滚到列表再断言
+  await page.evaluate(() => document.querySelector('.filters')?.scrollIntoView())
+  await page.waitForTimeout(1400)
   const revealed = await page.locator('.dh-reveal.is-in').count()
   check('滚动入场动效已触发', revealed > 0, `已入场=${revealed}`)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(600)
 
-  const tickerText = (await page.locator('.ticker__item').innerText().catch(() => '')) || ''
-  check('公告轮播有内容', tickerText.length > 0, tickerText.slice(0, 22))
+  // ---- App Shell（布局 3）----
+  const sidenavBox = await page.locator('.dh-sidenav__in').boundingBox().catch(() => null)
+  check('宽屏左侧导航常驻（App Shell）', !!sidenavBox && sidenavBox.width > 150,
+    sidenavBox ? `宽=${Math.round(sidenavBox.width)}px` : 'null')
+  const navCatCount = await page.locator('.dh-sidenav__cat').count()
+  check('左侧导航含分类且带帖子数', navCatCount >= 2, `分类项=${navCatCount}`)
+  check('置顶帖抽成「精选」卡', (await page.locator('.dh-spot').count()) === 1)
+  const feedCount = await page.locator('.feed .post').count()
+  check('精选帖不再重复出现在流里', feedCount > 0 && feedCount <= 9, `流内=${feedCount}`)
+  check('公告改为右栏卡片', (await page.locator('.dh-ann').count()) > 0)
+
+  // 计数口径：th_category.post_count 历史上没人维护，后端已改成实时聚合，这里守住一致性
+  const allPillText = await page.locator('.filters .dh-pill i').first().innerText()
+  const totalText = await page.locator('.filters__sp').innerText()
+  const totalNum = Number((totalText.match(/\d+/) || [0])[0])
+  check('「全部」计数与「共 N 条」一致', Number(allPillText) === totalNum,
+    `全部=${allPillText} 共=${totalNum}`)
+  check('星云层渲染（深色）', (await page.locator('.dh-nebula').count()) === 3)
+  check('旧网格已移除', (await page.locator('.dh-bg__grid').count()) === 0)
+  check('银河带渲染（深色）', (await page.locator('.dh-bg__band').count()) === 1)
+
   await shot(page, '01-home-dark')
 
   // ==================== 2. 浅色主题 ====================
@@ -112,6 +136,8 @@ async function msgText(page, timeout = 8000) {
   await page.locator('.dh-hdr__acts .dh-icon-btn').nth(1).click()
   await page.waitForTimeout(900)
   check('主题切到 light', (await page.getAttribute('html', 'data-theme')) === 'light')
+  check('浅色下星云仍在（改 multiply 混色）', (await page.locator('.dh-nebula').count()) === 3)
+  check('浅色下星空 canvas 隐藏', !(await page.locator('canvas.dh-bg__stars').isVisible().catch(() => false)))
   await shot(page, '02-home-light')
   await page.locator('.dh-hdr__acts .dh-icon-btn').nth(1).click()
   await page.waitForTimeout(700)
@@ -210,7 +236,8 @@ async function msgText(page, timeout = 8000) {
     `${collectBefore} → ${!collectBefore}`)
   await shot(page, '06b-post-detail-logged-in')
 
-  // 发表一条回响，验证评论链路
+  // 发表一条回响，验证评论链路（用发布前后差值断言，避免依赖演示数据的条数）
+  const cmtBefore = await page.locator('.cmt').count()
   await clearMessages(page)
   await page.locator('textarea.composer__in').fill('这是一条来自浏览器验收脚本的回响。')
   await page.locator('.composer__foot .dh-btn--primary').click()
@@ -218,7 +245,7 @@ async function msgText(page, timeout = 8000) {
   const cmtMsg = await msgText(page)
   check('发表回响成功', /成功|回响/.test(cmtMsg), cmtMsg)
   const cmtCount = await page.locator('.cmt').count()
-  check('回响列表已刷新', cmtCount >= 3, `回响=${cmtCount}`)
+  check('回响列表已刷新', cmtCount === cmtBefore + 1, `${cmtBefore} → ${cmtCount}`)
 
   // ==================== 7. 发布 ====================
   console.log('\n=== 7. 发布 ===')
@@ -279,6 +306,71 @@ async function msgText(page, timeout = 8000) {
   await page.waitForTimeout(1500)
   check('非法用户 ID 给出友好提示', (await page.locator('.dh-state').count()) > 0,
     (await page.locator('.dh-state').first().innerText().catch(() => '')))
+
+  // ==================== 12. 布局 3 的交互与按钮动效 ====================
+  console.log('\n=== 12. 交互与按钮动效 ===')
+  await go(page, `${TREE}/#/`)
+  await page.waitForTimeout(1800)
+
+  // 公告手风琴（演示库至少有 1 条公告；用第一条验证展开/收起）
+  const ann1 = page.locator('.dh-ann').first()
+  if (await ann1.count()) {
+    check('公告默认展开第一条', await ann1.evaluate((el) => el.classList.contains('is-on')))
+    await ann1.locator('.dh-ann__t').click()
+    await page.waitForTimeout(400)
+    check('点击可收起公告', !(await ann1.evaluate((el) => el.classList.contains('is-on'))))
+    await ann1.locator('.dh-ann__t').click()
+    await page.waitForTimeout(400)
+    check('再次点击可展开并显示正文', await ann1.locator('.dh-ann__bd').isVisible())
+  } else {
+    check('公告卡片渲染', false, '未渲染任何 .dh-ann')
+  }
+
+  // 按钮磁吸：把指针移到按钮右下角，应产生 --tx/--ty 位移变量
+  const ctaBtn = page.locator('.hero__cta .dh-btn').first()
+  const bb = await ctaBtn.boundingBox()
+  await page.mouse.move(bb.x + bb.width * 0.86, bb.y + bb.height * 0.78)
+  await page.waitForTimeout(420)
+  const tx = await ctaBtn.evaluate((el) => el.style.getPropertyValue('--tx'))
+  const mx = await ctaBtn.evaluate((el) => el.style.getPropertyValue('--mx'))
+  check('按钮磁吸产生位移（--tx）', /-?\d+(\.\d+)?px/.test(tx), `--tx=${tx || '空'}`)
+  check('按钮聚光跟随写入光标位置（--mx）', /%$/.test(mx), `--mx=${mx || '空'}`)
+
+  // 涟漪：按下后应临时插入 .dh-rip
+  await page.mouse.down()
+  await page.waitForTimeout(120)
+  const ripCount = await ctaBtn.locator('.dh-rip').count()
+  await page.mouse.up()
+  check('按下产生涟漪节点', ripCount > 0, `涟漪=${ripCount}`)
+  await page.waitForTimeout(800)
+  check('涟漪自动移除（不堆积 DOM）', (await ctaBtn.locator('.dh-rip').count()) === 0)
+  await go(page, `${TREE}/#/`)   // 别让上面那次 press 真的触发跳转
+  await page.waitForTimeout(1500)
+
+  // 分类筛选写入 URL，左侧导航同步高亮
+  await page.locator('.filters .dh-pill').nth(1).click()
+  await page.waitForTimeout(1600)
+  check('分类筛选写入 URL（可分享/可后退）', /category=\d+/.test(page.url()), page.url())
+  check('左侧导航分类同步高亮', (await page.locator('.dh-sidenav__cat.is-on').count()) > 0)
+  const filteredTotal = await page.locator('.filters__sp').innerText()
+  check('筛选后总数文案更新', /共\s*\d+\s*条/.test(filteredTotal), filteredTotal)
+  await shot(page, '12-home-category-filter')
+
+  // 触底自动加载
+  await go(page, `${TREE}/#/`)
+  await page.waitForTimeout(1800)
+  const beforeLoad = await page.locator('.feed .post').count()
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.waitForTimeout(2600)
+  const afterLoad = await page.locator('.feed .post').count()
+  check('触底自动加载更多', afterLoad > beforeLoad, `${beforeLoad} → ${afterLoad}`)
+
+  // 回到顶部
+  check('滚动后出现回到顶部按钮', await page.locator('.dh-totop').isVisible().catch(() => false))
+  await page.locator('.dh-totop').click()
+  await page.waitForTimeout(1400)
+  check('点击后回到顶部', (await page.evaluate(() => window.scrollY)) < 80,
+    `scrollY=${await page.evaluate(() => window.scrollY)}`)
 
   // ==================== 汇总 ====================
   console.log('\n========================================')

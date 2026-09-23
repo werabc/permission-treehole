@@ -1,5 +1,5 @@
 {
-  "pass": 43,
+  "pass": 66,
   "fail": 0,
   "errors": [],
   "badResponses": [],
@@ -17,7 +17,7 @@
     {
       "name": "极光背景图已加载并可见",
       "ok": true,
-      "extra": "opacity=0.7"
+      "extra": "opacity=0.72"
     },
     {
       "name": "星点 canvas 已铺满视口",
@@ -27,12 +27,12 @@
     {
       "name": "帖子卡片渲染",
       "ok": true,
-      "extra": "数量=10"
+      "extra": "数量=9"
     },
     {
       "name": "图标为真实 SVG（替代 emoji）",
       "ok": true,
-      "extra": "13.625x12.65625"
+      "extra": "14.51666259765625x10.72509765625"
     },
     {
       "name": "页面文本不再含 emoji 图标",
@@ -42,15 +42,65 @@
     {
       "name": "滚动入场动效已触发",
       "ok": true,
-      "extra": "已入场=1"
+      "extra": "已入场=5"
     },
     {
-      "name": "公告轮播有内容",
+      "name": "宽屏左侧导航常驻（App Shell）",
       "ok": true,
-      "extra": "欢迎来到树洞！\n这是一个匿名分享的平台，请遵"
+      "extra": "宽=236px"
+    },
+    {
+      "name": "左侧导航含分类且带帖子数",
+      "ok": true,
+      "extra": "分类项=6"
+    },
+    {
+      "name": "置顶帖抽成「精选」卡",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "精选帖不再重复出现在流里",
+      "ok": true,
+      "extra": "流内=9"
+    },
+    {
+      "name": "公告改为右栏卡片",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "「全部」计数与「共 N 条」一致",
+      "ok": true,
+      "extra": "全部=16 共=16"
+    },
+    {
+      "name": "星云层渲染（深色）",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "旧网格已移除",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "银河带渲染（深色）",
+      "ok": true,
+      "extra": ""
     },
     {
       "name": "主题切到 light",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "浅色下星云仍在（改 multiply 混色）",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "浅色下星空 canvas 隐藏",
       "ok": true,
       "extra": ""
     },
@@ -152,7 +202,7 @@
     {
       "name": "回响列表已刷新",
       "ok": true,
-      "extra": "回响=4"
+      "extra": "1 → 2"
     },
     {
       "name": "字数计量随输入更新",
@@ -197,7 +247,7 @@
     {
       "name": "我的心事列表渲染",
       "ok": true,
-      "extra": "数量=8"
+      "extra": "数量=9"
     },
     {
       "name": "帖子带删除入口",
@@ -218,6 +268,71 @@
       "name": "非法用户 ID 给出友好提示",
       "ok": true,
       "extra": "用户不存在"
+    },
+    {
+      "name": "公告默认展开第一条",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "点击可收起公告",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "再次点击可展开并显示正文",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "按钮磁吸产生位移（--tx）",
+      "ok": true,
+      "extra": "--tx=11.6px"
+    },
+    {
+      "name": "按钮聚光跟随写入光标位置（--mx）",
+      "ok": true,
+      "extra": "--mx=86.0%"
+    },
+    {
+      "name": "按下产生涟漪节点",
+      "ok": true,
+      "extra": "涟漪=1"
+    },
+    {
+      "name": "涟漪自动移除（不堆积 DOM）",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "分类筛选写入 URL（可分享/可后退）",
+      "ok": true,
+      "extra": "http://localhost:3000/#/?category=1"
+    },
+    {
+      "name": "左侧导航分类同步高亮",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "筛选后总数文案更新",
+      "ok": true,
+      "extra": "共 4 条"
+    },
+    {
+      "name": "触底自动加载更多",
+      "ok": true,
+      "extra": "9 → 16"
+    },
+    {
+      "name": "滚动后出现回到顶部按钮",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "点击后回到顶部",
+      "ok": true,
+      "extra": "scrollY=0"
     }
   ]
 }

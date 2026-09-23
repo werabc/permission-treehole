@@ -7,6 +7,12 @@ UPDATE th_user SET nickname = '林深见鹿', bio = '愿意听，也愿意说' W
 DELETE FROM th_post WHERE deleted = 0;
 DELETE FROM th_comment WHERE deleted = 0;
 DELETE FROM th_notification;
+DELETE FROM th_announcement;
+
+INSERT INTO th_announcement (title, content, type, status, creator_id, publish_time) VALUES
+('欢迎来到树洞！', '这是一个匿名分享的平台，请遵守社区规范，文明发言。禁止人身攻击、泄露他人隐私、发布广告与联系方式。', 'NORMAL', 1, 1, NOW() - INTERVAL 2 DAY),
+('树洞条例更新：关于隐私保护', '禁止发布他人真实姓名、联系方式、住址、工作单位等可识别信息。一经核实将下架内容并视情节禁言或封号。', 'NORMAL', 1, 1, NOW() - INTERVAL 1 DAY),
+('今夜话题：你最近一次觉得“值得”，是因为什么？', '在广场写下你的答案，带上「趣味分享」分类，会更容易被看见。', 'TOPIC', 1, 1, NOW() - INTERVAL 2 HOUR);
 
 INSERT INTO th_post
   (id, user_id, category_id, content, is_anonymous, is_top, status, view_count, like_count, comment_count, create_time) VALUES
@@ -16,12 +22,22 @@ INSERT INTO th_post
 (4, 2, 2,  '养了 6 年的猫今天走了。它最后是趴在我手边睡着的，很安静，像平时一样。我到现在也没舍得收走它的碗。', 1, 0, 1, 3458, 1209, 0, NOW() - INTERVAL 3 HOUR),
 (5, 1, 1,  '暗恋了三年的人今天发了婚礼邀请。我点了“我会去”，然后哭了一整晚。第二天还是挑了一件最好看的裙子。', 1, 0, 1, 1893,  612, 0, NOW() - INTERVAL 8 HOUR),
 (6, 2, 5,  '第一次带爸妈出国，他们在机场像小孩一样兴奋，拉着我拍了好多模糊的照片。突然很想努力赚钱，让他们再多看几个地方。', 0, 0, 1,  967,  401, 0, NOW() - INTERVAL 1 DAY),
-(7, 1, 4,  '实习三个月，今天第一次被 leader 当众表扬。回家路上给自己买了杯最贵的奶茶，坐在楼下喝完才上楼。', 1, 0, 1,  534,  188, 0, NOW() - INTERVAL 2 DAY);
+(7, 1, 4,  '实习三个月，今天第一次被 leader 当众表扬。回家路上给自己买了杯最贵的奶茶，坐在楼下喝完才上楼。', 1, 0, 1,  534,  188, 0, NOW() - INTERVAL 2 DAY),
+(8, 2, 3,  '今天组里最年轻的实习生离职了，走之前跟我说“谢谢你带我”。其实我什么都没教他，只是没让他挨骂。', 1, 0, 1,  788,  264, 0, NOW() - INTERVAL 2 DAY),
+(9, 1, 1,  '凌晨三点睡不着，把这个帖子写在这里。明天还要上班，但写完之后好像也没那么怕了。', 1, 0, 1, 1412,  503, 0, NOW() - INTERVAL 3 DAY),
+(10, 2, 2, '搬来这个城市第四年，第一次有人敲门说“我做了汤，给你一碗”。我端着碗站在门口，愣了很久。', 0, 0, 1, 2260,  874, 0, NOW() - INTERVAL 3 DAY),
+(11, 1, 4, '论文被拒了三次。导师说“再改改”，我说好。挂掉电话在楼道里坐了很久，然后回去继续改。', 1, 0, 1, 1673,  548, 0, NOW() - INTERVAL 4 DAY),
+(12, 2, 1, '分手第 100 天。今天路过我们常去的那家店，老板问我“你朋友怎么没来”。我说她出差了。', 1, 0, 1, 3941, 1382, 0, NOW() - INTERVAL 5 DAY),
+(13, 1, 4, '想问问大家，怎么跟爸妈说“我不想考公”？每次刚开口，他们就说“我们都是为你好”。', 1, 0, 1, 2517,  936, 0, NOW() - INTERVAL 5 DAY),
+(14, 2, 5, '今天在地铁上看到有人抱着一整箱猫粮，笑得特别开心。突然觉得这个世界还是挺好的。', 1, 0, 1, 1105,  462, 0, NOW() - INTERVAL 6 DAY),
+(15, 1, 3, '公司团建又要自费 AA，还要表演节目。我今年最大的成就，就是学会说“我不去”。', 1, 0, 1, 3082, 1157, 0, NOW() - INTERVAL 6 DAY),
+(16, 2, 2, '第一次一个人去看电影，买了最大桶的爆米花。散场的时候才发现，自己一直在笑。', 0, 0, 1,  842,  317, 0, NOW() - INTERVAL 7 DAY);
 
 INSERT INTO th_comment (id, post_id, user_id, content, is_anonymous, like_count, status, create_time) VALUES
 (1, 2, 2, '我妈也总问我吃得好不好，我每次都说挺好的。谢谢你把这句话写出来，让我知道不止我一个人这样。', 1, 96, 1, NOW() - INTERVAL 2 HOUR),
 (2, 2, 1, '下次可以试着跟她说一句“我有点累”。她可能会心疼，但也会知道你在好好活着。', 0, 142, 1, NOW() - INTERVAL 1 HOUR),
-(3, 1, 2, '梅雨季总会过去的。你已经比昨天多撑住了一天，这就够了。', 1, 58, 1, NOW() - INTERVAL 2 MINUTE);
+(3, 1, 2, '梅雨季总会过去的。你已经比昨天多撑住了一天，这就够了。', 1, 58, 1, NOW() - INTERVAL 2 MINUTE),
+(4, 3, 1, '图书馆那一年没有白费。恭喜你，也请好好休息一段时间。', 1, 88, 1, NOW() - INTERVAL 40 MINUTE);
 
 INSERT INTO th_notification (user_id, sender_id, type, target_type, target_id, content, is_read, create_time) VALUES
 (1, 2, 'COMMENT',       'POST', 2, '林深见鹿 回响了你的心事《妈妈打电话问我最近吃得好不好》', 0, NOW() - INTERVAL 2 HOUR),

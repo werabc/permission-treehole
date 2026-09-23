@@ -21,9 +21,12 @@
   --r-xl: 30px;
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --page: 1180px;
   --narrow: 780px;
+  --rail: 330px;
+  --sidenav: 236px;
+  --btn-spot: rgba(255, 255, 255, 0.5);
 }
 
 html[data-theme="dark"] {
@@ -38,31 +41,39 @@ html[data-theme="dark"] {
   --text-dim: #a4a9c0;
   --text-mute: #6a708c;
   --shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.75);
-  --art-opacity: 0.7;
+  --shadow-hi: 0 0 0 1px rgba(95, 224, 189, 0.12), 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+  --art-opacity: 0.72;
   --art-blend: screen;
   --grain-opacity: 0.05;
-  --grid-opacity: 0.035;
+  --hero-veil: linear-gradient(180deg, rgba(5, 5, 12, 0.45) 0%, var(--bg) 80%);
+  --vig: color-mix(in srgb, var(--bg) 62%, transparent);
+  --btn-spot: rgba(255, 255, 255, 0.5);
 }
 
 html[data-theme="light"] {
-  --bg: #f7f7f4;
-  --bg-2: #efeff0;
-  --surface: rgba(255, 255, 255, 0.72);
-  --surface-2: rgba(255, 255, 255, 0.92);
+  --bg: #f7f6f2;
+  --bg-2: #efeeea;
+  --surface: rgba(255, 255, 255, 0.76);
+  --surface-2: rgba(255, 255, 255, 0.95);
   --surface-solid: #ffffff;
-  --border: rgba(18, 20, 40, 0.08);
-  --border-strong: rgba(18, 20, 40, 0.16);
-  --text: #14162a;
-  --text-dim: #4e5473;
-  --text-mute: #858ba6;
-  --accent: #0f9d7c;
-  --accent-soft: rgba(15, 157, 124, 0.1);
-  --accent-line: rgba(15, 157, 124, 0.35);
-  --shadow: 0 20px 50px -22px rgba(20, 22, 42, 0.24);
-  --art-opacity: 0.22;
-  --art-blend: luminosity;
-  --grain-opacity: 0.03;
-  --grid-opacity: 0.5;
+  --border: rgba(30, 27, 22, 0.075);
+  --border-strong: rgba(30, 27, 22, 0.16);
+  --text: #1a1916;
+  --text-dim: #56534c;
+  --text-mute: #8b877d;
+  --accent: #0e8f70;
+  --accent-soft: rgba(14, 143, 112, 0.09);
+  --accent-line: rgba(14, 143, 112, 0.32);
+  --violet: #8b7ac9;
+  --danger: #d9455c;
+  --shadow: 0 1px 2px rgba(30, 27, 22, 0.04), 0 12px 32px -14px rgba(30, 27, 22, 0.16);
+  --shadow-hi: 0 0 0 1px rgba(14, 143, 112, 0.18), 0 18px 40px -16px rgba(14, 143, 112, 0.26);
+  --art-opacity: 0.34;
+  --art-blend: soft-light;
+  --grain-opacity: 0.035;
+  --hero-veil: linear-gradient(180deg, rgba(247, 246, 242, 0.18) 0%, var(--bg) 88%);
+  --vig: color-mix(in srgb, var(--bg) 42%, transparent);
+  --btn-spot: rgba(255, 255, 255, 0.62);
 }
 
 /* ---------- Reset ---------- */
@@ -121,23 +132,59 @@ ul, ol { list-style: none; }
 }
 .dh-card--hover:hover::after { opacity: 1; }
 
-/* ---------- 按钮 ---------- */
+/* ---------- 按钮（含 5 层微交互：磁吸 / 聚光跟随 / 涟漪 / 扫光+箭头 / 按下回弹） ---------- */
 .dh-btn {
+  position: relative; overflow: hidden; isolation: isolate;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 11px 22px; border-radius: 999px; font-size: 14px; font-weight: 500;
-  border: 1px solid transparent; transition: all 0.32s var(--ease); white-space: nowrap;
+  border: 1px solid transparent; white-space: nowrap;
+  /* 磁吸位移与按下缩放必须合成同一个 transform，否则两者互相覆盖 */
+  transform: translate3d(var(--tx, 0), var(--ty, 0), 0) scale(var(--ps, 1));
+  transition: transform 0.34s var(--ease-spring), box-shadow 0.34s var(--ease),
+    background 0.3s var(--ease), border-color 0.3s var(--ease), color 0.3s var(--ease);
+  will-change: transform;
 }
-.dh-btn:active { transform: scale(0.975); }
+.dh-btn__lb {
+  display: inline-flex; align-items: center; gap: 8px; position: relative; z-index: 2;
+  transform: translate3d(var(--lx, 0), var(--ly, 0), 0);
+  transition: transform 0.34s var(--ease-spring);
+}
+/* ① 聚光跟随 */
+.dh-btn::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: 1; pointer-events: none;
+  background: radial-gradient(120px circle at var(--mx, 50%) var(--my, 50%), var(--btn-spot, rgba(255, 255, 255, 0.5)), transparent 64%);
+  opacity: 0; transition: opacity 0.32s var(--ease);
+}
+.dh-btn:hover::before { opacity: 0.85; }
+/* ② 悬浮扫光 */
+.dh-btn::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 42%; left: -60%; z-index: 1; pointer-events: none;
+  background: linear-gradient(100deg, transparent, color-mix(in srgb, #fff 32%, transparent), transparent);
+  transform: skewX(-18deg); transition: left 0.62s var(--ease);
+}
+.dh-btn:hover::after { left: 118%; }
+/* ③ 涟漪 */
+.dh-rip {
+  position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; z-index: 1;
+  background: currentColor; opacity: 0.3; pointer-events: none;
+  animation: dh-rip 0.66s var(--ease) forwards;
+}
+@keyframes dh-rip { from { transform: scale(0); opacity: 0.34; } to { transform: scale(26); opacity: 0; } }
+/* ④ 箭头位移 */
+.dh-btn .dh-arw { transition: transform 0.34s var(--ease-spring); }
+.dh-btn:hover .dh-arw { transform: translateX(4px); }
+/* ⑤ 按下回弹 */
+.dh-btn:active { --ps: 0.955; }
 .dh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.dh-btn:disabled:active { transform: none; }
+.dh-btn:disabled:active { --ps: 1; }
 .dh-btn--primary {
   background: var(--accent); color: #04140f; font-weight: 600;
   box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 html[data-theme="light"] .dh-btn--primary { color: #fff; }
-.dh-btn--primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 18px 40px -14px color-mix(in srgb, var(--accent) 80%, transparent); }
+.dh-btn--primary:hover:not(:disabled) { box-shadow: 0 20px 44px -14px color-mix(in srgb, var(--accent) 78%, transparent); }
 .dh-btn--ghost { border-color: var(--border-strong); color: var(--text); background: var(--surface); }
-.dh-btn--ghost:hover:not(:disabled) { background: var(--surface-2); transform: translateY(-2px); }
+.dh-btn--ghost:hover:not(:disabled) { background: var(--surface-2); border-color: var(--accent-line); box-shadow: var(--shadow-hi); }
 .dh-btn--quiet { color: var(--text-dim); padding: 9px 16px; }
 .dh-btn--quiet:hover:not(:disabled) { color: var(--text); background: var(--surface); }
 .dh-btn--danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
@@ -286,8 +333,11 @@ html[data-theme="light"] .dh-seg button.is-on { color: #fff; }
 .dh-icon-btn {
   position: relative; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px;
   border: 1px solid var(--border); color: var(--text-dim); transition: all 0.28s var(--ease); flex-shrink: 0;
+  transform: translate3d(var(--tx, 0), var(--ty, 0), 0) scale(var(--ps, 1));
+  will-change: transform;
 }
 .dh-icon-btn:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface); }
+.dh-icon-btn:active { --ps: 0.92; }
 .dh-badge {
   position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px;
   border-radius: 999px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 600;
@@ -301,6 +351,94 @@ html[data-theme="light"] .dh-seg button.is-on { color: #fff; }
 .dh-user-chip:hover { border-color: var(--border-strong); color: var(--text); }
 .dh-user-chip .dh-av { width: 26px; height: 26px; font-size: 12px; border-radius: 999px; }
 .dh-user-chip b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+
+/* ============================================================
+   App Shell（布局 3「App 式」）
+   左：固定导航；右：顶栏 + 内容。窄屏自动收起为单列。
+   ============================================================ */
+.dh-shell { position: relative; z-index: 1; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); }
+.dh-shell__main { min-width: 0; display: flex; flex-direction: column; }
+
+.dh-sidenav { display: none; }
+.dh-sidenav__in {
+  /* 左导航在独立网格列里，头顶没有顶栏遮挡，所以吸顶位置可以贴顶 */
+  position: sticky; top: 20px;
+  display: grid; gap: 4px; padding: 14px 12px; border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--surface-solid) 52%, transparent);
+  border: 1px solid var(--border); backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.dh-sidenav__lk {
+  display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: var(--r-sm);
+  font-size: 14px; color: var(--text-dim); transition: all 0.28s var(--ease);
+}
+.dh-sidenav__lk:hover { color: var(--text); background: var(--surface-2); }
+.dh-sidenav__lk.is-on { color: var(--accent); background: var(--accent-soft); }
+.dh-sidenav__cnt {
+  margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--accent);
+  background: var(--accent-soft); border-radius: 999px; padding: 1px 7px; min-width: 20px; text-align: center;
+}
+.dh-sidenav__hr { height: 1px; background: var(--border); margin: 8px 4px; }
+.dh-sidenav__h {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-mute); padding: 6px 12px 2px;
+}
+.dh-sidenav__cat {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--r-sm);
+  font-size: 13.5px; color: var(--text-dim); transition: all 0.28s var(--ease);
+}
+.dh-sidenav__cat:hover { color: var(--text); background: var(--surface-2); }
+.dh-sidenav__cat.is-on { color: var(--accent); background: var(--accent-soft); }
+.dh-sidenav__cat b { margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--text-mute); }
+
+/* 首页的「内容 + 右栏」两列网格 */
+.dh-page {
+  width: 100%; max-width: var(--page); margin: 0 auto; padding: 0 24px;
+  display: grid; gap: 22px; align-items: start;
+}
+.dh-page__content { grid-column: 1; min-width: 0; }
+.dh-rail { grid-column: 2; display: grid; gap: 14px; align-content: start; }
+
+/* 右栏模块 */
+.dh-mod { padding: 20px; }
+.dh-mod__h { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.dh-mod__h svg { color: var(--accent); flex-shrink: 0; }
+.dh-mod__h span { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-mute); letter-spacing: 0.1em; }
+
+/* 公告手风琴 */
+.dh-ann__t {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 10px;
+  border-radius: var(--r-md); text-align: left; transition: background 0.3s var(--ease);
+}
+.dh-ann__t:hover { background: var(--surface-2); }
+.dh-ann.is-on .dh-ann__t { background: var(--accent-soft); }
+.dh-ann__mk { width: 6px; height: 6px; border-radius: 999px; background: var(--text-mute); margin-top: 8px; flex-shrink: 0; transition: background 0.3s var(--ease); }
+.dh-ann.is-on .dh-ann__mk { background: var(--accent); }
+.dh-ann__tx { font-size: 13.5px; line-height: 1.55; font-weight: 500; }
+.dh-ann__bd {
+  display: none; padding: 2px 10px 10px 26px; font-size: 12.8px; line-height: 1.72; color: var(--text-dim);
+  white-space: pre-wrap; word-break: break-word;
+}
+.dh-ann.is-on .dh-ann__bd { display: block; animation: dh-ann-in 0.34s var(--ease); }
+@keyframes dh-ann-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.dh-ann__meta { display: flex; gap: 8px; margin-top: 8px; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-mute); }
+
+/* 数据 / 公约 */
+.dh-statrow { display: flex; gap: 22px; }
+.dh-statrow b { display: block; font-family: var(--font-mono); font-size: 20px; font-weight: 500; letter-spacing: -0.02em; }
+.dh-statrow span { font-size: 11px; color: var(--text-mute); }
+.dh-pact { display: grid; gap: 9px; }
+.dh-pact li { display: flex; gap: 10px; font-size: 12.8px; line-height: 1.6; color: var(--text-dim); }
+.dh-pact b { color: var(--text); font-weight: 500; }
+.dh-pact .no { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent); padding-top: 3px; }
+.dh-trust { margin-top: 12px; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-mute); letter-spacing: 0.04em; }
+
+/* 精选（置顶） */
+.dh-spot { padding: 24px 26px; border-radius: var(--r-xl); cursor: pointer; }
+html[data-theme="dark"] .dh-spot { background: linear-gradient(150deg, rgba(95, 224, 189, 0.075), var(--surface) 55%); }
+html[data-theme="light"] .dh-spot { background: linear-gradient(150deg, rgba(14, 143, 112, 0.055), var(--surface) 55%); }
+.dh-spot__h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.dh-spot__b { font-size: 16.5px; line-height: 1.82; white-space: pre-wrap; word-break: break-word; }
 
 /* ---------- 页脚 ---------- */
 .dh-ftr { position: relative; z-index: 1; border-top: 1px solid var(--border); margin-top: 48px; padding: 32px 0; }
@@ -330,31 +468,61 @@ html[data-theme="light"] .dh-seg button.is-on { color: #fff; }
 .dh-hdr__wrap { position: relative; }
 
 /* ---------- 背景装饰层 ---------- */
+/* 层序很重要：veil 必须在 nebula 之前，否则它收尾那段不透明底色会把彩色雾团整块盖掉 */
 .dh-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .dh-bg__art {
-  position: absolute; inset: -6%;
+  position: absolute; inset: -8% -8% auto auto; width: 108%; height: 105%;
   background: url("./hero-aurora-tree.jpg") center right / cover no-repeat;
   opacity: var(--art-opacity);
   mix-blend-mode: var(--art-blend);
-  filter: saturate(1.05) contrast(1.02);
-  animation: dh-kenburns 40s ease-in-out infinite alternate;
+  animation: dh-kenburns 46s ease-in-out infinite alternate;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 92%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 92%);
   transition: opacity 0.6s var(--ease);
 }
 .dh-bg__veil {
   position: absolute; inset: 0;
   background:
-    radial-gradient(120% 90% at 78% 12%, transparent 0%, var(--bg) 62%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent) 0%, var(--bg) 78%);
+    radial-gradient(120% 82% at 76% 6%, transparent 0%, var(--bg) 66%),
+    var(--hero-veil);
 }
-.dh-bg__grid {
-  position: absolute; inset: 0; opacity: var(--grid-opacity);
-  background-image:
-    linear-gradient(to right, var(--text) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--text) 1px, transparent 1px);
-  background-size: 72px 72px;
-  -webkit-mask-image: radial-gradient(110% 80% at 50% 0%, #000 0%, transparent 72%);
-  mask-image: radial-gradient(110% 80% at 50% 0%, #000 0%, transparent 72%);
+/* 星云 / 晨雾：替代原来的网格，撑体积感 */
+.dh-nebula { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.5; }
+html[data-theme="dark"] .dh-nebula { mix-blend-mode: screen; }
+html[data-theme="light"] .dh-nebula { mix-blend-mode: multiply; opacity: 0.88; }
+html[data-theme="dark"] .dh-nebula--1 { background: radial-gradient(circle, rgba(95, 224, 189, 0.30), transparent 68%); }
+html[data-theme="dark"] .dh-nebula--2 { background: radial-gradient(circle, rgba(167, 139, 250, 0.32), transparent 68%); }
+html[data-theme="dark"] .dh-nebula--3 { background: radial-gradient(circle, rgba(80, 140, 255, 0.20), transparent 70%); }
+html[data-theme="light"] .dh-nebula--1 { background: radial-gradient(circle, rgba(66, 188, 158, 0.52), transparent 66%); }
+html[data-theme="light"] .dh-nebula--2 { background: radial-gradient(circle, rgba(146, 118, 232, 0.48), transparent 66%); }
+html[data-theme="light"] .dh-nebula--3 { background: radial-gradient(circle, rgba(246, 168, 108, 0.50), transparent 68%); }
+.dh-nebula--1 { width: 46vw; height: 46vw; left: -10vw; top: -8vw; animation: dh-drift1 34s ease-in-out infinite alternate; }
+.dh-nebula--2 { width: 40vw; height: 40vw; right: -6vw; top: 6vh; animation: dh-drift2 42s ease-in-out infinite alternate; }
+.dh-nebula--3 { width: 52vw; height: 34vw; left: 14vw; top: 52vh; animation: dh-drift3 50s ease-in-out infinite alternate; }
+@keyframes dh-drift1 { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(5vw, 3vh, 0) scale(1.12); } }
+@keyframes dh-drift2 { from { transform: translate3d(0, 0, 0) scale(1.06); } to { transform: translate3d(-4vw, 4vh, 0) scale(1); } }
+@keyframes dh-drift3 { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(3vw, -4vh, 0) scale(1.1); } }
+/* 银河带（仅深色） */
+.dh-bg__band {
+  position: absolute; inset: -30% -20%; opacity: 0.5; mix-blend-mode: screen;
+  transform: rotate(-14deg);
+  background: linear-gradient(102deg, transparent 28%, rgba(120, 190, 255, 0.10) 45%, rgba(186, 156, 252, 0.13) 52%, transparent 70%);
+  animation: dh-band 60s ease-in-out infinite alternate;
 }
+html[data-theme="light"] .dh-bg__band { display: none; }
+@keyframes dh-band { from { transform: rotate(-14deg) translateX(-3%); } to { transform: rotate(-11deg) translateX(3%); } }
+/* 晨光色彩带（仅浅色）—— 让白底有层次，取代网格 */
+.dh-bg__ribbon { display: none; }
+html[data-theme="light"] .dh-bg__ribbon {
+  display: block; position: absolute; inset: -26% -14% auto auto; width: 86%; height: 74%;
+  background: conic-gradient(from 205deg at 76% 0%,
+    rgba(96, 196, 168, 0.30), rgba(168, 146, 232, 0.26), rgba(244, 186, 142, 0.24),
+    rgba(120, 200, 255, 0.18), rgba(96, 196, 168, 0.30));
+  filter: blur(78px); opacity: 0.75;
+  animation: dh-ribbon 40s ease-in-out infinite alternate;
+}
+@keyframes dh-ribbon { from { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); } to { transform: translate3d(-2%, 2%, 0) rotate(6deg) scale(1.08); } }
+.dh-bg__vig { position: absolute; inset: 0; background: radial-gradient(120% 100% at 50% 40%, transparent 38%, var(--vig) 100%); }
 .dh-bg__grain {
   position: absolute; inset: 0; opacity: var(--grain-opacity);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -364,12 +532,24 @@ html[data-theme="light"] .dh-bg__stars { display: none; }
 
 @keyframes dh-kenburns {
   from { transform: scale(1) translate3d(0, 0, 0); }
-  to { transform: scale(1.09) translate3d(-1.5%, -1%, 0); }
+  to { transform: scale(1.1) translate3d(-1.6%, -1.2%, 0); }
 }
-@keyframes dh-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+
+/* ---------- 回到顶部 ---------- */
+.dh-totop {
+  position: fixed; right: 28px; bottom: 30px; z-index: 70;
+  width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
+  border: 1px solid var(--border); backdrop-filter: blur(18px); box-shadow: var(--shadow);
+  color: var(--text-dim);
+  transform: translate3d(var(--tx, 0), var(--ty, 0), 0) scale(var(--ps, 1));
+  transition: transform 0.34s var(--ease-spring), color 0.3s var(--ease), border-color 0.3s var(--ease);
 }
+.dh-totop:hover { color: var(--accent); border-color: var(--accent-line); }
+.dh-totop:active { --ps: 0.93; }
+.dh-totop__ic { transform: rotate(180deg); }
+.totop-enter-active, .totop-leave-active { transition: opacity 0.3s var(--ease), transform 0.3s var(--ease); }
+.totop-enter-from, .totop-leave-to { opacity: 0; transform: translateY(12px); }
 
 /* ---------- Element Plus 深色适配 ---------- */
 html[data-theme="dark"] {
@@ -380,8 +560,30 @@ html[data-theme="dark"] {
 .el-dialog, .el-drawer { backdrop-filter: blur(24px); }
 
 /* ---------- 响应式 ---------- */
+/* 宽屏：App Shell 双列生效——左导航常驻，顶栏里的文字导航收起（避免和左导航重复） */
+@media (min-width: 1081px) {
+  .dh-shell {
+    grid-template-columns: var(--sidenav) minmax(0, 1fr);
+    gap: 26px; max-width: 1500px; margin: 0 auto; padding: 0 24px;
+  }
+  .dh-sidenav { display: block; padding-top: 20px; }
+  .dh-nav { display: none; }
+  .dh-page { grid-template-columns: minmax(0, 1fr) var(--rail); padding: 0; }
+  /* 显式定位，DOM 顺序就可以按移动端最舒服的顺序写 */
+  .dh-page__hero { grid-column: 1 / -1; grid-row: 1; }
+  .dh-spot { grid-column: 1; grid-row: 2; }
+  .dh-rail { grid-column: 2; grid-row: 2 / span 2; }
+  .dh-page__content { grid-column: 1; grid-row: 3; }
+}
+/* 中等屏：左导航收起，首页右栏改到内容上方两列排布 */
+@media (max-width: 1080px) {
+  .dh-page { grid-template-columns: minmax(0, 1fr); }
+  .dh-page__content, .dh-rail { grid-column: 1; }
+  .dh-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dh-page__hero, .dh-spot { grid-column: 1; }
+}
 @media (max-width: 720px) {
-  .dh-wrap, .dh-narrow { padding: 0 16px; }
+  .dh-wrap, .dh-narrow, .dh-page { padding: 0 16px; }
   .dh-nav { display: none; }
   .dh-hdr__inner { gap: 8px; padding: 8px 10px 8px 14px; }
   .dh-user-chip { padding: 5px; max-width: 44px; }
@@ -390,6 +592,7 @@ html[data-theme="dark"] {
   .dh-only-mobile { display: grid !important; }
   .dh-hide-mobile { display: none !important; }
   .dh-brand em { display: none; }
+  .dh-rail { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {

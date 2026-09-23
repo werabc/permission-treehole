@@ -1,98 +1,146 @@
 <template>
-  <div class="home">
+  <div class="dh-page">
     <!-- ============ Hero ============ -->
-    <section class="hero">
-      <div class="dh-wrap hero__grid">
-        <div>
-          <span class="dh-eyebrow"><i class="dh-dot" /> 匿名 · 安全 · 被听见</span>
-          <h1>把心事<br />种进<i>树洞</i>里</h1>
-          <p class="hero__sub">说给懂的人听，不必署名。</p>
-          <div class="hero__cta">
-            <button class="dh-btn dh-btn--primary dh-btn--lg" type="button" @click="goPublish">
-              <AppIcon name="spark" :size="16" /> 匿名写一条
-            </button>
-            <button class="dh-btn dh-btn--ghost dh-btn--lg" type="button" @click="scrollToFeed">
-              先逛逛广场
-            </button>
-          </div>
-          <div class="hero__stats">
-            <div class="stat">
-              <b>{{ total.toLocaleString() }}</b>
-              <span>条心事</span>
-            </div>
-            <div class="stat">
-              <b>{{ categories.length }}</b>
-              <span>个分类</span>
-            </div>
-          </div>
-        </div>
+    <section class="dh-page__hero hero">
+      <span class="dh-eyebrow"><i class="dh-dot" /> 匿名 · 安全 · 被听见</span>
+      <h1>把心事<br />种进<i>树洞</i>里</h1>
+      <p class="hero__sub">说给懂的人听，不必署名。</p>
 
-        <!-- 今日回声：从最新帖子里随机挑一条真实内容 -->
-        <div v-if="echoPost" class="dh-card echo" v-reveal>
-          <div class="echo__head"><AppIcon name="bell" :size="14" /> 今日回声</div>
-          <p>“{{ echoText }}”</p>
-          <div class="echo__foot">
-            <span>{{ echoPost.isAnonymous === 1 ? '来自 一个匿名的人' : `来自 ${echoPost.authorName || '陌生人'}` }}</span>
-            <span class="wave"><i /><i /><i /><i /><i /></span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ 公告 ============ -->
-    <div v-if="announcements.length > 0" class="dh-wrap ticker">
-      <div class="ticker__in">
-        <span class="ticker__label">公告</span>
-        <div class="ticker__viewport">
-          <Transition name="tick" mode="out-in">
-            <div :key="annIndex" class="ticker__item">
-              <b>{{ announcements[annIndex].title }}</b>
-              <span>{{ announcements[annIndex].content }}</span>
-            </div>
-          </Transition>
-        </div>
-        <span class="ticker__dots">
-          <button
-            v-for="(ann, i) in announcements"
-            :key="ann.id"
-            type="button"
-            :class="['ticker__dot', { on: i === annIndex }]"
-            :aria-label="`公告 ${i + 1}`"
-            @click="annIndex = i"
-          />
-        </span>
-      </div>
-    </div>
-
-    <!-- ============ 搜索 ============ -->
-    <div class="dh-wrap search">
-      <label class="search__in">
-        <AppIcon name="search" :size="18" class="search__ico" />
+      <label class="hero__search">
+        <AppIcon name="search" :size="17" class="hero__search-ic" />
         <input
+          ref="searchRef"
           v-model="keyword"
           type="search"
           placeholder="搜索心事、关键词或某个人的昵称…"
           aria-label="搜索"
           @keyup.enter="goSearch"
         />
-        <button class="dh-btn dh-btn--primary dh-btn--sm" type="button" @click="goSearch">搜索</button>
+        <span class="hero__kbd">/</span>
       </label>
-    </div>
 
-    <!-- ============ 分类 + 列表 ============ -->
-    <div class="dh-wrap">
+      <div class="hero__cta">
+        <button class="dh-btn dh-btn--primary dh-btn--lg" type="button" @click="goPublish">
+          <span class="dh-btn__lb"><AppIcon name="spark" :size="16" /> 匿名写一条</span>
+        </button>
+        <button class="dh-btn dh-btn--ghost dh-btn--lg" type="button" @click="scrollToFeed">
+          <span class="dh-btn__lb">
+            看看今晚的心事
+            <AppIcon name="chevron-right" :size="15" class="dh-arw" />
+          </span>
+        </button>
+      </div>
+
+      <div class="hero__stats">
+        <div class="stat"><b>{{ total.toLocaleString() }}</b><span>条心事</span></div>
+        <div class="stat"><b>{{ categories.length }}</b><span>个分类</span></div>
+      </div>
+    </section>
+
+    <!-- ============ 右栏 ============ -->
+    <aside class="dh-rail">
+      <!-- 公告 -->
+      <div v-if="announcements.length > 0" class="dh-card dh-mod">
+        <div class="dh-mod__h">
+          <AppIcon name="mega" :size="15" />
+          树洞公告
+          <span>{{ announcements.length }} 条</span>
+        </div>
+        <div
+          v-for="(ann, i) in announcements"
+          :key="ann.id"
+          class="dh-ann"
+          :class="{ 'is-on': annOpen === i }"
+        >
+          <button class="dh-ann__t" type="button" @click="toggleAnn(i)">
+            <i class="dh-ann__mk" />
+            <span class="dh-ann__tx">{{ ann.title }}</span>
+          </button>
+          <div class="dh-ann__bd">
+            {{ ann.content }}
+            <div class="dh-ann__meta">
+              <span>{{ ann.type }}</span>
+              <span>·</span>
+              <span>{{ ann.publishTime || ann.createTime }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 今日回声（取当前列表里内容最长的一条真实帖子） -->
+      <div v-if="echoPost" class="dh-card dh-mod echo" @click="goPost(echoPost.id)">
+        <div class="dh-mod__h">
+          <AppIcon name="moon" :size="15" />
+          今日回声
+        </div>
+        <p class="echo__q">“{{ echoText }}”</p>
+        <div class="echo__f">
+          <span>来自 {{ echoPost.isAnonymous === 1 ? '一个匿名的人' : echoPost.authorName || '陌生人' }}</span>
+          <span class="echo__go">去看看 <AppIcon name="chevron-right" :size="12" /></span>
+        </div>
+      </div>
+
+      <!-- 数据 -->
+      <div class="dh-card dh-mod">
+        <div class="dh-mod__h">
+          <AppIcon name="cell" :size="15" />
+          树洞数据
+        </div>
+        <div class="dh-statrow">
+          <div><b>{{ total.toLocaleString() }}</b><span>条心事</span></div>
+          <div><b>{{ categories.length }}</b><span>个分类</span></div>
+        </div>
+      </div>
+
+      <!-- 公约 -->
+      <div class="dh-card dh-mod">
+        <div class="dh-mod__h">
+          <AppIcon name="shield" :size="15" />
+          树洞公约
+        </div>
+        <ul class="dh-pact">
+          <li><span class="no">01</span><span><b>匿名是保护，不是武器。</b>不攻击、不人肉、不泄露隐私。</span></li>
+          <li><span class="no">02</span><span><b>不做广告与引流。</b>联系方式、二维码、外链都会被拦下。</span></li>
+          <li><span class="no">03</span><span><b>你可以只写一句。</b>不必完整，不必正确，写下来就够。</span></li>
+        </ul>
+        <p class="dh-trust">本平台不记录你的真实身份</p>
+      </div>
+    </aside>
+
+    <!-- ============ 精选（置顶帖单独成卡，不再混在流里） ============ -->
+    <article v-if="spotPost" class="dh-card dh-card--hover dh-spot" @click="goPost(spotPost.id)">
+      <div class="dh-spot__h">
+        <span class="dh-tag dh-tag--pin">置顶 · 精选</span>
+        <span class="dh-mono dh-spot__time">{{ formatDate(spotPost.createTime) }}</span>
+        <span v-if="spotPost.categoryName" class="dh-tag dh-spot__cat">{{ spotPost.categoryName }}</span>
+      </div>
+      <p class="dh-spot__b">{{ spotPost.content }}</p>
+      <div class="dh-spot__f">
+        <span class="dh-metric"><AppIcon name="eye" :size="13" /> {{ spotPost.viewCount || 0 }}</span>
+        <span class="dh-metric"><AppIcon name="like" :size="13" /> {{ spotPost.likeCount || 0 }}</span>
+        <span class="dh-metric"><AppIcon name="comment" :size="13" /> {{ spotPost.commentCount || 0 }}</span>
+        <span class="dh-spot__more">读全文 <AppIcon name="chevron-right" :size="12" /></span>
+      </div>
+    </article>
+
+    <!-- ============ 内容 ============ -->
+    <div class="dh-page__content">
       <div class="filters">
-        <button type="button" :class="['dh-pill', { 'is-on': selectedCategory === undefined }]" @click="pickCategory(undefined)">
-          全部
+        <button
+          type="button"
+          :class="['dh-pill', { 'is-on': !activeCategory }]"
+          @click="pickCategory(undefined)"
+        >
+          全部 <i>{{ total }}</i>
         </button>
         <button
           v-for="cat in categories"
           :key="cat.id"
           type="button"
-          :class="['dh-pill', { 'is-on': selectedCategory === cat.id }]"
+          :class="['dh-pill', { 'is-on': activeCategory === cat.id }]"
           @click="pickCategory(cat.id)"
         >
-          {{ cat.name }}
+          {{ cat.name }} <i>{{ cat.postCount || 0 }}</i>
         </button>
         <span class="filters__sp">共 {{ total.toLocaleString() }} 条</span>
       </div>
@@ -111,58 +159,73 @@
           />
         </template>
 
-        <div v-if="!loading && posts.length === 0" class="dh-state">
+        <div v-if="!loading && posts.length === 0 && !spotPost" class="dh-state">
           <p>这里还很安静</p>
           <button class="dh-btn dh-btn--ghost" type="button" style="margin-top: 14px" @click="goPublish">
-            来写第一条
+            <span class="dh-btn__lb">来写第一条</span>
           </button>
         </div>
       </div>
 
-      <div v-if="hasMore" class="load-more">
+      <!-- 触底自动加载：哨兵进入视口就翻页，按钮作兜底 -->
+      <div v-if="hasMore" ref="sentinelRef" class="load-more">
         <button class="dh-btn dh-btn--ghost" type="button" :disabled="loading" @click="loadMore">
-          {{ loading ? '加载中…' : '加载更多' }}
+          <span class="dh-btn__lb">{{ loading ? '加载中…' : '加载更多' }}</span>
         </button>
       </div>
-      <div v-else-if="posts.length > 0" class="sentinel">— 到底了 —</div>
+      <div v-else-if="posts.length > 0" class="sentinel-line">— 到底了 —</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import PostCard from '../components/PostCard.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { getPostPage, getCategoryList, getActiveAnnouncements } from '../api/treehole'
 import { isLoggedIn } from '../api/auth'
 import type { Post, Category, Announcement } from '../api/treehole'
 
+const route = useRoute()
 const router = useRouter()
+
 const posts = ref<Post[]>([])
 const categories = ref<Category[]>([])
 const announcements = ref<Announcement[]>([])
+const total = ref(0)
 const loading = ref(false)
 const pageNum = ref(1)
 const pageSize = 10
-const total = ref(0)
-const selectedCategory = ref<number | undefined>(undefined)
 const keyword = ref('')
 const hasMore = ref(false)
-const annIndex = ref(0)
+const annOpen = ref(0)
+const spotPost = ref<Post | null>(null)
 
-let annTimer: ReturnType<typeof setInterval> | null = null
+const searchRef = ref<HTMLInputElement | null>(null)
+const sentinelRef = ref<HTMLElement | null>(null)
 
-/** 今日回声：取当前列表里 content 最长的一条，保证内容充实 */
-const echoPost = computed(() => {
-  if (posts.value.length === 0) return null
-  return [...posts.value].sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0))[0]
+/** 分类筛选同步在 URL 上：可分享、可后退 */
+const activeCategory = computed(() => {
+  const raw = route.query.category
+  const n = Number(Array.isArray(raw) ? raw[0] : raw)
+  return Number.isInteger(n) && n > 0 ? n : undefined
 })
 
+/** 今日回声：取内容最长的一条，保证读起来有内容 */
+const echoPost = computed(() => {
+  const list = [spotPost.value, ...posts.value].filter(Boolean) as Post[]
+  if (list.length === 0) return null
+  return [...list].sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0))[0]
+})
 const echoText = computed(() => {
   const text = echoPost.value?.content || ''
-  return text.length > 46 ? `${text.slice(0, 46)}…` : text
+  return text.length > 52 ? `${text.slice(0, 52)}…` : text
 })
+
+function goPost(id: number) {
+  router.push(`/post/${id}`)
+}
 
 function goPublish() {
   router.push(isLoggedIn() ? '/publish' : '/login')
@@ -179,32 +242,54 @@ function goSearch() {
 }
 
 function pickCategory(id?: number) {
-  if (selectedCategory.value === id) return
-  selectedCategory.value = id
-  fetchPosts()
+  if (activeCategory.value === id) return
+  router.push({ path: '/', query: id ? { category: String(id) } : {} })
+}
+
+function toggleAnn(i: number) {
+  annOpen.value = annOpen.value === i ? -1 : i
+}
+
+function formatDate(value?: string) {
+  if (!value) return ''
+  const d = new Date(value.replace(' ', 'T'))
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('zh-CN')
+}
+
+/** 第一页数据里把置顶帖抽出来做「精选」，并从列表移除，避免同一篇出现两次 */
+function splitSpot(list: Post[]) {
+  if (pageNum.value !== 1) return { spot: null as Post | null, rest: list }
+  const idx = list.findIndex((p) => p.isTop === 1)
+  if (idx === -1) return { spot: null as Post | null, rest: list }
+  return { spot: list[idx], rest: list.filter((_, i) => i !== idx) }
 }
 
 async function fetchPosts() {
   loading.value = true
   pageNum.value = 1
   try {
-    const res = await getPostPage({ pageNum: 1, pageSize, categoryId: selectedCategory.value })
-    posts.value = res.data.records || []
+    const res = await getPostPage({ pageNum: 1, pageSize, categoryId: activeCategory.value })
+    const list = res.data.records || []
     total.value = res.data.total || 0
-    hasMore.value = posts.value.length < total.value
+    const { spot, rest } = splitSpot(list)
+    spotPost.value = spot
+    posts.value = rest
+    hasMore.value = posts.value.length + (spot ? 1 : 0) < total.value
   } finally {
     loading.value = false
   }
 }
 
 async function loadMore() {
+  if (loading.value || !hasMore.value) return
   loading.value = true
   pageNum.value += 1
   try {
-    const res = await getPostPage({ pageNum: pageNum.value, pageSize, categoryId: selectedCategory.value })
-    posts.value = [...posts.value, ...(res.data.records || [])]
+    const res = await getPostPage({ pageNum: pageNum.value, pageSize, categoryId: activeCategory.value })
+    const list = res.data.records || []
     total.value = res.data.total || 0
-    hasMore.value = posts.value.length < total.value
+    posts.value = [...posts.value, ...list]
+    hasMore.value = posts.value.length + (spotPost.value ? 1 : 0) < total.value
   } finally {
     loading.value = false
   }
@@ -228,104 +313,108 @@ async function loadAnnouncements() {
   }
 }
 
+/* 触底自动加载 */
+let io: IntersectionObserver | null = null
+function observeSentinel() {
+  if (!sentinelRef.value) return
+  if (!io) {
+    io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadMore()
+    }, { rootMargin: '240px 0px' })
+  }
+  io.disconnect()
+  io.observe(sentinelRef.value)
+}
+
+/* 按 "/" 聚焦搜索 */
+function onKeydown(e: KeyboardEvent) {
+  if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+  const el = document.activeElement
+  if (el && /input|textarea/i.test(el.tagName)) return
+  e.preventDefault()
+  searchRef.value?.focus()
+}
+
+watch(activeCategory, () => {
+  fetchPosts().then(() => observeSentinel())
+})
+// 哨兵出现/消失时重新观察
+watch(sentinelRef, () => observeSentinel())
+watch(hasMore, () => observeSentinel())
+
 onMounted(() => {
   loadCategories()
-  fetchPosts()
   loadAnnouncements()
-  annTimer = setInterval(() => {
-    if (announcements.value.length > 1) {
-      annIndex.value = (annIndex.value + 1) % announcements.value.length
-    }
-  }, 4200)
+  fetchPosts().then(observeSentinel)
+  window.addEventListener('keydown', onKeydown)
 })
 
 onUnmounted(() => {
-  if (annTimer) clearInterval(annTimer)
+  io?.disconnect()
+  window.removeEventListener('keydown', onKeydown)
 })
 </script>
 
 <style scoped>
 /* ---------- Hero ---------- */
-.hero { padding: 78px 0 24px; }
-.hero__grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: center; }
+.hero { padding: 62px 0 6px; }
 .hero h1 {
-  margin: 22px 0 0; font-size: clamp(38px, 5.4vw, 62px); line-height: 1.06;
-  letter-spacing: -0.035em; font-weight: 700;
+  margin: 20px 0 0; font-size: clamp(34px, 4.4vw, 56px); line-height: 1.06;
+  letter-spacing: -0.038em; font-weight: 700;
 }
-.hero h1 i { font-style: normal; color: var(--accent); }
+.hero h1 i { font-style: normal; color: var(--accent); position: relative; }
+.hero h1 i::after {
+  content: ""; position: absolute; left: 0; right: -2px; bottom: 0.06em; height: 0.16em;
+  border-radius: 4px; background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
 .hero__sub {
-  margin-top: 20px; font-family: var(--font-display); font-style: italic;
-  font-size: clamp(17px, 2vw, 21px); color: var(--text-dim); max-width: 30ch;
+  margin-top: 18px; font-family: var(--font-display); font-style: italic;
+  font-size: clamp(16px, 1.8vw, 20px); color: var(--text-dim); max-width: 28ch;
 }
-.hero__cta { margin-top: 34px; display: flex; gap: 12px; flex-wrap: wrap; }
-.hero__stats { margin-top: 42px; display: flex; gap: 34px; flex-wrap: wrap; }
+.hero__search {
+  display: flex; align-items: center; gap: 11px; margin-top: 26px; max-width: 470px;
+  padding: 6px 6px 6px 18px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); backdrop-filter: blur(18px);
+  transition: border-color 0.35s var(--ease), box-shadow 0.35s var(--ease);
+}
+.hero__search:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow); }
+.hero__search-ic { color: var(--text-mute); }
+.hero__search input { flex: 1; font-size: 14.5px; padding: 10px 0; min-width: 0; }
+.hero__search input::placeholder { color: var(--text-mute); }
+.hero__kbd {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--text-mute);
+  border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; margin-right: 6px;
+}
+.hero__cta { margin-top: 22px; display: flex; gap: 12px; flex-wrap: wrap; }
+.hero__stats { margin-top: 34px; display: flex; gap: 34px; flex-wrap: wrap; }
 .stat b { display: block; font-family: var(--font-mono); font-size: 24px; font-weight: 500; letter-spacing: -0.02em; }
 .stat span { font-size: 12px; color: var(--text-mute); letter-spacing: 0.05em; }
 
-/* ---------- 今日回声 ---------- */
-.echo { padding: 26px; border-radius: var(--r-xl); }
-.echo__head {
-  display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-mute);
-  letter-spacing: 0.1em; font-family: var(--font-mono); text-transform: uppercase;
-}
-.echo p { margin: 18px 0 20px; font-family: var(--font-display); font-style: italic; font-size: 19px; line-height: 1.6; }
-.echo__foot { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-mute); }
-.wave { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
-.wave i { width: 3px; border-radius: 3px; background: var(--accent-line); animation: wave 1.3s ease-in-out infinite; }
-.wave i:nth-child(1) { height: 8px; }
-.wave i:nth-child(2) { height: 16px; animation-delay: 0.12s; }
-.wave i:nth-child(3) { height: 11px; animation-delay: 0.24s; }
-.wave i:nth-child(4) { height: 19px; animation-delay: 0.36s; }
-.wave i:nth-child(5) { height: 7px; animation-delay: 0.48s; }
-@keyframes wave { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
+/* ---------- 右栏模块 ---------- */
+.echo { cursor: pointer; }
+.echo__q { font-family: var(--font-display); font-style: italic; font-size: 16.5px; line-height: 1.62; color: var(--text-dim); }
+.echo__f { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; font-size: 11.5px; color: var(--text-mute); }
+.echo__go { display: inline-flex; align-items: center; gap: 3px; color: var(--accent); transition: gap 0.3s var(--ease); }
+.echo:hover .echo__go { gap: 7px; }
 
-/* ---------- 公告 ---------- */
-.ticker { margin-top: 30px; }
-.ticker__in {
-  display: flex; align-items: center; gap: 14px; height: 46px; padding: 0 14px 0 16px;
-  border-radius: 999px; border: 1px solid var(--border); background: var(--surface);
-  backdrop-filter: blur(16px);
-}
-.ticker__label {
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em;
-  color: var(--accent); text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
-}
-.ticker__viewport { flex: 1; min-width: 0; height: 46px; overflow: hidden; }
-.ticker__item { display: flex; align-items: center; gap: 10px; height: 46px; font-size: 13px; color: var(--text-dim); }
-.ticker__item b { color: var(--text); font-weight: 500; flex-shrink: 0; }
-.ticker__item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tick-enter-active, .tick-leave-active { transition: opacity 0.4s var(--ease), transform 0.4s var(--ease); }
-.tick-enter-from { opacity: 0; transform: translateY(100%); }
-.tick-leave-to { opacity: 0; transform: translateY(-100%); }
-.ticker__dots { display: flex; gap: 5px; flex-shrink: 0; }
-.ticker__dot { width: 5px; height: 5px; border-radius: 999px; background: var(--border-strong); transition: all 0.3s var(--ease); }
-.ticker__dot.on { background: var(--accent); width: 14px; }
+/* ---------- 精选 ---------- */
+.dh-spot__time { font-size: 11.5px; color: var(--text-mute); }
+.dh-spot__cat { margin-left: auto; }
+.dh-spot__f { display: flex; align-items: center; gap: 16px; margin-top: 16px; font-size: 12px; color: var(--text-mute); flex-wrap: wrap; }
+.dh-spot__more { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-size: 12.5px; }
 
-/* ---------- 搜索 ---------- */
-.search { margin-top: 30px; }
-.search__in {
-  display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 20px;
-  border-radius: 999px; border: 1px solid var(--border); background: var(--surface);
-  backdrop-filter: blur(18px); transition: border-color 0.35s var(--ease), box-shadow 0.35s var(--ease);
-}
-.search__in:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow); }
-.search__ico { color: var(--text-mute); }
-.search__in input { flex: 1; font-size: 15px; padding: 12px 0; min-width: 0; }
-.search__in input::placeholder { color: var(--text-mute); }
-
-/* ---------- 分类 / 列表 ---------- */
-.filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 30px 0 20px; }
+/* ---------- 筛选 / 列表 ---------- */
+.filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.filters .dh-pill i { font-style: normal; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-mute); }
+.filters .dh-pill.is-on i { color: var(--accent); }
 .filters__sp { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); letter-spacing: 0.08em; }
-.feed { display: grid; gap: 14px; }
-.load-more { text-align: center; margin-top: 26px; }
-.sentinel { text-align: center; padding: 30px; color: var(--text-mute); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em; }
+.feed { display: grid; gap: 14px; margin-top: 18px; }
+.load-more { display: flex; justify-content: center; margin-top: 24px; }
+.sentinel-line { text-align: center; padding: 26px; color: var(--text-mute); font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.1em; }
 
-@media (max-width: 980px) {
-  .hero__grid { grid-template-columns: 1fr; gap: 34px; }
-}
 @media (max-width: 720px) {
-  .hero { padding: 44px 0 18px; }
-  .search__in { padding-left: 14px; }
-  .ticker__dots { display: none; }
+  .hero { padding: 36px 0 4px; }
+  .hero__search { padding-left: 14px; }
+  .hero__kbd { display: none; }
 }
 </style>

@@ -3,51 +3,56 @@
     <IconSprite />
     <BackdropFx />
 
-    <header v-if="!hideChrome" class="dh-hdr">
-      <div class="dh-wrap">
-        <div class="dh-hdr__inner">
-          <router-link to="/" class="dh-brand">
-            <AppIcon name="tree" :size="28" />
-            <span>树洞</span>
-            <em>deep hollow</em>
-          </router-link>
+    <!-- App Shell（布局 3）：宽屏左侧常驻导航，窄屏自动收起 -->
+    <div class="dh-shell">
+      <AppSidenav v-if="!hideChrome" :unread-count="unreadCount" :is-logged-in="isLoggedIn" />
 
-          <nav class="dh-nav">
-            <router-link to="/">广场</router-link>
-            <router-link v-if="isLoggedIn" to="/publish">发布</router-link>
-          </nav>
-
-          <div class="dh-hdr__acts">
-            <router-link to="/search" class="dh-icon-btn" title="搜索" aria-label="搜索">
-              <AppIcon name="search" :size="17" />
-            </router-link>
-
-            <button
-              class="dh-icon-btn dh-hide-mobile"
-              type="button"
-              :title="theme === 'dark' ? '切换到浅色' : '切换到深色'"
-              aria-label="切换主题"
-              @click="toggleTheme"
-            >
-              <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="17" />
-            </button>
-
-            <template v-if="isLoggedIn">
-              <router-link to="/notifications" class="dh-icon-btn" title="消息中心" aria-label="消息中心">
-                <AppIcon name="bell" :size="17" />
-                <span v-if="unreadCount > 0" class="dh-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+      <div class="dh-shell__main">
+        <header v-if="!hideChrome" class="dh-hdr">
+          <div class="dh-wrap">
+            <div class="dh-hdr__inner">
+              <router-link to="/" class="dh-brand">
+                <AppIcon name="tree" :size="28" />
+                <span>树洞</span>
+                <em>deep hollow</em>
               </router-link>
-              <router-link to="/settings" class="dh-icon-btn dh-hide-mobile" title="账号设置" aria-label="账号设置">
-                <AppIcon name="cog" :size="17" />
-              </router-link>
-              <router-link to="/profile" class="dh-user-chip" title="我的主页">
-                <span class="dh-av">{{ displayName.charAt(0) }}</span>
-                <b>{{ displayName }}</b>
-              </router-link>
-              <button
-                class="dh-icon-btn dh-hide-mobile"
-                type="button"
-                title="退出登录"
+
+              <nav class="dh-nav">
+                <router-link to="/">广场</router-link>
+                <router-link v-if="isLoggedIn" to="/publish">发布</router-link>
+              </nav>
+
+              <div class="dh-hdr__acts">
+                <router-link to="/search" class="dh-icon-btn" title="搜索" aria-label="搜索">
+                  <AppIcon name="search" :size="17" />
+                </router-link>
+
+                <button
+                  class="dh-icon-btn dh-hide-mobile"
+                  type="button"
+                  :title="theme === 'dark' ? '切换到浅色' : '切换到深色'"
+                  aria-label="切换主题"
+                  @click="toggleTheme"
+                >
+                  <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="17" />
+                </button>
+
+                <template v-if="isLoggedIn">
+                  <router-link to="/notifications" class="dh-icon-btn" title="消息中心" aria-label="消息中心">
+                    <AppIcon name="bell" :size="17" />
+                    <span v-if="unreadCount > 0" class="dh-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+                  </router-link>
+                  <router-link to="/settings" class="dh-icon-btn dh-hide-mobile" title="账号设置" aria-label="账号设置">
+                    <AppIcon name="cog" :size="17" />
+                  </router-link>
+                  <router-link to="/profile" class="dh-user-chip" title="我的主页">
+                    <span class="dh-av">{{ displayName.charAt(0) }}</span>
+                    <b>{{ displayName }}</b>
+                  </router-link>
+                  <button
+                    class="dh-icon-btn dh-hide-mobile"
+                    type="button"
+                    title="退出登录"
                 aria-label="退出登录"
                 @click="handleLogout"
               >
@@ -73,6 +78,12 @@
             </button>
 
             <div v-if="menuOpen" class="dh-menu" role="menu">
+              <router-link to="/" role="menuitem" @click="menuOpen = false">
+                <AppIcon name="home" :size="16" /> 广场
+              </router-link>
+              <router-link v-if="isLoggedIn" to="/publish" role="menuitem" @click="menuOpen = false">
+                <AppIcon name="plus" :size="16" /> 写一条心事
+              </router-link>
               <button type="button" role="menuitem" @click="onMenuTheme">
                 <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="16" />
                 {{ theme === 'dark' ? '切换到浅色' : '切换到深色' }}
@@ -89,19 +100,23 @@
       </div>
     </header>
 
-    <main class="dh-main">
-      <router-view />
-    </main>
+        <main class="dh-main">
+          <router-view />
+        </main>
 
-    <footer v-if="!hideChrome" class="dh-ftr">
-      <div class="dh-wrap dh-ftr__in">
-        <span>© 2026 树洞 · Deep Hollow — 说给懂的人听，不必署名</span>
-        <span class="dh-ftr__links">
-          <router-link to="/notifications">消息</router-link>
-          <router-link to="/settings">设置</router-link>
-        </span>
+        <footer v-if="!hideChrome" class="dh-ftr">
+          <div class="dh-wrap dh-ftr__in">
+            <span>© 2026 树洞 · Deep Hollow — 说给懂的人听，不必署名</span>
+            <span class="dh-ftr__links">
+              <router-link to="/notifications">消息</router-link>
+              <router-link to="/settings">设置</router-link>
+            </span>
+          </div>
+        </footer>
       </div>
-    </footer>
+    </div>
+
+    <BackToTop v-if="!hideChrome" />
   </div>
 </template>
 
@@ -114,6 +129,8 @@ import { useTheme } from './composables/useTheme'
 import AppIcon from './components/AppIcon.vue'
 import IconSprite from './components/IconSprite.vue'
 import BackdropFx from './components/BackdropFx.vue'
+import AppSidenav from './components/AppSidenav.vue'
+import BackToTop from './components/BackToTop.vue'
 
 const route = useRoute()
 const router = useRouter()
