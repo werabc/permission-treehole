@@ -11,6 +11,7 @@ import com.permission.common.exception.BusinessException;
 import com.permission.system.mapper.SysDeptMapper;
 import com.permission.system.mapper.SysUserMapper;
 import com.permission.system.service.SysDeptService;
+import com.permission.system.support.DataScopeGuard;
 import com.permission.system.support.DataScopeHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ import java.util.Objects;
 public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> implements SysDeptService {
 
     private final SysUserMapper userMapper;
+    private final DataScopeGuard dataScopeGuard;
 
     @Override
     public List<SysDept> getDeptTree(String keyword, Integer status) {
@@ -44,7 +46,13 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
 
     @Override
     public SysDept getDeptById(Long id) {
-        return baseMapper.selectById(id);
+        // 数据权限：拦截器过滤后返回 0 行无法区分"不存在/无权"，先显式断言把越权读变 403
+        dataScopeGuard.assertDeptReadable(id);
+        SysDept dept = baseMapper.selectById(id);
+        if (dept == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "部门不存在");
+        }
+        return dept;
     }
 
     @Override
@@ -54,6 +62,8 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         if (dept.getParentId() == null) {
             dept.setParentId(0L);
         }
+        // 数据权限：只能在自己有权管辖的父部门下新建（顶级部门仅全部数据范围可建）
+        dataScopeGuard.assertDeptParentInScope(dept.getParentId());
         dept.setAncestors(getAncestors(dept.getParentId()));
         // 组织层级由 ancestors 推导并冗余存储：1-集团 2-公司 3-部门 4+-小组
         dept.setDeptLevel(DataScopeHelper.calcLevel(dept.getAncestors()));
@@ -63,6 +73,8 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateDept(SysDept dept) {
+        // 数据权限：先断言再读，否则被拦截器过滤后会误报"部门不存在"而掩盖越权
+        dataScopeGuard.assertDeptWritable(dept.getId());
         SysDept existing = baseMapper.selectById(dept.getId());
         if (existing == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "部门不存在");
@@ -70,6 +82,10 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         validateDeptNameUnique(dept.getDeptName(), dept.getParentId(), dept.getId());
         if (dept.getParentId() == null) {
             dept.setParentId(0L);
+        }
+        // 数据权限：不允许把部门移动到管辖范围之外的父节点下（否则等于把整棵子树送出边界）
+        if (!Objects.equals(dept.getParentId(), existing.getParentId())) {
+            dataScopeGuard.assertDeptParentInScope(dept.getParentId());
         }
         String newAncestors = getAncestors(dept.getParentId());
         boolean moved = !Objects.equals(newAncestors, existing.getAncestors());
@@ -106,6 +122,8 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     @Override
     @Transactional
     public void deleteDept(Long id) {
+        // 数据权限：目标部门必须在本用户的写范围内
+        dataScopeGuard.assertDeptWritable(id);
         long childCount = baseMapper.selectCount(
                 new LambdaQueryWrapper<SysDept>().eq(SysDept::getParentId, id));
         if (childCount > 0) {

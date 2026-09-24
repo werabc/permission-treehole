@@ -59,6 +59,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final SysDeptMapper deptMapper;
     private final SysLoginLogService loginLogService;
     private final OnlineUserService onlineUserService;
+    private final com.permission.system.support.DataScopeGuard dataScopeGuard;
 
     @Override
     public TokenVO login(LoginDTO loginDTO) {
@@ -265,16 +266,20 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     @Override
     public SysUser getUserById(Long id) {
+        // 数据权限：拦截器会把数据范围拼进 SQL（返回 0 行），但不能区分"不存在"与"无权访问"。
+        // 这里先做一次显式断言，把越权读变成明确的 403，而不是静默返回 null。
+        dataScopeGuard.assertUserReadable(id);
         SysUser user = baseMapper.selectById(id);
-        if (user != null && user.getDeptId() != null) {
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        if (user.getDeptId() != null) {
             SysDept dept = deptMapper.selectById(user.getDeptId());
             if (dept != null) {
                 user.setDeptName(dept.getDeptName());
             }
         }
-        if (user != null) {
-            user.setPassword(null); // Never serialize password hash in response
-        }
+        user.setPassword(null); // Never serialize password hash in response
         return user;
     }
 
@@ -285,6 +290,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new BusinessException(ResultCode.DATA_EXISTS, "用户名已存在");
         }
         validatePassword(user.getPassword());
+        // 数据权限：只能在有权管辖的部门下创建用户
+        dataScopeGuard.assertUserDeptInScope(user.getDeptId());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setStatus(UserStatus.ENABLED.getCode());
         baseMapper.insert(user);
@@ -293,10 +300,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     @Transactional
     public void updateUser(SysUser user) {
+        // 数据权限：先断言再读，否则被拦截器过滤后会误报"用户不存在"而掩盖越权
+        dataScopeGuard.assertUserWritable(user.getId());
         SysUser existing = baseMapper.selectById(user.getId());
         if (existing == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
+        // 数据权限：不允许把用户迁移到看不见的部门
+        dataScopeGuard.assertUserDeptInScope(user.getDeptId());
         if (!existing.getUsername().equals(user.getUsername()) && existsByUsername(user.getUsername())) {
             throw new BusinessException(ResultCode.DATA_EXISTS, "用户名已存在");
         }
@@ -308,6 +319,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Transactional
     public void deleteUsers(List<Long> ids) {
         if (CollUtil.isNotEmpty(ids)) {
+            // 数据权限：批量删除前逐个校验，任一越权即整体拒绝
+            dataScopeGuard.assertUsersWritable(ids);
             baseMapper.deleteBatchIds(ids);
             userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().in(SysUserRole::getUserId, ids));
         }
@@ -316,6 +329,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     @Transactional
     public void updateStatus(Long id, Integer status) {
+        // 数据权限：不能禁用/启用范围外用户
+        dataScopeGuard.assertUserWritable(id);
         SysUser user = new SysUser();
         user.setId(id);
         user.setStatus(status);
@@ -325,6 +340,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     @Transactional
     public void resetPassword(Long id, String newPassword) {
+        // 数据权限：重置密码是高危操作，必须校验归属（否则可越权重置超管密码）
+        dataScopeGuard.assertUserWritable(id);
         validatePassword(newPassword);
         SysUser user = new SysUser();
         user.setId(id);
@@ -352,6 +369,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     @Transactional
     public void assignRoles(Long userId, Set<Long> roleIds) {
+        // 数据权限：给他人分配角色是垂直提权的最短路径，必须校验归属
+        dataScopeGuard.assertUserWritable(userId);
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
         if (CollUtil.isNotEmpty(roleIds)) {
             for (Long roleId : roleIds) {
@@ -427,6 +446,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (ids == null || ids.isEmpty()) {
             return;
         }
+        // 数据权限：批量改状态前逐个校验，任一越权即整体拒绝
+        dataScopeGuard.assertUsersWritable(ids);
         SysUser user = new SysUser();
         user.setStatus(status);
         update(user, new LambdaQueryWrapper<SysUser>().in(SysUser::getId, ids));

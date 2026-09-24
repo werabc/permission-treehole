@@ -106,6 +106,66 @@ public final class DataScopeHelper {
         return sb.toString();
     }
 
+    // ==================== 写侧可见性判定（与 buildCondition 同源） ====================
+
+    /**
+     * 当前用户是否有权"写"某个用户记录（改/删/禁用/重置密码/分配角色）
+     *
+     * 与 {@link #buildCondition} 的读侧规则保持**同一套语义**，避免读写漂移：
+     *   - ALL           → 放行
+     *   - 目标即本人    → 放行（读侧始终 OR id = 自己，写侧对齐）
+     *   - SELF          → 仅本人
+     *   - 其余          → 目标 dept_id 必须落在 deptIds 内
+     *
+     * @param user           当前登录用户
+     * @param targetUserId   目标用户ID
+     * @param targetDeptId   目标用户所属部门ID（可为 null）
+     */
+    public static boolean canWriteUser(LoginUser user, Long targetUserId, Long targetDeptId) {
+        if (user == null) return false;                       // 无登录态：写操作一律不放行
+        if (user.getUserId() != null && user.getUserId().equals(targetUserId)) return true;
+
+        DataScope scope = DataScope.of(user.getDataScope());
+        if (scope == DataScope.ALL) return true;
+        if (scope == DataScope.SELF) return false;            // 仅本人，且目标不是本人
+
+        return inVisibleDepts(user, targetDeptId);
+    }
+
+    /**
+     * 当前用户是否有权"写"某个部门记录（改/删）
+     *
+     * 判定基准与读侧 sys_dept 一致：用"可见部门 + 祖先"集合，
+     * 因为部门是树结构，能看见父节点才能对它做管理操作。
+     *
+     * @param user           当前登录用户
+     * @param targetDeptId   目标部门ID
+     */
+    public static boolean canWriteDept(LoginUser user, Long targetDeptId) {
+        if (user == null) return false;
+        if (targetDeptId == null) return false;
+
+        DataScope scope = DataScope.of(user.getDataScope());
+        if (scope == DataScope.ALL) return true;
+
+        if (scope == DataScope.SELF) {
+            return user.getDeptId() != null && user.getDeptId().equals(targetDeptId);
+        }
+        List<Long> treeIds = user.getDeptTreeIds() == null || user.getDeptTreeIds().isEmpty()
+                ? user.getDeptIds() : user.getDeptTreeIds();
+        return treeIds != null && treeIds.contains(targetDeptId);
+    }
+
+    /**
+     * 目标部门是否落在"可见部门集合"内（写侧 sys_user 判定用）
+     * 注意：这里**不能**用 deptTreeIds（含祖先），否则会因祖先部门被放行而放大写权限。
+     */
+    private static boolean inVisibleDepts(LoginUser user, Long targetDeptId) {
+        if (targetDeptId == null) return false;
+        List<Long> deptIds = user.getDeptIds();
+        return deptIds != null && deptIds.contains(targetDeptId);
+    }
+
     // ==================== 组织树解析 ====================
 
     /** ancestors "0,100,101" → [0,100,101]；空或非法返回空列表 */

@@ -65,6 +65,8 @@ class SysUserServiceImplTest {
     @Mock
     private OnlineUserService onlineUserService;
     @Mock
+    private com.permission.system.support.DataScopeGuard dataScopeGuard;
+    @Mock
     private SysUserMapper baseMapper;
     @Mock
     private ValueOperations<String, Object> valueOperations;
