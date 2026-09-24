@@ -21,3 +21,35 @@
   - 字体：Noto Sans SC（正文）/ Fraunces 斜体（诗意短句）/ JetBrains Mono（数据与标签）
   - 图标统一线性 SVG，禁止 emoji
 - 中文 POST：Git Bash 下 `curl -d '中文'` 会破坏 UTF-8 → 一律 `printf | curl --data-binary @-`
+
+## 后端启动（重要坑）
+- **`SERVER__PORT` 是 WorkBuddy 注入的环境变量，Spring Boot 会把它映射成 `server.port` 并覆盖 yml！**
+  启动必须显式指定端口：`--server.port=8081`（e2e profile），否则报
+  `Port 62748 already in use`（62748 正是 WorkBuddy 自己的端口，不是你的服务占用）
+- 打包前必须先杀掉占用 jar 的 java 进程，否则 `repackage` 报 `Unable to rename xxx.jar.original`
+- 运行 jar：`"C:/Users/Lenovo/.jdks/ms-17.0.17/bin/java.exe" -jar permission-api/target/permission-api-1.0.0.jar --spring.profiles.active=e2e --server.port=8081`
+- 跑浏览器脚本需 `NODE_PATH="D:/software/nodejs/node_global/node_modules/@playwright/mcp/node_modules"`
+- 沙箱禁止 node spawn 子进程（EBUSY）→ 脚本取验证码用 `net` 内联 Redis RESP 客户端，别用 redis-cli
+
+## 数据权限架构（2026-09-24 定型）
+- 读侧：`DataPermissionInterceptor` + `DataPermissionHandler`（只改写 SELECT），豁免清单按 mappedStatementId 精确匹配
+- 写侧：`DataScopeGuard`（Service 层守门员），判定委托 `DataScopeHelper.canWriteUser/canWriteDept` —— **读写同源**
+- 守门员要用 `selectRawById`（必须进豁免清单）区分 404/403；业务查询严禁走豁免路径
+- 超管 id=1 除本人外不得改/删/禁用/重置（`BUILTIN_ADMIN_ID`）
+
+## 测试资产与「已验证」清单（2026-09-24）
+- **已全绿的验证套件**（代码未触及则不重跑，见 `docs/接口文档.md` 附录 F）：
+  - `scripts/verify_treehole_ui.cjs` —— C 端功能 E2E（真实浏览器）**76/76**
+  - `scripts/audit_dom_user_view.cjs` —— C 端用户视角 DOM 巡检 **73/73**
+  - `scripts/audit_dom_admin.cjs` —— 管理端逐路由 DOM 巡检 **120/120**
+  - `scripts/verify_admin_role_ui.cjs` —— 管理端角色创建/分配/防提权 **10/10**
+  - `scripts/verify_avatar_perm.sh` —— 头像上传全链路 + 树洞权限矩阵 **65/65**
+  - `scripts/verify_write_scope.cjs` —— 越权写防护攻击验证 **26/26**
+  - `scripts/verify_guard_no_overreach.cjs` —— 守门员不误伤验证 **16/16**
+  - 后端单测 8 个测试类（含 DataScopeWriteGuardTest 42 组合矩阵、DataPermissionBypassTest）→ **84/84**
+- **两个前端的 hash 路由**：C 端 `localhost:3000/#/xxx`、管理端 `localhost:5173/#/xxx`。
+  用 path 模式 URL 会静默落到首页/dashboard —— 写 E2E 必踩。
+- **C 端 dev server 只监听 IPv6** `[::1]:3000`，curl `127.0.0.1:3000` 会 502，用 `localhost`。
+- **管理端若 dev server 被杀**（vite 预构建 commit 触发沙箱 safe-delete >50 文件）：改用 `npm run build` + `vite preview`。
+- 管理端登录页断言文案是「权限管理系统」。
+- 规模基线：后端 21 个 Controller / 137 个 Java 文件 / 138 个端点；C 端 11 页 + 8 组件；管理端 28 页；权限码 34 个；角色 admin / tech_lead / user。
