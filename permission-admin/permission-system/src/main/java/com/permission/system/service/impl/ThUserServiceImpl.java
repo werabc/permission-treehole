@@ -102,7 +102,10 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         user.setPassword(passwordEncoder.encode(loginDTO.getPassword()));
         user.setGender(0);
         user.setStatus(1);
-        user.setAvatar("default.png");
+        // 不写 "default.png" 这种占位字符串：它不是可访问的 URL，
+        // 前端 AppAvatar 会把它当图片地址去请求 → 必然破图（历史上首页出现 3 张坏图就是这个）。
+        // 留空即可，AppAvatar 会自动退回"首字母"头像。
+        user.setAvatar(null);
         user.setPostCount(0);
         user.setCommentCount(0);
         user.setViolationCount(0);

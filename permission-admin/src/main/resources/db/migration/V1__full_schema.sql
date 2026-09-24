@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS th_user (
     username VARCHAR(50) NOT NULL COMMENT '用户名',
     password VARCHAR(200) NOT NULL COMMENT 'BCrypt密码',
     nickname VARCHAR(50) NOT NULL COMMENT '昵称',
-    avatar VARCHAR(500) DEFAULT 'default.png',
+    avatar VARCHAR(500) DEFAULT NULL COMMENT '头像URL；空表示无头像，前端显示首字母',
     bio VARCHAR(200) DEFAULT NULL,
     gender TINYINT DEFAULT 0 COMMENT '0-未知 1-男 2-女',
     email VARCHAR(100) DEFAULT NULL,

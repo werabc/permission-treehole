@@ -103,6 +103,9 @@ async function handleLogin() {
   justify-content: center;
   position: relative;
   background: #f0f2f5;
+  /* .login-bg 是 200% 宽的装饰层（靠负偏移+圆角做出弧面），
+     没有这行会被撑出横向滚动条，用户在登录页可以左右拖动 */
+  overflow: hidden;
 }
 
 .login-bg {

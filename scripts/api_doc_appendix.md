@@ -219,13 +219,16 @@
 | 前端接口调用与后端端点一致性 | `scripts/api_audit.py` 双向对账 | 136 调用全命中 | 09-24 |
 | 角色创建 / 菜单分配 / 用户分配角色（管理端 UI） | `scripts/verify_admin_role_ui.cjs`（真实浏览器+真实验证码登录） | 10/10，控制台错误 0 | 09-24 |
 | 防提权：创建 role_code=admin 被拒（浏览器实测） | 同上 | 通过 | 09-24 |
+| **C 端用户视角 DOM 巡检**（白屏/文案/按钮可见可点/破图/横向溢出/JS 报错） | `scripts/audit_dom_user_view.cjs`（真实浏览器） | **73/73**，控制台错误 0 | 09-24 |
+| **管理端用户视角 DOM 巡检**（登录页 + 8 个系统页 + 12 个树洞管理页） | `scripts/audit_dom_admin.cjs`（真实浏览器，逐路由） | **120/120**，控制台错误 0 | 09-24 |
+| 注册头像占位缺陷（首页 3 张破图） | 同上巡检暴露 → 修复后复测无破图 | 已修复 | 09-24 |
+| 管理端登录页横向溢出（800px） | 同上巡检暴露 → `.login-container{overflow:hidden}` | 已修复，复测溢出=0 | 09-24 |
 
 ## ⚠️ 待验证 / 待升级
 
 | 项 | 状态 | 说明 |
 |---|---|---|
 | 写操作数据范围校验（UPDATE/DELETE） | **待升级** | 拦截器只改写 SELECT；写操作由 Service 层显式校验兜底（代码已注明）。启用拦截器改写写操作需配套回归测试 |
-| 管理端浏览器 E2E 重写 | 待升级 | `browser_e2e.cjs` 选择器过时（已 gitignore），是唯一覆盖管理端流程的测试资产 |
-| C 端全量 E2E 复跑（含 4 项快修后） | `scripts/verify_treehole_ui.cjs` | 76/76，控制台错误 0、4xx/5xx 0 | 09-24 |
-| 登录页浅色引语对比度（暗角修复） | `docs/login-check/login-light-v2.jpg` 实机截图 | 可读性达标 | 09-24 |
+| 管理端浏览器 E2E 重写 | 待升级 | `browser_e2e.cjs` 选择器过时（已 gitignore）；现有覆盖已由 `audit_dom_admin.cjs` + `verify_admin_role_ui.cjs` 替代 |
 | C 端 `tsconfig.json` 类型检查 | 待补 | build 只剥类型不做检查 |
+| 管理端 `tsconfig.json` 类型检查 | 待补 | 同上 |
