@@ -22,6 +22,50 @@ const STAMP = Date.now().toString().slice(-8)
 const PWD = 'Admin@1234'
 let pass = 0, fail = 0
 const lines = []
+
+/** 兜底清理：只删本轮 STAMP 产生的数据，正常/异常路径都执行 */
+let ADMIN_TOKEN = null
+
+/** 分页拉全量 */
+async function findAll(token, path) {
+  const out = []
+  for (let p = 1; p <= 10; p++) {
+    const r = await req('GET', `${path}?pageNum=${p}&pageSize=100`, token)
+    const rec = r.data?.records || r.data?.list || []
+    out.push(...rec)
+    const total = r.data?.total ?? out.length
+    if (out.length >= total || rec.length === 0) break
+  }
+  return out
+}
+
+/** 兜底清理：角色 → 用户 → 部门，每步校验 + 重试（顺序不可颠倒，否则 4003） */
+async function finalCleanup() {
+  if (!ADMIN_TOKEN) return
+  try {
+    for (const r of (await findAll(ADMIN_TOKEN, '/api/role/page')).filter(x => (x.roleCode || '').includes(STAMP))) {
+      await req('DELETE', `/api/role/${r.id}`, ADMIN_TOKEN)
+    }
+    for (let i = 0; i < 3; i++) {
+      const users = (await findAll(ADMIN_TOKEN, '/api/user/page')).filter(u => (u.username || '').includes(STAMP))
+      if (!users.length) break
+      await req('DELETE', `/api/user/${users.map(u => u.id).join(',')}`, ADMIN_TOKEN)
+      await new Promise(r => setTimeout(r, 300))
+    }
+    for (let i = 0; i < 3; i++) {
+      const tree = await req('GET', '/api/dept/tree', ADMIN_TOKEN)
+      const flat = []
+      const walk = l => { for (const d of l || []) { flat.push(d); walk(d.children) } }
+      walk(Array.isArray(tree.data) ? tree.data : [])
+      const mine = flat.filter(x => (x.deptName || '').includes(STAMP))
+      if (!mine.length) break
+      for (const d of mine) await req('DELETE', `/api/dept/${d.id}`, ADMIN_TOKEN)
+      await new Promise(r => setTimeout(r, 300))
+    }
+  } catch (e) {
+    console.error('[兜底清理] 出错：', e.message)
+  }
+}
 const check = (g, name, cond, extra = '') => {
   if (cond) { pass++; lines.push(`  [PASS] ${name}${extra ? ' :: ' + extra : ''}`) }
   else { fail++; lines.push(`  [FAIL] ${name}${extra ? ' :: ' + extra : ''}`) }
@@ -77,6 +121,7 @@ async function findUserId(token, username) {
   section('准备：admin 建一个普通用户')
   const admin = await login('admin', PWD)
   const adminToken = admin.token
+  ADMIN_TOKEN = adminToken
   check('准备', 'admin 登录成功', !!adminToken)
   if (!adminToken) { console.log(lines.join('\n')); process.exit(1) }
 
@@ -151,19 +196,26 @@ async function findUserId(token, username) {
   }
 
   section('清理')
+  // 顺序很关键：先删角色（断开与用户的关联），再删用户，最后删部门。
+  // 若反过来，用户删除会连带清掉 sys_user_role，导致角色残留。
   if (roleId) await req('DELETE', `/api/role/${roleId}`, adminToken)
   const delU = [uid, leadId, memberId].filter(Boolean).join(',')
   if (delU) await req('DELETE', `/api/user/${delU}`, adminToken)
   check('清理', '测试用户已删除', !(await findUserId(adminToken, uname)))
   if (deptId) await req('DELETE', `/api/dept/${deptId}`, adminToken)
+  const treeAfter = await req('GET', '/api/dept/tree', adminToken)
+  const walkAfter = l => { for (const d of l || []) { if (d.deptName === deptName) return d.id; const h = walkAfter(d.children); if (h) return h } return null }
+  check('清理', '测试部门已删除', !walkAfter(Array.isArray(treeAfter.data) ? treeAfter.data : []))
 
   console.log('\n--- 完整明细 ---')
   console.log(lines.join('\n'))
   console.log('\n========================================')
   console.log(`通过 ${pass} / ${pass + fail}`)
+  await finalCleanup()
+  console.log('[兜底清理] 已执行')
   if (fail > 0) {
     console.log('\n--- 失败明细 ---')
     for (const l of lines) if (l.includes('[FAIL]')) console.log(l)
     process.exit(1)
   }
-})().catch(e => { console.error('脚本异常:', e); process.exit(1) })
+})().catch(async e => { console.error('脚本异常:', e); await finalCleanup(); process.exit(1) })

@@ -50,6 +50,61 @@ function redisGet(key) {
 
 let pass = 0, fail = 0
 const lines = []
+
+/**
+ * 兜底清理：无论脚本正常结束还是中途断言失败，都把本轮 stamp 产生的数据清干净。
+ * 只删"本脚本自己创建"的（按 username/dept_name/role_code 后缀 STAMP 精确匹配），
+ * 不会误伤既有数据。
+ */
+let ADMIN_TOKEN = null
+
+/** 分页拉全量（接口默认分页，单页可能拿不全，这里循环到拿满） */
+async function findAll(token, path, key) {
+  const out = []
+  for (let p = 1; p <= 10; p++) {
+    const r = await req('GET', `${path}?pageNum=${p}&pageSize=100`, token)
+    const rec = r.data?.records || r.data?.list || []
+    out.push(...rec)
+    const total = r.data?.total ?? out.length
+    if (out.length >= total || rec.length === 0) break
+  }
+  return out
+}
+
+/**
+ * 兜底清理：顺序 **角色 → 用户 → 部门**，且每步都校验结果、失败重试。
+ * 顺序不可颠倒：部门删除会被"部门下存在用户(4003)"挡住，用户删除又会连带清 sys_user_role。
+ * 只删本轮 STAMP 产生的数据，不会误伤既有数据。
+ */
+async function finalCleanup() {
+  if (!ADMIN_TOKEN) return
+  try {
+    // 1) 角色（先断开与用户的关联）
+    for (const r of (await findAll(ADMIN_TOKEN, '/api/role/page')).filter(x => (x.roleCode || '').includes(STAMP))) {
+      await req('DELETE', `/api/role/${r.id}`, ADMIN_TOKEN)
+    }
+    // 2) 用户：删除后必须确认已不可见，否则重试（限流/瞬时失败都会在这里被纠回）
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const users = (await findAll(ADMIN_TOKEN, '/api/user/page')).filter(u => (u.username || '').includes(STAMP))
+      if (!users.length) break
+      await req('DELETE', `/api/user/${users.map(u => u.id).join(',')}`, ADMIN_TOKEN)
+      await new Promise(r => setTimeout(r, 300))
+    }
+    // 3) 部门：同样校验 + 重试；叶子优先（先删有 parentId 的，再删顶级）
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const tree = await req('GET', '/api/dept/tree', ADMIN_TOKEN)
+      const flat = []
+      const walk = l => { for (const d of l || []) { flat.push(d); walk(d.children) } }
+      walk(Array.isArray(tree.data) ? tree.data : [])
+      const mine = flat.filter(x => (x.deptName || '').includes(STAMP))
+      if (!mine.length) break
+      for (const d of mine) await req('DELETE', `/api/dept/${d.id}`, ADMIN_TOKEN)
+      await new Promise(r => setTimeout(r, 300))
+    }
+  } catch (e) {
+    console.error('[兜底清理] 出错：', e.message)
+  }
+}
 const check = (g, name, cond, extra = '') => {
   if (cond) { pass++; lines.push(`  [PASS] ${name}${extra ? ' :: ' + extra : ''}`) }
   else { fail++; lines.push(`  [FAIL] ${name}${extra ? ' :: ' + extra : ''}`) }
@@ -111,6 +166,7 @@ async function findRoleId(token, roleCode) {
   const adminLogin = await login('admin', PWD)
   check('准备', 'admin 登录成功', !!adminLogin.token, adminLogin.token ? 'ok' : JSON.stringify(adminLogin.body).slice(0, 200))
   const adminToken = adminLogin.token
+  ADMIN_TOKEN = adminToken
   if (!adminToken) { console.log(lines.join('\n')); process.exit(1) }
 
   // 两个部门
@@ -208,6 +264,7 @@ async function findRoleId(token, roleCode) {
 
   section('清理测试数据')
   if (roleId) await write('DELETE', `/api/role/${roleId}`, adminToken)
+  // 顺序：角色 → 用户 → 部门。角色要先删，否则其 sys_user_role 关联会随用户删除而残留。
   const delIds = [devUserId, finUserId].filter(Boolean).join(',')
   if (delIds) await write('DELETE', `/api/user/${delIds}`, adminToken)
   const delU = await findUserId(adminToken, finUser)
@@ -222,9 +279,11 @@ async function findRoleId(token, roleCode) {
   console.log(lines.join('\n'))
   console.log('\n========================================')
   console.log(`通过 ${pass} / ${pass + fail}`)
+  await finalCleanup()
+  console.log('[兜底清理] 已执行')
   if (fail > 0) {
     console.log('\n--- 失败明细 ---')
     for (const l of lines) if (l.includes('[FAIL]')) console.log(l)
     process.exit(1)
   }
-})().catch(e => { console.error('脚本异常:', e); process.exit(1) })
+})().catch(async e => { console.error('脚本异常:', e); await finalCleanup(); process.exit(1) })
