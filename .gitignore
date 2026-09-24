@@ -107,3 +107,4 @@ scripts/.tmp/
 # ===== Deploy secrets =====
 deploy/permission-admin/sql/
 deploy/*.pem
+config/
