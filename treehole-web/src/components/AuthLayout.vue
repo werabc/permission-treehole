@@ -31,6 +31,13 @@
   background: linear-gradient(90deg, transparent 40%, var(--bg) 100%);
 }
 .auth__quote { position: absolute; left: 56px; bottom: 64px; z-index: 2; max-width: 24ch; }
+/* 浅色主题下引语是白字压浅雾，对比度不足：给文字后面加一道局部暗角 */
+.auth__quote::before {
+  content: ""; position: absolute; inset: -18px -22px -14px -22px; z-index: -1;
+  background: radial-gradient(ellipse at 30% 70%, rgba(6, 6, 13, 0.42), transparent 72%);
+  filter: blur(6px);
+}
+html[data-theme="dark"] .auth__quote::before { background: radial-gradient(ellipse at 30% 70%, rgba(6, 6, 13, 0.3), transparent 72%); }
 .auth__quote p {
   font-family: var(--font-display); font-style: italic; font-size: 26px; line-height: 1.5;
   color: #fff; text-shadow: 0 2px 30px rgba(0, 0, 0, 0.6);

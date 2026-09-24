@@ -344,7 +344,16 @@ public class ThUserServiceImpl extends ServiceImpl<ThUserMapper, ThUser> impleme
         // 注意：缓存值可能是 Long（树洞端）也可能是 LoginUser 对象（管理端），
         // 反序列化不可靠，因此统一从 key 里的 JWT 解析 userId 来判定归属。
         try {
-            java.util.Set<String> keys = redisTemplate.keys(SecurityConstants.TOKEN_CACHE_PREFIX + "*");
+            // 用 SCAN 游标遍历代替 KEYS：KEYS 是 O(N) 全库阻塞扫描，
+            // Token 量大时会卡住整个 Redis（所有请求排队），改密接口就成了 DoS 入口
+            java.util.Set<String> keys = new java.util.HashSet<>();
+            try (var conn = redisTemplate.getConnectionFactory().getConnection();
+                 var cursor = conn.scan(org.springframework.data.redis.core.ScanOptions
+                         .scanOptions().match(SecurityConstants.TOKEN_CACHE_PREFIX + "*").count(500).build())) {
+                while (cursor.hasNext()) {
+                    keys.add(new String(cursor.next()));
+                }
+            }
             int revoked = 0;
             if (keys != null) {
                 for (String key : keys) {

@@ -70,6 +70,12 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void createRole(SysRole role) {
+        // 显式禁止创建内置编码角色。虽然唯一性校验 + admin 不可删已间接挡住，
+        // 但若有人绕过应用直接删库里的 admin 角色再从界面重建，就能造出超管——
+        // 权限标识必须在入口处封死，不能依赖数据状态。
+        if (role.getRoleCode() != null && BUILTIN_CODES.contains(role.getRoleCode().toLowerCase())) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "内置角色编码不允许创建");
+        }
         validateRoleNameUnique(role.getRoleName(), null);
         validateRoleCodeUnique(role.getRoleCode(), null);
         validateDataScope(role);
