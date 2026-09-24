@@ -1,12 +1,10 @@
 <template>
   <article class="dh-card dh-card--hover post" @click="goDetail">
     <header class="post__top">
-      <span v-if="post.isAnonymous === 1" class="dh-av dh-av--anon">
-        <AppIcon name="user" :size="15" />
-      </span>
-      <button v-else class="dh-av" type="button" :title="post.authorName || '用户'" @click.stop="goAuthor">
-        {{ initial }}
+      <button v-if="post.isAnonymous !== 1" type="button" :title="post.authorName || '用户'" @click.stop="goAuthor">
+        <AppAvatar :src="post.authorAvatar" :name="post.authorName" :size="36" />
       </button>
+      <AppAvatar v-else :anonymous="true" :size="36" />
 
       <span class="who">
         <button v-if="post.isAnonymous !== 1" class="who__name" type="button" @click.stop="goAuthor">
@@ -50,6 +48,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppIcon from './AppIcon.vue'
+import AppAvatar from './AppAvatar.vue'
 import type { Post } from '../api/treehole'
 
 const props = withDefaults(

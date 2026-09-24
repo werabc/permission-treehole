@@ -22,7 +22,7 @@ public class ThCategoryAdminController {
 
     @Operation(summary = "分类列表(管理)")
     @GetMapping("/list")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:category:list', 'admin')")
     public R<List<ThCategory>> list() {
         return R.ok(categoryMapper.selectList(new LambdaQueryWrapper<ThCategory>()
                 .eq(ThCategory::getDeleted, 0)
@@ -31,7 +31,7 @@ public class ThCategoryAdminController {
 
     @Operation(summary = "新增分类")
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:category:add', 'admin')")
     public R<Void> create(@RequestBody ThCategory category) {
         long count = categoryMapper.selectCount(new LambdaQueryWrapper<ThCategory>()
                 .eq(ThCategory::getCode, category.getCode()));
@@ -45,7 +45,7 @@ public class ThCategoryAdminController {
 
     @Operation(summary = "修改分类")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:category:edit', 'admin')")
     public R<Void> update(@PathVariable Long id, @RequestBody ThCategory category) {
         ThCategory existing = categoryMapper.selectById(id);
         if (existing == null) return R.fail(404, "分类不存在");
@@ -61,7 +61,7 @@ public class ThCategoryAdminController {
 
     @Operation(summary = "删除分类")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:category:delete', 'admin')")
     public R<Void> delete(@PathVariable Long id) {
         ThCategory category = categoryMapper.selectById(id);
         if (category == null) return R.fail(404, "分类不存在");

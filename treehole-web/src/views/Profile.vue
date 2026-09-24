@@ -2,7 +2,7 @@
   <div class="dh-wrap prof">
     <!-- ============ 头部 ============ -->
     <div class="dh-card prof__head" v-reveal>
-      <div class="prof__av">{{ userInitial }}</div>
+      <AppAvatar :src="userInfo.avatar" :name="userInfo.nickname || userInfo.username" :size="72" />
       <div class="prof__info">
         <h2>{{ userInfo.nickname || '未设置昵称' }}</h2>
         <p>@{{ userInfo.username }} <span v-if="userInfo.bio">· {{ userInfo.bio }}</span></p>
@@ -185,6 +185,7 @@ import {
 } from 'element-plus'
 import PostCard from '../components/PostCard.vue'
 import AppIcon from '../components/AppIcon.vue'
+import AppAvatar from '../components/AppAvatar.vue'
 import { getUserInfo } from '../api/auth'
 import {
   getMyPosts, getReceivedComments, getMyComments, getMyCollects, getCollectCount,
@@ -205,11 +206,6 @@ const showEditDialog = ref(false)
 const showNotifications = ref(false)
 const saving = ref(false)
 const editForm = reactive({ nickname: '', bio: '', gender: 0 })
-
-const userInitial = computed(() => {
-  const name = userInfo.value.nickname || userInfo.value.username || '?'
-  return name.charAt(0).toUpperCase()
-})
 
 async function loadUserInfo() {
   try {

@@ -30,9 +30,9 @@
         <el-option label="停用" :value="0" />
       </el-select>
       <el-button type="primary" @click="fetchData">查询</el-button>
-      <el-button :icon="Plus" type="success" @click="openCreateDialog">新增敏感词</el-button>
-      <el-button :icon="Upload" @click="importVisible = true">批量导入</el-button>
-      <el-button :icon="Refresh" @click="handleRefresh">刷新词库缓存</el-button>
+      <el-button v-permission="'th:sensitive:add'" :icon="Plus" type="success" @click="openCreateDialog">新增敏感词</el-button>
+      <el-button v-permission="'th:sensitive:import'" :icon="Upload" @click="importVisible = true">批量导入</el-button>
+      <el-button v-permission="'th:sensitive:refresh'" :icon="Refresh" @click="handleRefresh">刷新词库缓存</el-button>
     </div>
 
     <el-table :data="tableData" v-loading="loading" stripe border row-key="id">
@@ -58,11 +58,11 @@
       <el-table-column prop="createTime" label="创建时间" width="170" />
       <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="openEditDialog(row)">编辑</el-button>
-          <el-button link :type="row.status === 1 ? 'warning' : 'success'" size="small" @click="toggleStatus(row)">
+          <el-button v-permission="'th:sensitive:edit'" link type="primary" size="small" @click="openEditDialog(row)">编辑</el-button>
+          <el-button v-permission="'th:sensitive:edit'" link :type="row.status === 1 ? 'warning' : 'success'" size="small" @click="toggleStatus(row)">
             {{ row.status === 1 ? '停用' : '启用' }}
           </el-button>
-          <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+          <el-button v-permission="'th:sensitive:delete'" link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

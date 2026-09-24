@@ -12,6 +12,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -25,6 +26,19 @@ public class GlobalExceptionHandler {
     public R<Void> handleBusinessException(BusinessException e) {
         log.warn("Business exception: code={}, msg={}", e.getCode(), e.getMessage());
         return R.fail(e.getCode(), e.getMessage());
+    }
+
+    /**
+     * 上传超限。
+     * 注意：Spring Boot 的 multipart 默认上限是 1MB，比业务侧的头像上限（2MB）还小，
+     * 结果 1~2MB 的图片会在这里被容器拦下并抛成 500，用户看到"服务器内部错误"。
+     * 必须在配置里把 multipart 上限调到业务上限之上，同时在这里兜底成 400 可读提示。
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public R<Void> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        log.warn("Upload size exceeded: {}", e.getMessage());
+        return R.fail(ResultCode.BAD_REQUEST, "文件过大，请压缩后重试");
     }
 
     @ExceptionHandler(AccessDeniedException.class)

@@ -46,6 +46,11 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
 
     @Override
     public IPage<ThComment> pageComments(long pageNum, long pageSize, Long postId) {
+        return pageComments(pageNum, pageSize, postId, null);
+    }
+
+    @Override
+    public IPage<ThComment> pageComments(long pageNum, long pageSize, Long postId, Long currentUserId) {
         // 限制分页大小
         if (pageSize > MAX_PAGE_SIZE) {
             pageSize = MAX_PAGE_SIZE;
@@ -61,8 +66,8 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
 
         IPage<ThComment> result = commentMapper.selectPage(page, wrapper);
 
-        // 批量填充用户信息，避免 N+1 查询
-        fillCommentExtras(result.getRecords());
+        // 批量填充用户信息与当前用户的点赞态，避免 N+1 查询
+        fillCommentExtras(result.getRecords(), currentUserId);
 
         return result;
     }
@@ -193,9 +198,11 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
     }
 
     /**
-     * 批量填充评论作者名和被回复人名，避免 N+1 查询
+     * 批量填充评论作者名、头像、被回复人名，以及"当前用户是否已点赞"，避免 N+1 查询
+     *
+     * @param currentUserId 当前登录用户，未登录传 null；用于回填 liked 状态
      */
-    private void fillCommentExtras(List<ThComment> comments) {
+    private void fillCommentExtras(List<ThComment> comments, Long currentUserId) {
         if (comments == null || comments.isEmpty()) return;
 
         // 收集所有用户ID
@@ -216,21 +223,52 @@ public class ThCommentServiceImpl extends ServiceImpl<ThCommentMapper, ThComment
             }
         }
 
+        // 批量查询"我点过赞的评论"，一次 IN 查询解决，避免每条评论一次 count
+        Set<Long> likedIds = new HashSet<>();
+        if (currentUserId != null) {
+            List<Long> commentIds = comments.stream().map(ThComment::getId).toList();
+            if (!commentIds.isEmpty()) {
+                List<ThLike> likes = likeMapper.selectList(new LambdaQueryWrapper<ThLike>()
+                        .eq(ThLike::getUserId, currentUserId)
+                        .eq(ThLike::getTargetType, "COMMENT")
+                        .eq(ThLike::getDeleted, 0)
+                        .in(ThLike::getTargetId, commentIds));
+                likes.forEach(l -> likedIds.add(l.getTargetId()));
+            }
+        }
+
         // 填充
         for (ThComment comment : comments) {
             if (comment.getIsAnonymous() != null && comment.getIsAnonymous() == 1) {
                 comment.setAuthorName("匿名用户");
-                comment.setUserId(null);  // 匿名评论清除 userId，防止去匿名化
+                comment.setAuthorAvatar(null);   // 匿名不给头像，避免去匿名化
+                comment.setUserId(null);         // 匿名评论清除 userId，防止去匿名化
             } else {
                 ThUser user = userMap.get(comment.getUserId());
                 comment.setAuthorName(user != null ? user.getNickname() : "未知用户");
+                comment.setAuthorAvatar(user != null ? user.getAvatar() : null);
             }
             if (comment.getReplyUserId() != null) {
                 ThUser replyUser = userMap.get(comment.getReplyUserId());
                 comment.setReplyUserName(replyUser != null ? replyUser.getNickname() : "未知用户");
             }
+            comment.setLiked(likedIds.contains(comment.getId()));
             // 公开接口不返回敏感字段
             comment.setIp(null);
+        }
+    }
+
+    @Override
+    public void unlikeComment(Long id, Long userId) {
+        LambdaQueryWrapper<ThLike> wrapper = new LambdaQueryWrapper<ThLike>()
+                .eq(ThLike::getUserId, userId)
+                .eq(ThLike::getTargetType, "COMMENT")
+                .eq(ThLike::getTargetId, id)
+                .eq(ThLike::getDeleted, 0);
+        ThLike like = likeMapper.selectOne(wrapper);
+        if (like != null) {
+            likeMapper.deleteById(like.getId());
+            commentMapper.decrementLikeCount(id);
         }
     }
 }

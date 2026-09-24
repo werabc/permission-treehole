@@ -99,6 +99,11 @@ docs/browser-e2e/
 # ===== 生成物：截图统一存 jpg，不再提交 png 全屏图 =====
 docs/ui-shots/*.png
 
+# ===== 上传文件（运行时产物，不入库） =====
+uploads/
+permission-admin/uploads/
+scripts/.tmp/
+
 # ===== Deploy secrets =====
 deploy/permission-admin/sql/
 deploy/*.pem

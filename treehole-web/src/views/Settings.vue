@@ -37,10 +37,28 @@
       </div>
 
       <div class="field">
-        <label class="dh-label">头像链接</label>
-        <div class="dh-input">
-          <AppIcon name="image" :size="17" class="ico" />
-          <input v-model="form.avatar" placeholder="https://…（暂支持外链）" />
+        <label class="dh-label">头像</label>
+        <div class="avatar-row">
+          <AppAvatar :src="form.avatar" :name="form.nickname || '我'" :size="64" />
+          <div class="avatar-acts">
+            <input
+              ref="fileInput"
+              class="file-hidden"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              @change="onPickFile"
+            />
+            <button class="dh-btn dh-btn--ghost dh-btn--sm" type="button" :disabled="uploading" @click="pickFile">
+              <AppIcon name="image" :size="15" /> {{ uploading ? '上传中…' : '选择图片' }}
+            </button>
+            <button
+              v-if="form.avatar"
+              class="dh-btn dh-btn--quiet dh-btn--sm"
+              type="button"
+              @click="form.avatar = ''"
+            >移除</button>
+            <p class="avatar-tip">JPG / PNG / GIF / WebP，不超过 2MB</p>
+          </div>
         </div>
       </div>
 
@@ -98,15 +116,59 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AppIcon from '../components/AppIcon.vue'
+import AppAvatar from '../components/AppAvatar.vue'
 import { getUserInfo, changePassword, logout } from '../api/auth'
-import { updateProfile } from '../api/treehole'
+import { updateProfile, uploadAvatar } from '../api/treehole'
 
 const router = useRouter()
 
 const tab = ref<'profile' | 'security'>('profile')
 const saving = ref(false)
+const uploading = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const form = ref({ nickname: '', gender: 0, email: '', avatar: '', bio: '' })
+
+/** 单张头像上限，与后端 file.storage.avatar-max-size 保持一致 */
+const AVATAR_MAX_SIZE = 2 * 1024 * 1024
+const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+function pickFile() {
+  fileInput.value?.click()
+}
+
+/**
+ * 选中文件后立即上传。
+ * 前端先做一次类型/大小校验，是为了省掉一次必然失败的往返；
+ * 真正的把关仍在后端（靠文件头魔数判定，不信 Content-Type）。
+ */
+async function onPickFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  // 立刻清空，否则连续选同一个文件不会再触发 change
+  input.value = ''
+  if (!file) return
+
+  if (!AVATAR_TYPES.includes(file.type)) {
+    ElMessage.error('只支持 JPG / PNG / GIF / WebP 格式')
+    return
+  }
+  if (file.size > AVATAR_MAX_SIZE) {
+    ElMessage.error('图片不能超过 2MB')
+    return
+  }
+
+  uploading.value = true
+  try {
+    const res = await uploadAvatar(file)
+    form.value.avatar = res.data
+    ElMessage.success('已上传，记得点「保存资料」生效')
+  } catch (err: any) {
+    ElMessage.error(err?.response?.data?.message || '上传失败')
+  } finally {
+    uploading.value = false
+  }
+}
 const pwd = ref({ oldPassword: '', newPassword: '', confirm: '' })
 
 async function loadProfile() {
@@ -141,6 +203,9 @@ async function saveProfile() {
       bio: form.value.bio || undefined,
     })
     if (name) localStorage.setItem('th_nickname', name)
+    // 顶栏头像取自本地缓存，保存后必须同步 + 派发 storage，否则要刷新才变
+    if (form.value.avatar) localStorage.setItem('th_avatar', form.value.avatar)
+    else localStorage.removeItem('th_avatar')
     window.dispatchEvent(new Event('storage'))
     ElMessage.success('资料已保存')
   } catch (e: any) {
@@ -195,6 +260,12 @@ onMounted(loadProfile)
 .ta::placeholder { color: var(--text-mute); }
 
 .tip { font-size: 12.5px; color: var(--text-mute); margin-bottom: 4px; }
+
+/* 头像上传 */
+.file-hidden { display: none; }
+.avatar-row { display: flex; align-items: center; gap: 18px; }
+.avatar-acts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.avatar-tip { width: 100%; font-size: 12px; color: var(--text-mute); margin: 0; }
 .pane__acts { display: flex; justify-content: flex-end; margin-top: 26px; }
 
 @media (max-width: 720px) {

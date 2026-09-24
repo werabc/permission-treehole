@@ -1,8 +1,14 @@
 -- 前端改版视觉验收用的演示数据（仅用于 e2e 库，不要在生产执行）
 SET NAMES utf8mb4;
 
-UPDATE th_user SET nickname = '夜航船', bio = '在第 3 个城市漂着' WHERE id = 1;
-UPDATE th_user SET nickname = '林深见鹿', bio = '愿意听，也愿意说' WHERE id = 2;
+-- 演示帖的作者必须是"存在的用户"，否则前端只能显示"未知用户"。
+-- 原先这里只 UPDATE id=1/2，前提是库里恰好已有人注册过 —— 换个干净库就缺作者。
+-- 改为自带账号（密码与 init.sql 种子管理员一致，仅用于演示库）。
+INSERT INTO th_user (id, username, password, nickname, bio, gender, status) VALUES
+(1, 'demo_night', '$2a$10$YoZweBVj9TYL1Coop.9sTeQBvtEJMyGlYme2StFh2.mE60FkAMocW', '夜航船', '在第 3 个城市漂着', 1, 1),
+(2, 'demo_deer',  '$2a$10$YoZweBVj9TYL1Coop.9sTeQBvtEJMyGlYme2StFh2.mE60FkAMocW', '林深见鹿', '愿意听，也愿意说', 2, 1)
+ON DUPLICATE KEY UPDATE
+    nickname = VALUES(nickname), bio = VALUES(bio), status = VALUES(status);
 
 DELETE FROM th_post WHERE deleted = 0;
 DELETE FROM th_comment WHERE deleted = 0;

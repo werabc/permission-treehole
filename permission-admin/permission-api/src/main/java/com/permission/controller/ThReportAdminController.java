@@ -34,7 +34,7 @@ public class ThReportAdminController {
 
     @Operation(summary = "举报列表")
     @GetMapping("/page")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:report:list', 'admin')")
     public R<IPage<ThReport>> page(@RequestParam(defaultValue = "1") long pageNum,
                                     @RequestParam(defaultValue = "10") long pageSize,
                                     @RequestParam(required = false) Integer status) {
@@ -53,7 +53,7 @@ public class ThReportAdminController {
 
     @Operation(summary = "举报详情")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:report:view', 'admin')")
     public R<Map<String, Object>> detail(@PathVariable Long id) {
         ThReport report = reportMapper.selectById(id);
         if (report == null) return R.fail(404, "举报不存在");
@@ -81,7 +81,7 @@ public class ThReportAdminController {
 
     @Operation(summary = "处理举报")
     @PutMapping("/{id}/handle")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:report:handle', 'admin')")
     public R<Void> handle(@PathVariable Long id,
                            @RequestParam Integer status,
                            @RequestParam(required = false) String result,
@@ -95,7 +95,7 @@ public class ThReportAdminController {
 
     @Operation(summary = "批量处理")
     @PostMapping("/batch-handle")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:report:handle', 'admin')")
     public R<Void> batchHandle(@RequestBody Map<String, Object> body,
                                 @AuthenticationPrincipal com.permission.common.dto.LoginUser loginUser) {
         // Alibaba-Java: 安全规约【强制】无泛型集合赋值需类型安全检查
@@ -134,7 +134,7 @@ public class ThReportAdminController {
 
     @Operation(summary = "举报统计")
     @GetMapping("/stats")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:report:list', 'admin')")
     public R<Map<String, Long>> stats() {
         Map<String, Long> result = new HashMap<>();
         result.put("total", reportMapper.selectCount(new LambdaQueryWrapper<ThReport>().eq(ThReport::getDeleted, 0)));

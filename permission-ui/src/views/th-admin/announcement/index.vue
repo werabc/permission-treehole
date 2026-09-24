@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="toolbar">
-      <el-button type="primary" :icon="Plus" @click="openCreateDialog">发布公告</el-button>
+      <el-button v-permission="'th:announcement:add'" type="primary" :icon="Plus" @click="openCreateDialog">发布公告</el-button>
     </div>
 
     <el-table :data="tableData" v-loading="loading" stripe border>
@@ -21,8 +21,8 @@
       <el-table-column prop="createTime" label="发布时间" width="170" />
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="openEditDialog(row)">编辑</el-button>
-          <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+          <el-button v-permission="'th:announcement:edit'" link type="primary" size="small" @click="openEditDialog(row)">编辑</el-button>
+          <el-button v-permission="'th:announcement:delete'" link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

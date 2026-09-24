@@ -1,5 +1,5 @@
 {
-  "pass": 69,
+  "pass": 76,
   "fail": 0,
   "errors": [],
   "badResponses": [],
@@ -192,12 +192,7 @@
     {
       "name": "顶栏显示登录用户昵称",
       "ok": true,
-      "extra": "夜航船"
-    },
-    {
-      "name": "顶栏未读消息徽标显示",
-      "ok": true,
-      "extra": "未读=3"
+      "extra": "ui_826112"
     },
     {
       "name": "点赞切换生效",
@@ -235,14 +230,24 @@
       "extra": "发布成功"
     },
     {
+      "name": "另一用户点赞成功（用于产生通知）",
+      "ok": true,
+      "extra": "code=200"
+    },
+    {
+      "name": "顶栏未读消息徽标显示",
+      "ok": true,
+      "extra": "未读=1"
+    },
+    {
       "name": "消息列表渲染",
       "ok": true,
-      "extra": "数量=4"
+      "extra": "数量=1"
     },
     {
       "name": "未读消息高亮",
       "ok": true,
-      "extra": "未读=3"
+      "extra": "未读=1"
     },
     {
       "name": "消息页签 4 个",
@@ -252,7 +257,7 @@
     {
       "name": "个人主页昵称渲染",
       "ok": true,
-      "extra": "夜航船"
+      "extra": "ui_826112"
     },
     {
       "name": "数据宫格 4 格",
@@ -262,7 +267,7 @@
     {
       "name": "我的心事列表渲染",
       "ok": true,
-      "extra": "数量=9"
+      "extra": "数量=2"
     },
     {
       "name": "帖子带删除入口",
@@ -283,6 +288,36 @@
       "name": "非法用户 ID 给出友好提示",
       "ok": true,
       "extra": "用户不存在"
+    },
+    {
+      "name": "设置页有文件选择控件",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "只接受图片类型（accept 已限制）",
+      "ok": true,
+      "extra": "image/jpeg,image/png,image/gif,image/webp"
+    },
+    {
+      "name": "设置页显示头像预览（AppAvatar）",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "上传区提示大小限制",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "帖子卡片使用统一头像组件",
+      "ok": true,
+      "extra": "数量=9"
+    },
+    {
+      "name": "顶栏用户区显示头像组件",
+      "ok": true,
+      "extra": ""
     },
     {
       "name": "公告默认展开第一条",
@@ -337,7 +372,7 @@
     {
       "name": "触底自动加载更多",
       "ok": true,
-      "extra": "9 → 16"
+      "extra": "9 → 17"
     },
     {
       "name": "滚动后出现回到顶部按钮",

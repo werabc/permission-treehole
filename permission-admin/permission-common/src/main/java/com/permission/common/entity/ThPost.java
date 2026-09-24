@@ -20,6 +20,10 @@ public class ThPost extends BaseEntity {
     @TableField(exist = false)
     private String authorName;
 
+    /** 作者头像。匿名帖必须留空——头像可用于反向识别身份 */
+    @TableField(exist = false)
+    private String authorAvatar;
+
     private Long categoryId;
 
     @TableField(exist = false)

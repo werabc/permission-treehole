@@ -48,10 +48,10 @@
 
     <!-- 批量操作栏 -->
     <div class="batch-bar">
-      <el-button type="success" :disabled="selectedRows.length === 0" @click="handleBatch(1)">
+      <el-button v-permission="'th:report:handle'" type="success" :disabled="selectedRows.length === 0" @click="handleBatch(1)">
         <el-icon><Check /></el-icon>批量成立
       </el-button>
-      <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatch(2)">
+      <el-button v-permission="'th:report:handle'" type="danger" :disabled="selectedRows.length === 0" @click="handleBatch(2)">
         <el-icon><Close /></el-icon>批量不成立
       </el-button>
       <span class="selected-count" v-if="selectedRows.length > 0">已选择 {{ selectedRows.length }} 项</span>
@@ -79,10 +79,10 @@
       <el-table-column prop="createTime" label="举报时间" width="170" />
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
+          <el-button v-permission="'th:report:view'" link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
           <template v-if="row.status === 0">
-            <el-button link type="success" size="small" @click="handleReport(row, 1)">成立</el-button>
-            <el-button link type="danger" size="small" @click="handleReport(row, 2)">不成立</el-button>
+            <el-button v-permission="'th:report:handle'" link type="success" size="small" @click="handleReport(row, 1)">成立</el-button>
+            <el-button v-permission="'th:report:handle'" link type="danger" size="small" @click="handleReport(row, 2)">不成立</el-button>
           </template>
           <span v-else class="handled-text">{{ row.handleResult || '已处理' }}</span>
         </template>

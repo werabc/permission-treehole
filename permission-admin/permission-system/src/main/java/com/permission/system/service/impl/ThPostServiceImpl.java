@@ -306,6 +306,17 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
     /**
      * 批量填充帖子作者名和分类名，避免 N+1 查询
      */
+    @Override
+    public ThPost getPostDetail(Long id) {
+        ThPost post = getById(id);
+        if (post == null) {
+            return null;
+        }
+        // 复用列表的填充逻辑：作者名/头像/分类名 + 匿名脱敏 + 敏感字段清理
+        fillPostExtras(java.util.Collections.singletonList(post));
+        return post;
+    }
+
     private void fillPostExtras(List<ThPost> posts) {
         if (posts == null || posts.isEmpty()) return;
 
@@ -341,10 +352,12 @@ public class ThPostServiceImpl extends ServiceImpl<ThPostMapper, ThPost> impleme
         for (ThPost post : posts) {
             if (post.getIsAnonymous() != null && post.getIsAnonymous() == 1) {
                 post.setAuthorName("匿名用户");
+                post.setAuthorAvatar(null);  // 匿名帖不给头像，避免去匿名化
                 post.setUserId(null);  // 匿名帖子清除 userId，防止去匿名化
             } else {
                 ThUser user = userMap.get(post.getUserId());
                 post.setAuthorName(user != null ? user.getNickname() : "未知用户");
+                post.setAuthorAvatar(user != null ? user.getAvatar() : null);
             }
             if (post.getCategoryId() != null) {
                 ThCategory cat = categoryMap.get(post.getCategoryId());

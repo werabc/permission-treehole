@@ -32,7 +32,21 @@ public class ThProfileDTO {
     @Size(max = 200, message = "简介不能超过200字")
     private String bio;
 
-    /** 头像文件名 */
+    /**
+     * 头像地址。
+     *
+     * 只接受两种形态，其余一律拒绝：
+     *  1. 本站上传接口返回的相对地址（/api/file/avatar/<32位hex>.<jpg|png|gif|webp>）
+     *  2. 外部 http(s) 链接
+     *
+     * 必须收窄的原因：avatar 会被直接渲染进 <img src>，
+     * 若放任任意字符串，javascript:/data:text/html 这类值就是存储型 XSS 的入口。
+     * 允许空串是为了支持"清空头像"。
+     */
+    @Pattern(
+            regexp = "^(|/api/file/avatar/[0-9a-f]{32}\\.(?:jpg|png|gif|webp)|https?://[^\\s\"'<>]{1,300})$",
+            message = "头像地址不合法，请使用上传功能或填写 http(s) 图片链接"
+    )
     @Size(max = 255, message = "头像路径过长")
     private String avatar;
 }

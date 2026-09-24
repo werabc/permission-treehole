@@ -32,7 +32,7 @@ public class ThCommentAdminController {
 
     @Operation(summary = "评论列表")
     @GetMapping("/page")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:comment:list', 'admin')")
     public R<IPage<ThComment>> page(@RequestParam(defaultValue = "1") long pageNum,
                                      @RequestParam(defaultValue = "10") long pageSize,
                                      @RequestParam(required = false) Long postId) {
@@ -56,7 +56,7 @@ public class ThCommentAdminController {
 
     @Operation(summary = "评论详情")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:comment:view', 'admin')")
     public R<Map<String, Object>> detail(@PathVariable Long id) {
         ThComment comment = commentMapper.selectById(id);
         if (comment == null) return R.fail(404, "评论不存在");
@@ -88,7 +88,7 @@ public class ThCommentAdminController {
 
     @Operation(summary = "隐藏/恢复评论")
     @PutMapping("/{id}/hide")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:comment:hide', 'admin')")
     @OperationLog(module = "评论管理", value = "隐藏/恢复评论")
     public R<Void> hide(@PathVariable Long id, @RequestParam Integer status) {
         ThComment comment = commentMapper.selectById(id);
@@ -100,7 +100,7 @@ public class ThCommentAdminController {
 
     @Operation(summary = "删除评论")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:comment:delete', 'admin')")
     @OperationLog(module = "评论管理", value = "删除评论")
     public R<Void> delete(@PathVariable Long id) {
         ThComment comment = commentMapper.selectById(id);

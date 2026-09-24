@@ -48,7 +48,7 @@
                     <AppIcon name="cog" :size="17" />
                   </router-link>
                   <router-link to="/profile" class="dh-user-chip" title="我的主页">
-                    <span class="dh-av">{{ displayName.charAt(0) }}</span>
+                    <AppAvatar :src="avatar" :name="displayName" :size="26" />
                     <b>{{ displayName }}</b>
                   </router-link>
                   <button
@@ -125,7 +125,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { logout as doLogout } from './api/auth'
+import { logout as doLogout, getUserInfo } from './api/auth'
 import { getUnreadCount } from './api/treehole'
 import { useTheme } from './composables/useTheme'
 import AppIcon from './components/AppIcon.vue'
@@ -133,6 +133,7 @@ import IconSprite from './components/IconSprite.vue'
 import BackdropFx from './components/BackdropFx.vue'
 import AppSidenav from './components/AppSidenav.vue'
 import BackToTop from './components/BackToTop.vue'
+import AppAvatar from './components/AppAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -143,6 +144,7 @@ const hideChrome = computed(() => route.meta.guest === true)
 
 const unreadCount = ref(0)
 const nickname = ref(localStorage.getItem('th_nickname') || '')
+const avatar = ref(localStorage.getItem('th_avatar') || '')
 const tokenRef = ref(localStorage.getItem('th_token') || '')
 const menuOpen = ref(false)
 
@@ -163,6 +165,7 @@ function handleLogout() {
   doLogout()
   tokenRef.value = ''
   nickname.value = ''
+  avatar.value = ''
   unreadCount.value = 0
   router.push('/login')
 }
@@ -180,6 +183,7 @@ async function loadUnreadCount() {
 function onStorageChange() {
   tokenRef.value = localStorage.getItem('th_token') || ''
   nickname.value = localStorage.getItem('th_nickname') || ''
+  avatar.value = localStorage.getItem('th_avatar') || ''
   loadUnreadCount()
 }
 
@@ -203,10 +207,32 @@ function onDocClick(e: MouseEvent) {
 // 路由切换后收起移动端菜单
 watch(() => route.fullPath, () => { menuOpen.value = false })
 
+/**
+ * 登录接口只返回 token/nickname，头像要靠 user-info 补齐。
+ * 顺带把昵称也校准一次（用户可能在别处改过昵称）。
+ */
+async function loadProfile() {
+  if (!isLoggedIn.value) return
+  try {
+    const res = await getUserInfo()
+    const info = res.data || {}
+    if (info.nickname) {
+      nickname.value = info.nickname
+      localStorage.setItem('th_nickname', info.nickname)
+    }
+    avatar.value = info.avatar || ''
+    if (info.avatar) localStorage.setItem('th_avatar', info.avatar)
+    else localStorage.removeItem('th_avatar')
+  } catch {
+    /* 未登录或网络异常时静默 */
+  }
+}
+
 onMounted(() => {
   window.addEventListener('storage', onStorageChange)
   document.addEventListener('click', onDocClick)
   loadUnreadCount()
+  loadProfile()
 })
 
 onUnmounted(() => {

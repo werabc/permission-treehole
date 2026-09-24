@@ -25,10 +25,10 @@
     <el-tabs v-model="activeTab" style="margin-top: 20px">
       <el-tab-pane label="待审核帖子" name="posts">
         <div class="search-bar">
-          <el-button type="success" :disabled="selectedPosts.length === 0" @click="batchAudit('posts', 1)">
+          <el-button v-permission="'th:moderation:audit'" type="success" :disabled="selectedPosts.length === 0" @click="batchAudit('posts', 1)">
             <el-icon><Check /></el-icon>批量通过
           </el-button>
-          <el-button type="danger" :disabled="selectedPosts.length === 0" @click="batchAudit('posts', 2)">
+          <el-button v-permission="'th:moderation:audit'" type="danger" :disabled="selectedPosts.length === 0" @click="batchAudit('posts', 2)">
             <el-icon><Close /></el-icon>批量拒绝
           </el-button>
           <span class="selected-count" v-if="selectedPosts.length > 0">已选择 {{ selectedPosts.length }} 项</span>
@@ -43,8 +43,8 @@
           <el-table-column prop="createTime" label="发布时间" width="170" />
           <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
-              <el-button link type="success" size="small" @click="auditPost(row.id, 1)">通过</el-button>
-              <el-button link type="danger" size="small" @click="openRejectDialog(row)">拒绝</el-button>
+              <el-button v-permission="'th:moderation:audit'" link type="success" size="small" @click="auditPost(row.id, 1)">通过</el-button>
+              <el-button v-permission="'th:moderation:audit'" link type="danger" size="small" @click="openRejectDialog(row)">拒绝</el-button>
               <el-button link type="primary" size="small" @click="viewPostDetail(row)">详情</el-button>
             </template>
           </el-table-column>
@@ -56,10 +56,10 @@
 
       <el-tab-pane label="待审核评论" name="comments">
         <div class="search-bar">
-          <el-button type="success" :disabled="selectedComments.length === 0" @click="batchAudit('comments', 1)">
+          <el-button v-permission="'th:moderation:audit'" type="success" :disabled="selectedComments.length === 0" @click="batchAudit('comments', 1)">
             <el-icon><Check /></el-icon>批量通过
           </el-button>
-          <el-button type="danger" :disabled="selectedComments.length === 0" @click="batchAudit('comments', 2)">
+          <el-button v-permission="'th:moderation:audit'" type="danger" :disabled="selectedComments.length === 0" @click="batchAudit('comments', 2)">
             <el-icon><Close /></el-icon>批量拒绝
           </el-button>
           <span class="selected-count" v-if="selectedComments.length > 0">已选择 {{ selectedComments.length }} 项</span>
@@ -73,8 +73,8 @@
           <el-table-column prop="createTime" label="评论时间" width="170" />
           <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
-              <el-button link type="success" size="small" @click="auditComment(row.id, 1)">通过</el-button>
-              <el-button link type="danger" size="small" @click="openRejectDialog(row, 'comment')">拒绝</el-button>
+              <el-button v-permission="'th:moderation:audit'" link type="success" size="small" @click="auditComment(row.id, 1)">通过</el-button>
+              <el-button v-permission="'th:moderation:audit'" link type="danger" size="small" @click="openRejectDialog(row, 'comment')">拒绝</el-button>
               <el-button link type="primary" size="small" @click="viewCommentDetail(row)">详情</el-button>
             </template>
           </el-table-column>

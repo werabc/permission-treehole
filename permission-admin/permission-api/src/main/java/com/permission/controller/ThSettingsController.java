@@ -26,14 +26,14 @@ public class ThSettingsController {
 
     @Operation(summary = "获取所有配置")
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:settings:view', 'admin')")
     public R<Map<String, String>> getAll() {
         return R.ok(settingsService.getAll());
     }
 
     @Operation(summary = "更新配置")
     @PutMapping
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:settings:edit', 'admin')")
     public R<Void> update(@RequestBody Map<String, String> body) {
         for (Map.Entry<String, String> entry : body.entrySet()) {
             ThSetting setting = settingMapper.selectOne(new LambdaQueryWrapper<ThSetting>()

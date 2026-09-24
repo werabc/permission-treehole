@@ -7,7 +7,7 @@
           <template #header>
             <div class="card-header">
               <span>站点基本配置</span>
-              <el-button type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
+              <el-button v-permission="'th:settings:edit'" type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
             </div>
           </template>
           <el-form :model="settings" label-width="140px" style="max-width: 600px">
@@ -39,7 +39,7 @@
           <template #header>
             <div class="card-header">
               <span>用户注册配置</span>
-              <el-button type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
+              <el-button v-permission="'th:settings:edit'" type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
             </div>
           </template>
           <el-form :model="settings" label-width="140px" style="max-width: 600px">
@@ -72,7 +72,7 @@
           <template #header>
             <div class="card-header">
               <span>内容审核配置</span>
-              <el-button type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
+              <el-button v-permission="'th:settings:edit'" type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
             </div>
           </template>
           <el-form :model="settings" label-width="140px" style="max-width: 600px">
@@ -113,7 +113,7 @@
           <template #header>
             <div class="card-header">
               <span>安全配置</span>
-              <el-button type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
+              <el-button v-permission="'th:settings:edit'" type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
             </div>
           </template>
           <el-form :model="settings" label-width="140px" style="max-width: 600px">
@@ -157,7 +157,7 @@
           <template #header>
             <div class="card-header">
               <span>通知配置</span>
-              <el-button type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
+              <el-button v-permission="'th:settings:edit'" type="primary" :loading="saving" @click="saveSettings">保存配置</el-button>
             </div>
           </template>
           <el-form :model="settings" label-width="140px" style="max-width: 600px">

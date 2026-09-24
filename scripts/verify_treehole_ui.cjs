@@ -14,7 +14,9 @@ const HOME = process.env.USERPROFILE || process.env.HOME
 const EXE = path.join(HOME, 'AppData', 'Local', 'ms-playwright', 'chromium-1243', 'chrome-win64', 'chrome.exe')
 const TREE = 'http://localhost:3000'
 const OUT = 'D:/开发项目/s1/docs/ui-shots'
-const U1 = 'br_u1'
+// 演示库里 th_user 没有种子数据（用户都由注册接口产生），
+// 固定写死某个历史账号会让脚本换个环境就跑不起来 —— 改为运行时自建。
+const U1 = 'ui_' + (Date.now() % 1000000)
 const PWD = 'Browser@123'
 
   const errors = []
@@ -47,6 +49,27 @@ async function go(page, url) {
   await page.goto(url, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1200)
   await clearMessages(page)
+}
+
+const API_BASE = 'http://localhost:8081'
+
+/** 直接打后端接口，用于构造测试前置条件（Node 18+ 自带 fetch） */
+async function apiJson(method, path, { token, body } = {}) {
+  const res = await fetch(API_BASE + path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  return res.json().catch(() => ({}))
+}
+
+/** 树洞端登录，返回 token */
+async function thLogin(username, password) {
+  const r = await apiJson('POST', '/api/th/auth/login', { body: { username, password } })
+  return (r && r.data && r.data.token) || ''
 }
 
 async function msgText(page, timeout = 8000) {
@@ -174,12 +197,12 @@ async function msgText(page, timeout = 8000) {
   console.log('\n=== 5. 注册 ===')
   await go(page, `${TREE}/#/register`)
   check('注册页为分屏布局（左侧画面 + 右侧表单）', (await page.locator('.auth__art img').count()) === 1)
-  const newUser = 'ui_' + (Date.now() % 1000000)
+  const newUser = U1
 
   // 先验前端校验：两次密码不一致
   await page.getByPlaceholder('3-20 个字符').fill('ui_mismatch')
-  await page.getByPlaceholder('至少 6 位').fill('UiCheck@123')
-  await page.getByPlaceholder('再次输入密码').fill('UiCheck@999')
+  await page.getByPlaceholder('至少 6 位').fill(PWD)
+  await page.getByPlaceholder('再次输入密码').fill(PWD + '_X')
   await page.getByRole('button', { name: /注\s*册/ }).click()
   await page.waitForTimeout(600)
   check('两次密码不一致被拦截', (await page.locator('.dh-error').count()) > 0,
@@ -187,8 +210,8 @@ async function msgText(page, timeout = 8000) {
 
   // 再验正常注册
   await page.getByPlaceholder('3-20 个字符').fill(newUser)
-  await page.getByPlaceholder('至少 6 位').fill('UiCheck@123')
-  await page.getByPlaceholder('再次输入密码').fill('UiCheck@123')
+  await page.getByPlaceholder('至少 6 位').fill(PWD)
+  await page.getByPlaceholder('再次输入密码').fill(PWD)
   await shot(page, '05-register')
   await page.getByRole('button', { name: /注\s*册/ }).click()
   const regMsg = await msgText(page)
@@ -237,8 +260,8 @@ async function msgText(page, timeout = 8000) {
   check('登录成功并跳转首页', !/#\/login/.test(page.url()), page.url())
   const chip = (await page.locator('.dh-user-chip b').innerText().catch(() => '')) || ''
   check('顶栏显示登录用户昵称', chip.length > 0, chip)
-  const badge = (await page.locator('.dh-badge').innerText().catch(() => '')) || ''
-  check('顶栏未读消息徽标显示', badge.length > 0, `未读=${badge}`)
+  // 未读徽标的断言放在 7.5 之后：新注册用户此刻必然没有通知，
+  // 在这里断言等于断言"历史残留数据还在"，永远不该这么写。
 
   // ==================== 6.5 已登录：点赞 / 收藏 ====================
   console.log('\n=== 6.5 已登录交互（点赞 / 收藏） ===')
@@ -285,8 +308,26 @@ async function msgText(page, timeout = 8000) {
   const pubMsg = await msgText(page)
   check('发布成功并跳转详情', /成功/.test(pubMsg), pubMsg)
 
+  // ==================== 7.5 造一条通知 ====================
+  // 通知只能由"别人对我的内容有动作"产生，演示库里没有现成数据。
+  // 之前这几条断言其实是靠历史残留数据偶然通过的 —— 换个干净库必挂。
+  console.log('\n=== 7.5 构造通知（另一个用户点赞我的帖子） ===')
+  const myPost = await apiJson('POST', '/api/th/post', {
+    token: await thLogin(U1, PWD),
+    body: { content: '通知链路验收帖：等一个抱抱', isAnonymous: 0 },
+  })
+  const otherUser = 'noti_' + (Date.now() % 1000000)
+  await apiJson('POST', '/api/th/auth/register', { body: { username: otherUser, password: PWD } })
+  const otherToken = await thLogin(otherUser, PWD)
+  const likeRes = await apiJson('POST', `/api/th/post/${myPost.data}/like`, { token: otherToken })
+  check('另一用户点赞成功（用于产生通知）', likeRes.code === 200, `code=${likeRes.code}`)
+
   // ==================== 8. 消息中心 ====================
   console.log('\n=== 8. 消息中心 ===')
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1600)
+  const badge = (await page.locator('.dh-badge').innerText().catch(() => '')) || ''
+  check('顶栏未读消息徽标显示', badge.length > 0, `未读=${badge}`)
   await go(page, `${TREE}/#/notifications`)
   await page.waitForTimeout(1500)
   const noteCount = await page.locator('.note').count()
@@ -330,6 +371,22 @@ async function msgText(page, timeout = 8000) {
   await page.waitForTimeout(1500)
   check('非法用户 ID 给出友好提示', (await page.locator('.dh-state').count()) > 0,
     (await page.locator('.dh-state').first().innerText().catch(() => '')))
+
+  // ==================== 11.5 头像上传（本轮新增） ====================
+  console.log('\n=== 11.5 头像上传与展示 ===')
+  await go(page, `${TREE}/#/settings`)
+  await page.waitForTimeout(1600)
+  check('设置页有文件选择控件', (await page.locator('input.file-hidden[type=file]').count()) === 1)
+  const accept = await page.locator('input.file-hidden').getAttribute('accept').catch(() => '')
+  check('只接受图片类型（accept 已限制）', /image\/(jpeg|png|gif|webp)/.test(accept || ''), accept)
+  check('设置页显示头像预览（AppAvatar）', (await page.locator('.avatar-row .dhav').count()) === 1)
+  check('上传区提示大小限制', /2MB/.test(await page.locator('.avatar-tip').innerText().catch(() => '')))
+
+  await go(page, `${TREE}/#/`)
+  await page.waitForTimeout(1800)
+  check('帖子卡片使用统一头像组件', (await page.locator('.feed .post .dhav').count()) > 0,
+    `数量=${await page.locator('.feed .post .dhav').count()}`)
+  check('顶栏用户区显示头像组件', (await page.locator('.dh-user-chip .dhav').count()) === 1)
 
   // ==================== 12. 布局 3 的交互与按钮动效 ====================
   console.log('\n=== 12. 交互与按钮动效 ===')

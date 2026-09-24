@@ -40,14 +40,14 @@
       <el-table-column prop="createTime" label="注册时间" width="170" sortable />
       <el-table-column label="操作" width="380" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
+          <el-button v-permission="'th:user:view'" link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
           <el-button link type="info" size="small" @click="viewLogs(row)">日志</el-button>
-          <el-button v-if="row.muteUntil && new Date(row.muteUntil) > new Date()" link type="success" size="small" @click="handleUnmute(row)">解除禁言</el-button>
-          <el-button v-else link type="warning" size="small" @click="handleMute(row)">禁言</el-button>
-          <el-button v-if="row.status === 1" link type="danger" size="small" @click="handleBan(row)">封号</el-button>
-          <el-button v-else link type="success" size="small" @click="handleUnban(row)">解封</el-button>
+          <el-button v-if="can('th:user:mute') && isMuted(row)" link type="success" size="small" @click="handleUnmute(row)">解除禁言</el-button>
+          <el-button v-else-if="can('th:user:mute')" link type="warning" size="small" @click="handleMute(row)">禁言</el-button>
+          <el-button v-if="can('th:user:ban') && row.status === 1" link type="danger" size="small" @click="handleBan(row)">封号</el-button>
+          <el-button v-else-if="can('th:user:ban')" link type="success" size="small" @click="handleUnban(row)">解封</el-button>
           <el-button
-            v-if="(row.muteUntil && new Date(row.muteUntil) > new Date()) || row.status !== 1 || (row.violationCount || 0) > 0"
+            v-if="can('th:user:release') && ((row.muteUntil && new Date(row.muteUntil) > new Date()) || row.status !== 1 || (row.violationCount || 0) > 0)"
             link type="success"
             size="small"
             @click="handleRelease(row)"
@@ -181,7 +181,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getThUserPage, getThUserDetail, muteUser, unmuteUser, banUser, unbanUser, releaseThUser, getThUserLogs, getThUserPosts, getThUserComments } from '@/api/treehole-admin'
+import { useUserStore } from '@/stores/user'
 
+const userStore = useUserStore()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
@@ -328,6 +330,14 @@ async function confirmBan() {
   ElMessage.success('封号成功')
   banVisible.value = false
   fetchData()
+}
+
+/** 按钮级权限判断：admin 角色恒为 true（见 stores/user.hasPermission） */
+const can = (code: string) => userStore.hasPermission(code)
+
+/** 是否处于禁言中 */
+function isMuted(row: any) {
+  return !!row.muteUntil && new Date(row.muteUntil) > new Date()
 }
 
 function handleUnban(row: any) {

@@ -4,6 +4,8 @@ export interface Post {
   id: number
   userId?: number
   authorName?: string
+  /** 作者头像；匿名帖后端恒为空，用于避免去匿名化 */
+  authorAvatar?: string
   categoryId?: number
   categoryName?: string
   title?: string
@@ -24,6 +26,10 @@ export interface Comment {
   postId: number
   userId?: number
   authorName?: string
+  /** 作者头像；匿名评论后端恒为空 */
+  authorAvatar?: string
+  /** 当前登录用户是否已点赞（由列表接口回填） */
+  liked?: boolean
   parentId?: number
   replyUserId?: number
   replyUserName?: string
@@ -101,6 +107,20 @@ export function likeComment(id: number) {
   return request.post(`/th/comment/${id}/like`)
 }
 
+/** 取消点赞评论（后端原先只有点赞、没有取消，属接口缺口） */
+export function unlikeComment(id: number) {
+  return request.delete(`/th/comment/${id}/like`)
+}
+
+/**
+ * 查询当前用户是否已点赞该帖子。
+ * 后端一直有这个接口，但前端从未调用 —— 导致刷新后"已抱抱"状态丢失，
+ * 且点赞数会被本地乐观自增算错。
+ */
+export function isPostLiked(id: number) {
+  return request.get(`/th/post/${id}/liked`) as Promise<{ data: boolean }>
+}
+
 export function submitReport(data: ReportPayload) {
   return request.post('/th/report', data)
 }
@@ -168,6 +188,17 @@ export function getMyCollects(params: { pageNum: number; pageSize: number }) {
 /** 收藏数量 */
 export function getCollectCount() {
   return request.get('/th/user/collect-count') as Promise<{ data: number }>
+}
+
+/**
+ * 上传头像。
+ * 注意：这里必须让浏览器自己带 Content-Type（含 boundary），
+ * 手动写 'multipart/form-data' 会丢掉 boundary，后端直接报 400。
+ */
+export function uploadAvatar(file: File) {
+  const fd = new FormData()
+  fd.append('file', file)
+  return request.post('/file/avatar', fd) as Promise<{ data: string }>
 }
 
 /** 他人公开主页信息 */

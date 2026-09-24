@@ -82,18 +82,12 @@ public class ThPublicController {
     @GetMapping("/post/{id}")
     public R<ThPost> getPostDetail(@PathVariable Long id,
                                     @AuthenticationPrincipal LoginUser loginUser) {
-        ThPost post = postService.getById(id);
+        // 必须走 getPostDetail：它会填充作者名/头像/分类名并做匿名脱敏。
+        // 之前这里直接用 getById，实名帖的 authorName 为 null，前端只能显示"未知用户"。
+        ThPost post = postService.getPostDetail(id);
         if (post == null || post.getDeleted() == 1) return R.fail(404, "帖子不存在");
         if (post.getStatus() != 1) return R.fail(404, "帖子不存在");
         postService.incrementViewCount(id);
-        // 清除敏感字段，防止信息泄露
-        post.setIp(null);
-        post.setAuditRemark(null);
-        post.setAuditorId(null);
-        if (post.getIsAnonymous() != null && post.getIsAnonymous() == 1) {
-            post.setUserId(null);
-            post.setAuthorName("匿名用户");
-        }
         return R.ok(post);
     }
 
@@ -142,8 +136,11 @@ public class ThPublicController {
     @GetMapping("/comment/page")
     public R<IPage<ThComment>> getCommentPage(@RequestParam(defaultValue = "1") long pageNum,
                                                @RequestParam(defaultValue = "10") long pageSize,
-                                               @RequestParam Long postId) {
-        return R.ok(commentService.pageComments(pageNum, pageSize, postId));
+                                               @RequestParam Long postId,
+                                               @AuthenticationPrincipal LoginUser loginUser) {
+        // 登录用户额外回填 liked，否则刷新后"已点赞"状态会丢
+        Long currentUserId = loginUser == null ? null : loginUser.getUserId();
+        return R.ok(commentService.pageComments(pageNum, pageSize, postId, currentUserId));
     }
 
     @Operation(summary = "创建评论")
@@ -160,6 +157,14 @@ public class ThPublicController {
     public R<Void> likeComment(@PathVariable Long id,
                                 @AuthenticationPrincipal LoginUser loginUser) {
         commentService.likeComment(id, requireUserId(loginUser));
+        return R.ok();
+    }
+
+    @Operation(summary = "取消点赞评论")
+    @DeleteMapping("/comment/{id}/like")
+    public R<Void> unlikeComment(@PathVariable Long id,
+                                  @AuthenticationPrincipal LoginUser loginUser) {
+        commentService.unlikeComment(id, requireUserId(loginUser));
         return R.ok();
     }
 

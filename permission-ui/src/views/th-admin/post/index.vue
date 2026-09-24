@@ -19,16 +19,16 @@
 
     <!-- 批量操作栏 -->
     <div class="batch-bar">
-      <el-button type="success" :disabled="selectedRows.length === 0" @click="handleBatchAudit(1)">
+      <el-button v-permission="'th:post:audit'" type="success" :disabled="selectedRows.length === 0" @click="handleBatchAudit(1)">
         <el-icon><Check /></el-icon>批量通过
       </el-button>
-      <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchAudit(2)">
+      <el-button v-permission="'th:post:audit'" type="danger" :disabled="selectedRows.length === 0" @click="handleBatchAudit(2)">
         <el-icon><Close /></el-icon>批量拒绝
       </el-button>
-      <el-button type="warning" :disabled="selectedRows.length === 0" @click="handleBatchPin(1)">
+      <el-button v-permission="'th:post:pin'" type="warning" :disabled="selectedRows.length === 0" @click="handleBatchPin(1)">
         <el-icon><Top /></el-icon>批量置顶
       </el-button>
-      <el-button type="info" :disabled="selectedRows.length === 0" @click="handleBatchPin(0)">批量取消置顶</el-button>
+      <el-button v-permission="'th:post:pin'" type="info" :disabled="selectedRows.length === 0" @click="handleBatchPin(0)">批量取消置顶</el-button>
       <span class="selected-count" v-if="selectedRows.length > 0">已选择 {{ selectedRows.length }} 项</span>
     </div>
 
@@ -55,14 +55,14 @@
       <el-table-column prop="createTime" label="发布时间" width="170" sortable />
       <el-table-column label="操作" width="280" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
-          <el-button v-if="row.status === 0" link type="success" size="small" @click="handleAudit(row, 1)">通过</el-button>
-          <el-button v-if="row.status !== 2" link type="danger" size="small" @click="handleAudit(row, 2)">拒绝</el-button>
-          <el-button v-if="row.isTop === 1" link type="warning" size="small" @click="handlePin(row, 0)">取消置顶</el-button>
-          <el-button v-else link type="warning" size="small" @click="handlePin(row, 1)">置顶</el-button>
-          <el-button v-if="row.status === 1" link type="info" size="small" @click="handleHide(row, 0)">隐藏</el-button>
-          <el-button v-else link type="success" size="small" @click="handleHide(row, 1)">恢复</el-button>
-          <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+          <el-button v-permission="'th:post:view'" link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
+          <el-button v-if="can('th:post:audit') && row.status === 0" link type="success" size="small" @click="handleAudit(row, 1)">通过</el-button>
+          <el-button v-if="can('th:post:audit') && row.status !== 2" link type="danger" size="small" @click="handleAudit(row, 2)">拒绝</el-button>
+          <el-button v-if="can('th:post:pin') && row.isTop === 1" link type="warning" size="small" @click="handlePin(row, 0)">取消置顶</el-button>
+          <el-button v-else-if="can('th:post:pin')" link type="warning" size="small" @click="handlePin(row, 1)">置顶</el-button>
+          <el-button v-if="can('th:post:hide') && row.status === 1" link type="info" size="small" @click="handleHide(row, 0)">隐藏</el-button>
+          <el-button v-else-if="can('th:post:hide')" link type="success" size="small" @click="handleHide(row, 1)">恢复</el-button>
+          <el-button v-permission="'th:post:delete'" link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -124,6 +124,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Top, Search, Check, Close } from '@element-plus/icons-vue'
 import { getThPostPage, getThPostDetail, pinPost, hidePost, deleteThPost, batchAudit } from '@/api/treehole-admin'
 import { getThCategoryList } from '@/api/treehole-admin'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+/** 按钮级权限判断：admin 角色恒为 true（见 stores/user.hasPermission） */
+const can = (code: string) => userStore.hasPermission(code)
 
 const loading = ref(false)
 const tableData = ref<any[]>([])

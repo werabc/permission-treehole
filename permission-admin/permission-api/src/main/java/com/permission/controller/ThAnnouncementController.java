@@ -26,7 +26,7 @@ public class ThAnnouncementController {
 
     @Operation(summary = "公告列表")
     @GetMapping("/page")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:announcement:list', 'admin')")
     public R<IPage<ThAnnouncement>> page(@RequestParam(defaultValue = "1") long pageNum,
                                           @RequestParam(defaultValue = "10") long pageSize,
                                           @RequestParam(required = false) String type) {
@@ -45,7 +45,7 @@ public class ThAnnouncementController {
 
     @Operation(summary = "创建公告")
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:announcement:add', 'admin')")
     public R<Long> create(@RequestBody ThAnnouncement announcement,
                            @AuthenticationPrincipal com.permission.common.dto.LoginUser loginUser) {
         announcement.setCreatorId(loginUser.getUserId());
@@ -56,7 +56,7 @@ public class ThAnnouncementController {
 
     @Operation(summary = "编辑公告")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:announcement:edit', 'admin')")
     public R<Void> update(@PathVariable Long id, @RequestBody ThAnnouncement announcement) {
         ThAnnouncement existing = announcementMapper.selectById(id);
         if (existing == null) return R.fail(404, "公告不存在");
@@ -72,7 +72,7 @@ public class ThAnnouncementController {
 
     @Operation(summary = "删除公告")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:announcement:delete', 'admin')")
     public R<Void> delete(@PathVariable Long id) {
         ThAnnouncement announcement = announcementMapper.selectById(id);
         if (announcement == null) return R.fail(404, "公告不存在");

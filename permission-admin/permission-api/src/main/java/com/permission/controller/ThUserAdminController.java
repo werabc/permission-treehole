@@ -37,7 +37,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "用户列表")
     @GetMapping("/page")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:list', 'admin')")
     public R<IPage<ThUser>> page(@RequestParam(defaultValue = "1") long pageNum,
                                   @RequestParam(defaultValue = "10") long pageSize,
                                   @RequestParam(required = false) String keyword,
@@ -61,7 +61,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "用户详情")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:view', 'admin')")
     public R<Map<String, Object>> detail(@PathVariable Long id) {
         ThUser user = userMapper.selectById(id);
         if (user == null) return R.fail(404, "用户不存在");
@@ -99,7 +99,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "禁言用户")
     @PutMapping("/{id}/mute")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:mute', 'admin')")
     public R<Void> mute(@PathVariable Long id,
                         @RequestParam(required = false) Integer hours,
                         @RequestParam(required = false) Integer days,
@@ -114,7 +114,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "取消禁言")
     @PutMapping("/{id}/unmute")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:mute', 'admin')")
     public R<Void> unmute(@PathVariable Long id, @AuthenticationPrincipal LoginUser operator) {
         userGuard.release(id, false, operatorId(operator));
         return R.ok();
@@ -122,7 +122,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "封号")
     @PutMapping("/{id}/ban")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:ban', 'admin')")
     public R<Void> ban(@PathVariable Long id,
                        @RequestParam(required = false) Integer days,
                        @RequestParam(required = false) String reason,
@@ -135,7 +135,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "解封")
     @PutMapping("/{id}/unban")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:ban', 'admin')")
     public R<Void> unban(@PathVariable Long id, @AuthenticationPrincipal LoginUser operator) {
         userGuard.release(id, false, operatorId(operator));
         return R.ok();
@@ -143,7 +143,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "解除全部处罚（可选清零违规分）")
     @PutMapping("/{id}/release")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:release', 'admin')")
     public R<Void> release(@PathVariable Long id,
                            @RequestParam(defaultValue = "false") boolean resetViolation,
                            @AuthenticationPrincipal LoginUser operator) {
@@ -153,7 +153,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "手动加减违规分")
     @PutMapping("/{id}/violation")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:violation', 'admin')")
     public R<Integer> addViolation(@PathVariable Long id,
                                    @RequestParam Integer score,
                                    @RequestParam(required = false) String reason) {
@@ -168,7 +168,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "用户行为日志")
     @GetMapping("/{id}/logs")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:view', 'admin')")
     public R<IPage<ThUserLog>> logs(@PathVariable Long id,
                                      @RequestParam(defaultValue = "1") long pageNum,
                                      @RequestParam(defaultValue = "20") long pageSize) {
@@ -181,7 +181,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "用户发帖记录")
     @GetMapping("/{id}/posts")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:view', 'admin')")
     public R<IPage<com.permission.common.entity.ThPost>> posts(@PathVariable Long id,
                                                                @RequestParam(defaultValue = "1") long pageNum,
                                                                @RequestParam(defaultValue = "20") long pageSize) {
@@ -195,7 +195,7 @@ public class ThUserAdminController {
 
     @Operation(summary = "用户评论记录")
     @GetMapping("/{id}/comments")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:user:view', 'admin')")
     public R<IPage<com.permission.common.entity.ThComment>> comments(@PathVariable Long id,
                                                                      @RequestParam(defaultValue = "1") long pageNum,
                                                                      @RequestParam(defaultValue = "20") long pageSize) {

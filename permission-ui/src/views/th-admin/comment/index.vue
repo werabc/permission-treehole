@@ -16,13 +16,13 @@
 
     <!-- 批量操作栏 -->
     <div class="batch-bar">
-      <el-button type="warning" :disabled="selectedRows.length === 0" @click="handleBatchHide">
+      <el-button v-permission="'th:comment:hide'" type="warning" :disabled="selectedRows.length === 0" @click="handleBatchHide">
         <el-icon><Hide /></el-icon>批量隐藏
       </el-button>
-      <el-button type="success" :disabled="selectedRows.length === 0" @click="handleBatchShow">
+      <el-button v-permission="'th:comment:hide'" type="success" :disabled="selectedRows.length === 0" @click="handleBatchShow">
         <el-icon><View /></el-icon>批量显示
       </el-button>
-      <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete">
+      <el-button v-permission="'th:comment:delete'" type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete">
         <el-icon><Delete /></el-icon>批量删除
       </el-button>
       <span class="selected-count" v-if="selectedRows.length > 0">已选择 {{ selectedRows.length }} 项</span>
@@ -47,10 +47,10 @@
       <el-table-column prop="createTime" label="评论时间" width="170" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
-          <el-button v-if="row.hidden === 0" link type="warning" size="small" @click="handleHide(row, 1)">隐藏</el-button>
-          <el-button v-else link type="success" size="small" @click="handleHide(row, 0)">显示</el-button>
-          <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+          <el-button v-permission="'th:comment:view'" link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
+          <el-button v-if="can('th:comment:hide') && row.hidden === 0" link type="warning" size="small" @click="handleHide(row, 1)">隐藏</el-button>
+          <el-button v-else-if="can('th:comment:hide')" link type="success" size="small" @click="handleHide(row, 0)">显示</el-button>
+          <el-button v-permission="'th:comment:delete'" link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -84,6 +84,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Hide, View, Delete } from '@element-plus/icons-vue'
 import { getThCommentPage, getThCommentDetail, hideThComment, deleteThComment } from '@/api/treehole-admin'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+/** 按钮级权限判断：admin 角色恒为 true（见 stores/user.hasPermission） */
+const can = (code: string) => userStore.hasPermission(code)
 
 const loading = ref(false)
 const tableData = ref<any[]>([])

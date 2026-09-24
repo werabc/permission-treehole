@@ -35,6 +35,12 @@ spring:
           max-idle: 8
           min-idle: 0
           max-wait: -1ms
+  # 上传上限：必须大于 file.storage.avatar-max-size，否则 1~2MB 的图片会被容器
+  # 直接拦成 500（Spring Boot multipart 默认只有 1MB）
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:10MB}
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
@@ -67,3 +73,12 @@ knife4j:
 # 优先级：jwt.secret 配置 > JWT_SECRET_KEY 环境变量 > 兜底默认值（仅开发）
 jwt:
   secret: ${JWT_SECRET_KEY:}
+
+# ===== 文件存储（头像上传）=====
+# 生产环境建议挂独立数据盘并用 FILE_STORAGE_DIR 指定，
+# 不要放在应用发布目录里（下次发版会被覆盖）
+file:
+  storage:
+    dir: ${FILE_STORAGE_DIR:uploads}
+    public-prefix: ${FILE_PUBLIC_PREFIX:/api/file}
+    avatar-max-size: ${FILE_AVATAR_MAX_SIZE:2097152}

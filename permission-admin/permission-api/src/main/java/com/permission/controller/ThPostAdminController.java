@@ -36,7 +36,7 @@ public class ThPostAdminController {
 
     @Operation(summary = "帖子列表")
     @GetMapping("/page")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:post:list', 'admin')")
     public R<IPage<ThPost>> page(@RequestParam(defaultValue = "1") long pageNum,
                                   @RequestParam(defaultValue = "10") long pageSize,
                                   @RequestParam(required = false) Integer status,
@@ -74,7 +74,7 @@ public class ThPostAdminController {
 
     @Operation(summary = "帖子详情")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:post:view', 'admin')")
     public R<Map<String, Object>> detail(@PathVariable Long id) {
         ThPost post = postMapper.selectById(id);
         if (post == null) return R.fail(404, "帖子不存在");
@@ -115,7 +115,7 @@ public class ThPostAdminController {
 
     @Operation(summary = "审核帖子")
     @PutMapping("/{id}/audit")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:post:audit', 'admin')")
     @OperationLog(module = "帖子管理", value = "审核帖子")
     public R<Void> audit(@PathVariable Long id,
                           @RequestParam Integer status,
@@ -133,7 +133,7 @@ public class ThPostAdminController {
 
     @Operation(summary = "置顶/取消置顶")
     @PutMapping("/{id}/pin")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:post:pin', 'admin')")
     public R<Void> pin(@PathVariable Long id, @RequestParam Integer isTop) {
         ThPost post = postMapper.selectById(id);
         if (post == null) return R.fail(404, "帖子不存在");
@@ -144,7 +144,7 @@ public class ThPostAdminController {
 
     @Operation(summary = "隐藏/恢复")
     @PutMapping("/{id}/hide")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:post:hide', 'admin')")
     public R<Void> hide(@PathVariable Long id, @RequestParam Integer status) {
         ThPost post = postMapper.selectById(id);
         if (post == null) return R.fail(404, "帖子不存在");
@@ -155,7 +155,7 @@ public class ThPostAdminController {
 
     @Operation(summary = "删除帖子")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:post:delete', 'admin')")
     @OperationLog(module = "帖子管理", value = "删除帖子")
     public R<Void> delete(@PathVariable Long id) {
         ThPost post = postMapper.selectById(id);

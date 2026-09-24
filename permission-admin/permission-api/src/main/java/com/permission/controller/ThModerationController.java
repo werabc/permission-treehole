@@ -35,7 +35,7 @@ public class ThModerationController {
 
     @Operation(summary = "待审核帖子")
     @GetMapping("/posts")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:moderation:list', 'admin')")
     public R<IPage<ThPost>> pendingPosts(@RequestParam(defaultValue = "1") long pageNum,
                                           @RequestParam(defaultValue = "20") long pageSize) {
         Page<ThPost> page = new Page<>(pageNum, pageSize);
@@ -50,7 +50,7 @@ public class ThModerationController {
 
     @Operation(summary = "待审核评论")
     @GetMapping("/comments")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:moderation:list', 'admin')")
     public R<IPage<ThComment>> pendingComments(@RequestParam(defaultValue = "1") long pageNum,
                                                 @RequestParam(defaultValue = "20") long pageSize) {
         Page<ThComment> page = new Page<>(pageNum, pageSize);
@@ -65,7 +65,7 @@ public class ThModerationController {
 
     @Operation(summary = "批量审核")
     @PostMapping("/batch-audit")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:moderation:audit', 'admin')")
     @OperationLog(module = "内容审核", value = "批量审核")
     public R<Void> batchAudit(@RequestBody Map<String, Object> body) {
         String type = (String) body.get("type");
@@ -107,7 +107,7 @@ public class ThModerationController {
 
     @Operation(summary = "审核统计")
     @GetMapping("/stats")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:moderation:list', 'admin')")
     public R<Map<String, Long>> stats() {
         Map<String, Long> result = new HashMap<>();
         result.put("pendingPosts", postMapper.selectCount(new LambdaQueryWrapper<ThPost>()

@@ -8,6 +8,15 @@ public interface ThPostService extends IService<ThPost> {
 
     IPage<ThPost> pagePosts(long pageNum, long pageSize, Long categoryId, String keyword, Integer status);
 
+    /**
+     * 帖子详情（已填充 authorName / authorAvatar / categoryName）。
+     *
+     * 原先详情接口直接用 MyBatis-Plus 的 getById，只手工处理了匿名分支，
+     * 实名帖的 authorName 与 categoryName 永远是 null —— 前端只能显示"未知用户"，
+     * 分类标签也不显示。详情与列表必须走同一套填充逻辑。
+     */
+    ThPost getPostDetail(Long id);
+
     void createPost(ThPost post);
 
     /**

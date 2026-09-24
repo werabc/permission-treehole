@@ -30,7 +30,7 @@ public class ThSensitiveWordAdminController {
 
     @Operation(summary = "敏感词分页列表")
     @GetMapping("/page")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:sensitive:list', 'admin')")
     public R<IPage<ThSensitiveWord>> page(@RequestParam(defaultValue = "1") long pageNum,
                                           @RequestParam(defaultValue = "20") long pageSize,
                                           @RequestParam(required = false) String keyword,
@@ -41,7 +41,7 @@ public class ThSensitiveWordAdminController {
 
     @Operation(summary = "词库统计（词条数 / 总开关状态）")
     @GetMapping("/stats")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:sensitive:list', 'admin')")
     public R<Map<String, Object>> stats() {
         return R.ok(Map.of(
                 "wordCount", sensitiveWordService.getWordCount(),
@@ -51,7 +51,7 @@ public class ThSensitiveWordAdminController {
 
     @Operation(summary = "新增敏感词")
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:sensitive:add', 'admin')")
     public R<Void> add(@RequestBody ThSensitiveWord word,
                        @AuthenticationPrincipal LoginUser operator) {
         sensitiveWordService.add(word, operator == null ? "system" : operator.getUsername());
@@ -60,7 +60,7 @@ public class ThSensitiveWordAdminController {
 
     @Operation(summary = "批量导入（换行或逗号分隔）")
     @PostMapping("/import")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:sensitive:import', 'admin')")
     public R<Integer> importBatch(@RequestBody Map<String, Object> body,
                                   @AuthenticationPrincipal LoginUser operator) {
         String text = (String) body.get("text");
@@ -73,7 +73,7 @@ public class ThSensitiveWordAdminController {
 
     @Operation(summary = "修改敏感词")
     @PutMapping
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:sensitive:edit', 'admin')")
     public R<Void> update(@RequestBody ThSensitiveWord word) {
         sensitiveWordService.update(word);
         return R.ok();
@@ -81,7 +81,7 @@ public class ThSensitiveWordAdminController {
 
     @Operation(summary = "删除敏感词")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:sensitive:delete', 'admin')")
     public R<Void> delete(@PathVariable Long id) {
         sensitiveWordService.delete(id);
         return R.ok();
@@ -89,7 +89,7 @@ public class ThSensitiveWordAdminController {
 
     @Operation(summary = "手动刷新词库缓存")
     @PostMapping("/refresh")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:sensitive:refresh', 'admin')")
     public R<Integer> refresh() {
         sensitiveWordService.refresh();
         return R.ok(sensitiveWordService.getWordCount());

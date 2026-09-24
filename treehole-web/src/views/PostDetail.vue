@@ -7,8 +7,8 @@
     <!-- ============ 帖子 ============ -->
     <article class="dh-card detail__card" v-reveal>
       <div class="post__top">
-        <span v-if="post.isAnonymous === 1" class="dh-av dh-av--anon"><AppIcon name="user" :size="15" /></span>
-        <span v-else class="dh-av">{{ initial }}</span>
+        <AppAvatar v-if="post.isAnonymous === 1" :anonymous="true" :size="36" />
+        <AppAvatar v-else :src="post.authorAvatar" :name="post.authorName" :size="36" />
         <span class="who">
           <b>{{ post.isAnonymous === 1 ? '匿名' : post.authorName || '未知用户' }}</b>
           <span>{{ formatTime(post.createTime) }}</span>
@@ -80,15 +80,15 @@
         class="dh-card cmt"
         v-reveal="Math.min(i, 6) * 60"
       >
-        <span v-if="comment.isAnonymous === 1" class="dh-av dh-av--anon"><AppIcon name="user" :size="15" /></span>
-        <span v-else class="dh-av">{{ (comment.authorName || '?').charAt(0).toUpperCase() }}</span>
+        <AppAvatar v-if="comment.isAnonymous === 1" :anonymous="true" :size="34" />
+        <AppAvatar v-else :src="comment.authorAvatar" :name="comment.authorName" :size="34" />
         <div class="cmt__body">
           <b>{{ comment.isAnonymous === 1 ? '匿名' : comment.authorName || '未知用户' }}</b>
           <span v-if="comment.replyUserName" class="cmt__reply">→ {{ comment.replyUserName }}</span>
           <p>{{ comment.content }}</p>
           <div class="cmt__foot">
             <span>{{ formatTime(comment.createTime) }}</span>
-            <button type="button" class="cmt__act" @click="handleCommentLike(comment)">
+            <button type="button" :class="['cmt__act', { on: comment.liked }]" @click="handleCommentLike(comment)">
               <AppIcon name="like" :size="12" /> {{ comment.likeCount || 0 }}
             </button>
             <button type="button" class="cmt__act" @click="setReplyTarget(comment)">
@@ -141,8 +141,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElDialog, ElForm, ElFormItem, ElSelect, ElOption, ElInput, ElButton } from 'element-plus'
 import AppIcon from '../components/AppIcon.vue'
+import AppAvatar from '../components/AppAvatar.vue'
 import {
-  getPostDetail, likePost, unlikePost, getCommentPage, createComment, likeComment,
+  getPostDetail, likePost, unlikePost, isPostLiked, getCommentPage, createComment,
+  likeComment, unlikeComment,
   submitReport as submitReportApi, toggleCollect, isCollected, deletePost as removePost,
 } from '../api/treehole'
 import { isLoggedIn, getUserIdFromToken } from '../api/auth'
@@ -210,6 +212,21 @@ async function fetchComments() {
     commentTotal.value = res.data.total || 0
   } catch {
     /* ignore */
+  }
+}
+
+/**
+ * 回填"我是否已抱抱"。
+ * 这个接口后端一直存在，但前端从没调用过 —— 结果是刷新后状态显示为未点赞，
+ * 此时点击走 likePost（服务端幂等直接返回），前端却把 likeCount 又加了一次，数字会越点越偏。
+ */
+async function fetchLiked() {
+  if (!isLoggedIn() || postId.value === null) return
+  try {
+    const res = await isPostLiked(postId.value)
+    liked.value = res.data
+  } catch {
+    /* 失败时保持未点赞，不影响阅读 */
   }
 }
 
@@ -288,9 +305,18 @@ async function handleCommentLike(comment: Comment) {
     router.push('/login')
     return
   }
+  // liked 由列表接口回填；据此决定点赞还是取消，数字才不会越点越多
+  const wasLiked = comment.liked === true
   try {
-    await likeComment(comment.id)
-    comment.likeCount = (comment.likeCount || 0) + 1
+    if (wasLiked) {
+      await unlikeComment(comment.id)
+      comment.likeCount = Math.max((comment.likeCount || 0) - 1, 0)
+      comment.liked = false
+    } else {
+      await likeComment(comment.id)
+      comment.likeCount = (comment.likeCount || 0) + 1
+      comment.liked = true
+    }
   } catch (e: any) {
     ElMessage.error(e?.response?.data?.message || '操作失败')
   }
@@ -374,7 +400,11 @@ function formatTime(time: string) {
 }
 
 onMounted(() => {
-  fetchPost().then(fetchCollected)
+  // 两个用户态都要回填：只用本地布尔值会让刷新后的状态与点赞数都不准
+  fetchPost().then(() => {
+    fetchLiked()
+    fetchCollected()
+  })
   fetchComments()
 })
 </script>
@@ -428,6 +458,7 @@ onMounted(() => {
 .cmt__foot { display: flex; align-items: center; gap: 14px; margin-top: 10px; font-size: 11.5px; color: var(--text-mute); font-family: var(--font-mono); }
 .cmt__act { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-mute); transition: color 0.28s var(--ease); font-family: inherit; }
 .cmt__act:hover { color: var(--accent); }
+.cmt__act.on { color: var(--accent); }
 
 @media (max-width: 720px) {
   .detail__card, .composer { padding: 20px; }

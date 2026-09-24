@@ -8,7 +8,7 @@
 
     <template v-else>
       <section class="dh-card head" v-reveal>
-        <div class="head__av">{{ avatarText }}</div>
+        <AppAvatar :src="profile?.avatar" :name="profile?.nickname || '?'" :size="72" />
         <div class="head__info">
           <h2>{{ profile.nickname }}</h2>
           <p>{{ profile.bio || '这个人很懒，什么都没留下' }}</p>
@@ -40,6 +40,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import PostCard from '../components/PostCard.vue'
+import AppAvatar from '../components/AppAvatar.vue'
 import { getPublicProfile, getUserPosts, type Post, type PublicProfile } from '../api/treehole'
 
 const route = useRoute()
@@ -49,7 +50,6 @@ const posts = ref<Post[]>([])
 const loading = ref(false)
 const postsLoading = ref(false)
 
-const avatarText = computed(() => (profile.value?.nickname || '?').slice(0, 1).toUpperCase())
 
 async function load(userId: number) {
   if (!Number.isInteger(userId) || userId <= 0) {

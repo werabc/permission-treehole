@@ -31,7 +31,7 @@ public class ThAnalyticsController {
 
     @Operation(summary = "概览数据")
     @GetMapping("/overview")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:analytics:view', 'admin')")
     public R<Map<String, Object>> overview() {
         Map<String, Object> result = new HashMap<>();
 
@@ -75,7 +75,7 @@ public class ThAnalyticsController {
 
     @Operation(summary = "趋势数据")
     @GetMapping("/trends")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:analytics:view', 'admin')")
     public R<Map<String, Object>> trends(@RequestParam(defaultValue = "7") int days) {
         Map<String, Object> result = new HashMap<>();
         List<String> dates = new ArrayList<>();
@@ -113,7 +113,7 @@ public class ThAnalyticsController {
 
     @Operation(summary = "分类热度")
     @GetMapping("/categories")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:analytics:view', 'admin')")
     public R<List<Map<String, Object>>> categories() {
         List<ThCategory> categories = categoryMapper.selectList(new LambdaQueryWrapper<ThCategory>()
                 .eq(ThCategory::getDeleted, 0)

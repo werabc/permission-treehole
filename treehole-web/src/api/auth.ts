@@ -56,6 +56,7 @@ export function logout() {
   }
   localStorage.removeItem('th_token')
   localStorage.removeItem('th_nickname')
+  localStorage.removeItem('th_avatar')
 }
 
 // 解析 Token 获取用户ID

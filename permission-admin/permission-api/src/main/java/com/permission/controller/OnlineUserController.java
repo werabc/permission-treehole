@@ -25,7 +25,7 @@ public class OnlineUserController {
 
     @Operation(summary = "获取在线用户列表")
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:online:list', 'admin')")
     public R<List<Map<String, Object>>> list() {
         return R.ok(onlineUserService.getOnlineUsers());
     }
@@ -38,7 +38,7 @@ public class OnlineUserController {
 
     @Operation(summary = "强制用户下线")
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasAnyAuthority('admin')")
+    @PreAuthorize("hasAnyAuthority('th:online:kick', 'admin')")
     public R<Void> forceLogout(@PathVariable Long userId) {
         onlineUserService.forceLogout(userId);
         return R.ok();
