@@ -31,6 +31,18 @@
 - 跑浏览器脚本需 `NODE_PATH="D:/software/nodejs/node_global/node_modules/@playwright/mcp/node_modules"`
 - 沙箱禁止 node spawn 子进程（EBUSY）→ 脚本取验证码用 `net` 内联 Redis RESP 客户端，别用 redis-cli
 
+## Git 远端与推送（2026-09-25）
+- 远端：`https://github.com/werabc/permission-admin.git`，唯一长期分支 `main`
+- **不需要配 `http.proxy`**：本机代理是 MyClash（Clash Plus）**TUN 模式**，
+  无任何本地 HTTP 代理端口在监听（7877/7890/10809 全 closed），git 流量已被透明接管。
+  判断通路：`curl -m 8 -o /dev/null -w "%{http_code}" https://github.com` 返回 200 即可直接 push。
+- 认证走 `credential.helper = !'E:\Git\gh.exe' auth git-credential`，非交互
+- ⚠️ **远端 main 的历史被替换过**（2026-09-25 发现）：远端曾是 `27cd1ec` ——
+  与本地根提交 `01227da` 消息相同但**无共同祖先**的孤立快照，普通 push 会被 `fetch first` 拒绝。
+  该快照内容已被本地历史完全覆盖（缺失文件=0），Novel 模块本地在 `adb7557` 主动删过。
+  已存档为远端分支 `remote-main-backup` 并强推（`--force-with-lease`）本地 main。
+  **再次遇到 `fetch first` 拒绝时，先按上述步骤核查是否仍是无损强推，不要盲目 merge。**
+
 ## 数据权限架构（2026-09-24 定型）
 - 读侧：`DataPermissionInterceptor` + `DataPermissionHandler`（只改写 SELECT），豁免清单按 mappedStatementId 精确匹配
 - 写侧：`DataScopeGuard`（Service 层守门员），判定委托 `DataScopeHelper.canWriteUser/canWriteDept` —— **读写同源**
